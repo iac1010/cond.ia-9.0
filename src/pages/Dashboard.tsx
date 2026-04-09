@@ -606,7 +606,7 @@ export default function Dashboard() {
               <div className="p-1.5 bg-emerald-500/20 rounded-lg">
                 <MessageSquare className="w-4 h-4 text-emerald-400" />
               </div>
-              <h3 className="text-[10px] font-bold text-white uppercase tracking-wider">Status Bia</h3>
+              <h3 className="text-[10px] font-bold text-white uppercase tracking-wider">Status do Sistema</h3>
             </div>
             <div className="flex items-center gap-1.5">
               <button 
@@ -625,7 +625,7 @@ export default function Dashboard() {
                 {biaEnabled ? 'ON' : 'OFF'}
               </button>
               <div className={`w-2 h-2 rounded-full ${biaStatus?.status === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} title="Servidor Webhook" />
-              <div className={`w-2 h-2 rounded-full ${biaOnline ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} title="Bia Brain (Navegador)" />
+              <div className={`w-2 h-2 rounded-full ${biaOnline ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} title="Processador Local (Navegador)" />
             </div>
           </div>
           
@@ -637,7 +637,7 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="flex justify-between text-emerald-100/70">
-              <span>Bia Brain:</span>
+              <span>Processador:</span>
               <span className={`font-mono ${biaOnline ? 'text-blue-300' : 'text-gray-400'}`}>
                 {biaOnline ? 'ONLINE' : 'OFFLINE'}
               </span>
@@ -1790,15 +1790,10 @@ export default function Dashboard() {
                 biaStatus?.status === 'online' ? 'bg-emerald-400' : 'bg-red-400'
               }`} />
               <span className="text-[10px] font-black uppercase tracking-widest">
-                Bia {biaStatus?.status === 'online' ? 'Online' : 'Offline'}
+                Conexão com Banco de Dados: {biaStatus?.status === 'online' ? 'Online' : 'Offline'}
               </span>
-              {biaStatus?.lastWebhookReceived && (
-                <span className="text-[8px] opacity-60 ml-2">
-                  Último sinal: {new Date(biaStatus.lastWebhookReceived).toLocaleTimeString('pt-BR')}
-                </span>
-              )}
               {!biaStatus?.supabaseConfigured && biaStatus?.status === 'online' && (
-                <span className="text-[8px] opacity-60 ml-1">(Erro Supabase)</span>
+                <span className="text-[8px] opacity-60 ml-1">(Erro de Configuração)</span>
               )}
               {!biaStatus?.geminiConfigured && biaStatus?.status === 'online' && (
                 <span className="text-[8px] opacity-60 ml-1">(Erro IA)</span>
@@ -1808,7 +1803,7 @@ export default function Dashboard() {
           
           {biaStatus?.lastMessageExtracted && (
             <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 mb-2 w-fit animate-pulse">
-              <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-1">Bia ouviu agora mesmo:</p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-1">Último comando recebido:</p>
               <p className="text-[10px] italic text-emerald-400">"{biaStatus.lastMessageExtracted}"</p>
             </div>
           )}
@@ -1856,7 +1851,7 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all w-fit bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)] hover:bg-blue-600"
           >
             <Brain className="w-3 h-3" />
-            Testar Bia
+            Testar Conexão
           </button>
         </div>
       </div>
