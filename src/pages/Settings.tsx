@@ -270,8 +270,8 @@ export default function Settings() {
         <div className="flex items-center gap-6">
           <BackButton />
           <div>
-            <h1 className="text-6xl font-light tracking-tight text-zinc-900 dark:text-white">Ajustes</h1>
-            <p className="text-xl text-white/60 mt-2 font-light">Configurações do sistema e dados da empresa</p>
+            <h1 className="text-6xl font-light tracking-tight text-white">Ajustes</h1>
+            <p className="text-xl text-white mt-2 font-light">Configurações do sistema e dados da empresa</p>
           </div>
         </div>
       </header>

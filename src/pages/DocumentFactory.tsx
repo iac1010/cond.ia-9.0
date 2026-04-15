@@ -319,13 +319,13 @@ export default function DocumentFactory() {
       <header className="bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-8 py-6 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-6">
-            <BackButton />
+            <BackButton variant="solid" iconSize={6} />
             <div>
-              <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
-                <FileSignature className="w-8 h-8 text-blue-600" />
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-3">
+                <FileSignature className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
                 Central de Documentos
               </h1>
-              <p className="text-slate-500 dark:text-zinc-400 font-medium">Documentos prontos para o dia a dia do síndico</p>
+              <p className="text-xs md:text-base text-slate-500 dark:text-zinc-400 font-medium">Documentos prontos para o dia a dia do síndico</p>
             </div>
           </div>
 
