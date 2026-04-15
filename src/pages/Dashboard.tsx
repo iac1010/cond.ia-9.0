@@ -2,7 +2,7 @@ import { useStore } from '../store';
 import { TicketStatus } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { safeFormatDate } from '../utils/dateUtils';
+import { safeFormatDate, safeFormatTime } from '../utils/dateUtils';
 import { 
   Users, FileText, Plus, Hammer, RefreshCw,
   DollarSign, TrendingUp, Package, Database, 
@@ -469,12 +469,43 @@ export default function Dashboard() {
   const totalReceitas = receipts.reduce((acc, curr) => acc + curr.value, 0);
   const totalDespesas = costs.reduce((acc, curr) => acc + curr.value, 0);
   const saldo = totalReceitas - totalDespesas;
-  const nextAppointments = useMemo(() => {
-    return appointments
-      .filter(a => a.start && new Date(a.start) > new Date())
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-      .slice(0, 3);
-  }, [appointments]);
+  const nextEvents = useMemo(() => {
+    const now = new Date();
+    
+    const appts = appointments
+      .filter(a => a.start && new Date(a.start) > now)
+      .map(a => ({
+        id: a.id,
+        title: a.title,
+        date: a.start,
+        type: 'Compromisso',
+        icon: <CalendarIcon className="w-2 h-2 text-blue-400" />
+      }));
+
+    const maintenances = scheduledMaintenances
+      .filter(m => m.nextDate && new Date(m.nextDate) > now)
+      .map(m => ({
+        id: m.id,
+        title: `Manut. Prev: ${m.item}`,
+        date: m.nextDate,
+        type: 'Manutenção',
+        icon: <Hammer className="w-2 h-2 text-amber-400" />
+      }));
+
+    const tasks = tickets
+      .filter(t => t.type === 'TAREFA' && t.date && new Date(t.date) > now && t.status !== 'CONCLUIDO')
+      .map(t => ({
+        id: t.id,
+        title: t.title || `Tarefa #${t.osNumber || t.id.slice(0, 5)}`,
+        date: t.date,
+        type: 'Tarefa',
+        icon: <ClipboardList className="w-2 h-2 text-emerald-400" />
+      }));
+
+    return [...appts, ...maintenances, ...tasks]
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 4);
+  }, [appointments, scheduledMaintenances, tickets]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -950,15 +981,18 @@ export default function Dashboard() {
             </div>
             
             <div className="flex-1 space-y-2 overflow-hidden">
-              {nextAppointments.length > 0 ? (
-                nextAppointments.map((apt) => (
-                  <div key={apt.id} className="border-l-2 border-white/20 pl-2 py-1 hover:bg-white/5 transition-colors rounded-r-lg">
-                    <p className="text-[11px] font-bold truncate leading-tight text-white/90">{apt.title}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
+              {nextEvents.length > 0 ? (
+                nextEvents.map((event) => (
+                  <div key={event.id} className="border-l-2 border-white/20 pl-2 py-1 hover:bg-white/5 transition-colors rounded-r-lg">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      {event.icon}
+                      <p className="text-[11px] font-bold truncate leading-tight text-white/90">{event.title}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
                       <Clock className="w-2 h-2 text-white/40" />
                       <p className="text-[9px] text-white/50 font-medium">
-                        {apt.start ? (
-                          `${safeFormatDate(apt.start, { day: '2-digit', month: 'short' })} • ${new Date(apt.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }).replace('Invalid Date', 'Data inválida')}`
+                        {event.date ? (
+                          `${safeFormatDate(event.date, { day: '2-digit', month: 'short' })} • ${safeFormatTime(event.date)}`
                         ) : (
                           'Horário não definido'
                         )}
@@ -1714,7 +1748,7 @@ export default function Dashboard() {
     }));
   }, [
     clients.length, tickets.length, products.length, receipts.length, 
-    saldo, nextAppointments, notices.length, packages.length, 
+    saldo, nextEvents, notices.length, packages.length, 
     visitors.length, criticalEvents, energyData.length, supplyItems.length, payments.length, scheduledMaintenances.length,
     savingsGoals.length, costs.length, consumptionReadings.length,
     contracts.length, renovations.length, moves.length, billingRules.length, budgetForecasts.length
