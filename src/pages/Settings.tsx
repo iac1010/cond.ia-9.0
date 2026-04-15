@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { CompanyData } from '../types';
 import { toast } from 'react-hot-toast';
-import { Upload, Trash2, Image as ImageIcon, Save, Download, Database, FileUp, ChevronUp, ChevronDown, Layout as LayoutIcon, Settings as SettingsIcon, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { Upload, Trash2, Image as ImageIcon, Save, Download, Database, FileUp, Layout as LayoutIcon, Settings as SettingsIcon, Eye, EyeOff, MessageSquare } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { motion } from 'framer-motion';
@@ -197,29 +197,6 @@ export default function Settings() {
       reader.readAsText(file);
     }
     if (e.target) e.target.value = '';
-  };
-
-  const moveMenuItem = (index: number, direction: 'up' | 'down') => {
-    const newOrder = [...menuOrder];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    if (targetIndex >= 0 && targetIndex < newOrder.length) {
-      [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
-      setMenuOrder(newOrder);
-    }
-  };
-
-  const menuLabels: Record<string, string> = {
-    dashboard: 'Dashboard',
-    clients: 'Clientes',
-    products: 'Produtos',
-    tickets: 'Ordens (Lista/Checklist)',
-    kanban: 'Kanban',
-    quotes: 'Orçamentos',
-    receipts: 'Recibos',
-    financial: 'Financeiro',
-    calendar: 'Agenda',
-    settings: 'Ajustes',
   };
 
   const tileLabels: Record<string, string> = {
@@ -577,43 +554,6 @@ export default function Settings() {
               </button>
             </div>
           </form>
-        </motion.div>
-
-        {/* Menu Organization Section */}
-        <motion.div variants={itemVariants} className="bg-zinc-50 rounded-3xl border border-zinc-200 p-8 shadow-xl">
-          <h2 className="text-2xl font-bold mb-8 flex items-center gap-3 text-zinc-900">
-            <LayoutIcon className="w-6 h-6 text-orange-600" />
-            Organização do Menu
-          </h2>
-          <p className="text-lg text-zinc-500 font-light mb-8">
-            Altere a ordem dos itens no menu lateral para facilitar seu fluxo de trabalho.
-          </p>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {menuOrder.map((id, index) => (
-              <div key={id} className="flex items-center justify-between p-5 bg-white rounded-2xl border border-zinc-200 group hover:bg-zinc-50 transition-all">
-                <span className="font-bold text-lg text-zinc-700">
-                  {menuLabels[id] || id}
-                </span>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => moveMenuItem(index, 'up')}
-                    disabled={index === 0}
-                    className="p-2 hover:bg-zinc-100 rounded-xl transition-all disabled:opacity-10 text-zinc-400 hover:text-zinc-600"
-                  >
-                    <ChevronUp className="w-6 h-6" />
-                  </button>
-                  <button 
-                    onClick={() => moveMenuItem(index, 'down')}
-                    disabled={index === menuOrder.length - 1}
-                    className="p-2 hover:bg-zinc-100 rounded-xl transition-all disabled:opacity-10 text-zinc-400 hover:text-zinc-600"
-                  >
-                    <ChevronDown className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </motion.div>
 
         {/* Dashboard Visibility Section */}
