@@ -531,6 +531,7 @@ export interface AppState {
   whatsappEnabled: boolean;
   biaEnabled: boolean;
   biaOnline: boolean;
+  lastSync: string | null;
   
   fetchInitialData: () => Promise<void>;
   syncToSupabase: () => Promise<void>;

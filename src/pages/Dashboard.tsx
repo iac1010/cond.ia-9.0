@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { safeFormatDate } from '../utils/dateUtils';
 import { 
-  Users, FileText, Plus, Hammer, 
+  Users, FileText, Plus, Hammer, RefreshCw,
   DollarSign, TrendingUp, Package, Database, 
   Calendar as CalendarIcon, CloudSun, Image as ImageIcon,
   Settings, Moon, Sun, UserPlus, Sun as SunIcon,
@@ -330,7 +330,9 @@ export default function Dashboard() {
     setTileOrder: updateStoreTileOrder,
     biaOnline,
     biaEnabled,
-    toggleBia
+    toggleBia,
+    lastSync,
+    syncToSupabase
   } = useStore();
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -366,31 +368,60 @@ export default function Dashboard() {
 
     const checkStatus = async () => {
       try {
+        // First try the API status (for full-stack features)
         const res = await fetch('/api/status');
         const contentType = res.headers.get('content-type');
         
         if (res.ok && contentType && contentType.includes('application/json')) {
           const data = await res.json();
           setBiaStatus(data);
-          retryCount = 0; // Reset retry count on success
+          retryCount = 0;
         } else {
-          // If it's not JSON, it might be the Vite dev server starting up
-          throw new Error(`Bia status check returned ${res.status} (${contentType})`);
+          // If API fails (e.g. on Vercel), check Supabase directly
+          if (isSupabaseConfigured) {
+            const { error } = await supabase.from('clients').select('id').limit(1);
+            setBiaStatus({
+              status: error ? 'error' : 'online',
+              supabaseConfigured: true,
+              geminiConfigured: !!(import.meta.env.VITE_GEMINI_API_KEY),
+              lastWebhookReceived: null,
+              lastMessageExtracted: null,
+              appUrl: window.location.origin
+            });
+          } else {
+            throw new Error('API and Supabase not configured');
+          }
         }
       } catch (e: any) {
+        // Fallback to direct Supabase check if API is completely missing (404/Fetch Error)
+        if (isSupabaseConfigured) {
+          try {
+            const { error } = await supabase.from('clients').select('id').limit(1);
+            setBiaStatus({
+              status: error ? 'error' : 'online',
+              supabaseConfigured: true,
+              geminiConfigured: !!(import.meta.env.VITE_GEMINI_API_KEY),
+              lastWebhookReceived: null,
+              lastMessageExtracted: null,
+              appUrl: window.location.origin
+            });
+            return;
+          } catch (supabaseErr) {
+            console.error('Supabase connectivity check failed:', supabaseErr);
+          }
+        }
+
         const isFetchError = e.message?.toLowerCase().includes('fetch') || 
                             e.name === 'TypeError' ||
                             e.message?.includes('text/html');
         
-        // Only log as error if we've exhausted retries or it's not a simple fetch/transient failure
         if (!isFetchError || retryCount >= maxRetries) {
-          console.error('Error checking Bia status:', e);
+          console.error('Error checking system status:', e);
         }
         
         if (retryCount < maxRetries) {
           retryCount++;
           const delay = 3000 * retryCount;
-          console.log(`Retrying Bia status check (${retryCount}/${maxRetries}) in ${delay}ms...`);
           setTimeout(checkStatus, delay);
         }
       }
@@ -655,15 +686,33 @@ export default function Dashboard() {
               </span>
             </div>
             
-            <div className="pt-1">
+            <div className="flex justify-between text-emerald-100/70">
+              <span>Última Sinc:</span>
+              <span className="text-white font-mono truncate max-w-[80px]">
+                {lastSync ? new Date(lastSync).toLocaleTimeString() : 'Nunca'}
+              </span>
+            </div>
+            
+            <div className="pt-1 flex gap-1">
               <input 
                 type="text"
                 value={manualCommand}
                 onChange={(e) => setManualCommand(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualCommand()}
                 placeholder="Comando manual..."
-                className="w-full bg-black/20 border border-emerald-500/30 rounded px-2 py-1 text-[8px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
+                className="flex-1 bg-black/20 border border-emerald-500/30 rounded px-2 py-1 text-[8px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
               />
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  syncToSupabase();
+                }}
+                className="p-1 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 rounded border border-emerald-500/30 transition-all"
+                title="Sincronizar agora"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </button>
             </div>
           </div>
           

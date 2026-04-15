@@ -61,8 +61,8 @@ export default function Tickets() {
         <div className="flex items-center gap-4 md:gap-6">
           <BackButton iconSize={6} className="p-3 md:p-4" />
           <div>
-            <h1 className="text-2xl md:text-6xl font-light tracking-tight text-zinc-900 dark:text-white">Ordens de Serviço</h1>
-            <p className="text-xs md:text-xl opacity-60 mt-1 md:mt-2 font-light text-white">Gerencie as manutenções e atendimentos</p>
+            <h1 className="text-2xl md:text-6xl font-light tracking-tight text-white">Ordens de Serviço</h1>
+            <p className="text-xs md:text-xl opacity-80 mt-1 md:mt-2 font-light text-white">Gerencie as manutenções e atendimentos</p>
           </div>
         </div>
         

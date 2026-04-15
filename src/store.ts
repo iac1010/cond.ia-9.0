@@ -101,54 +101,75 @@ export const useStore = create<AppState>()(
       biaEnabled: true,
       biaOnline: false,
       
-      fetchInitialData: async () => {
+      lastSync: null,
+  setLastSync: (date) => set({ lastSync: date }),
+  fetchInitialData: async () => {
         if (!isSupabaseConfigured) {
           console.warn('Supabase não configurado. Usando dados locais.');
+          if (window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
+            toast.error('Supabase não configurado. Verifique as variáveis de ambiente.');
+          }
           set({ isLoading: false });
           return;
         }
-        if (isLocalSupabase) {
-          toast.error('Você está usando uma URL do Supabase apontando para localhost. Isso não funcionará no ambiente de preview do AI Studio.');
-        }
+
         set({ isLoading: true });
+        
         try {
-          // Fetch all data in parallel
+          // Helper to wrap supabase calls with individual error handling
+          const safeFetch = async (promise: any, tableName: string) => {
+            try {
+              const res = await promise;
+              if (res.error) {
+                if (res.error.code === 'PGRST205') {
+                  console.warn(`Tabela "${tableName}" não encontrada no Supabase.`);
+                } else if (res.error.code !== 'PGRST116') {
+                  console.error(`Erro na tabela "${tableName}":`, res.error);
+                }
+              }
+              return res;
+            } catch (e) {
+              console.error(`Falha crítica ao buscar "${tableName}":`, e);
+              return { data: null, error: e };
+            }
+          };
+
           const results = await Promise.all([
-            supabase.from('clients').select('*'),
-            supabase.from('tickets').select('*'),
-            supabase.from('products').select('*'),
-            supabase.from('quotes').select('*'),
-            supabase.from('receipts').select('*'),
-            supabase.from('costs').select('*'),
-            supabase.from('appointments').select('*'),
-            supabase.from('checklist_items').select('*'),
-            supabase.from('suppliers').select('*'),
-            supabase.from('supply_items').select('*'),
-            supabase.from('payments').select('*'),
-            supabase.from('legal_agreements').select('*'),
-            supabase.from('scheduled_maintenances').select('*'),
-            supabase.from('consumption_readings').select('*'),
-            supabase.from('assemblies').select('*'),
-            supabase.from('notices').select('*'),
-            supabase.from('packages').select('*'),
-            supabase.from('visitors').select('*'),
-            supabase.from('critical_events').select('*'),
-            supabase.from('digital_folder').select('*'),
-            supabase.from('supply_quotations').select('*'),
-            supabase.from('company_settings').select('*').single(),
-            supabase.from('notifications').select('*'),
-            supabase.from('savings_goals').select('*'),
-            supabase.from('document_templates').select('*'),
-            supabase.from('sales').select('*'),
-            supabase.from('contracts').select('*'),
-            supabase.from('renovations').select('*'),
-            supabase.from('moves').select('*'),
-            supabase.from('billing_rules').select('*'),
-            supabase.from('budget_forecasts').select('*'),
-            supabase.from('feedbacks').select('*'),
-            supabase.from('reservations').select('*'),
-            supabase.from('staff').select('*'),
-            supabase.from('keys').select('*')
+            safeFetch(supabase.from('clients').select('*'), 'clients'),
+            safeFetch(supabase.from('tickets').select('*'), 'tickets'),
+            safeFetch(supabase.from('products').select('*'), 'products'),
+            safeFetch(supabase.from('quotes').select('*'), 'quotes'),
+            safeFetch(supabase.from('receipts').select('*'), 'receipts'),
+            safeFetch(supabase.from('costs').select('*'), 'costs'),
+            safeFetch(supabase.from('appointments').select('*'), 'appointments'),
+            safeFetch(supabase.from('checklist_items').select('*'), 'checklist_items'),
+            safeFetch(supabase.from('suppliers').select('*'), 'suppliers'),
+            safeFetch(supabase.from('supply_items').select('*'), 'supply_items'),
+            safeFetch(supabase.from('payments').select('*'), 'payments'),
+            safeFetch(supabase.from('legal_agreements').select('*'), 'legal_agreements'),
+            safeFetch(supabase.from('scheduled_maintenances').select('*'), 'scheduled_maintenances'),
+            safeFetch(supabase.from('consumption_readings').select('*'), 'consumption_readings'),
+            safeFetch(supabase.from('assemblies').select('*'), 'assemblies'),
+            safeFetch(supabase.from('notices').select('*'), 'notices'),
+            safeFetch(supabase.from('packages').select('*'), 'packages'),
+            safeFetch(supabase.from('visitors').select('*'), 'visitors'),
+            safeFetch(supabase.from('critical_events').select('*'), 'critical_events'),
+            safeFetch(supabase.from('digital_folder').select('*'), 'digital_folder'),
+            safeFetch(supabase.from('supply_quotations').select('*'), 'supply_quotations'),
+            safeFetch(supabase.from('company_settings').select('*').single(), 'company_settings'),
+            safeFetch(supabase.from('notifications').select('*'), 'notifications'),
+            safeFetch(supabase.from('savings_goals').select('*'), 'savings_goals'),
+            safeFetch(supabase.from('document_templates').select('*'), 'document_templates'),
+            safeFetch(supabase.from('sales').select('*'), 'sales'),
+            safeFetch(supabase.from('contracts').select('*'), 'contracts'),
+            safeFetch(supabase.from('renovations').select('*'), 'renovations'),
+            safeFetch(supabase.from('moves').select('*'), 'moves'),
+            safeFetch(supabase.from('billing_rules').select('*'), 'billing_rules'),
+            safeFetch(supabase.from('budget_forecasts').select('*'), 'budget_forecasts'),
+            safeFetch(supabase.from('feedbacks').select('*'), 'feedbacks'),
+            safeFetch(supabase.from('reservations').select('*'), 'reservations'),
+            safeFetch(supabase.from('staff').select('*'), 'staff'),
+            safeFetch(supabase.from('keys').select('*'), 'keys')
           ]);
 
           const [
@@ -703,9 +724,22 @@ export const useStore = create<AppState>()(
         const state = get();
 
         try {
-          // Sync all tables using upsert
-          const syncTasks = [
-            supabase.from('clients').upsert(state.clients.map(c => ({
+          // Helper for sequential syncing with progress
+          const syncTable = async (tableName: string, data: any[]) => {
+            if (data.length === 0) return { error: null };
+            
+            // Chunking to avoid large payload errors
+            const chunkSize = 50;
+            for (let i = 0; i < data.length; i += chunkSize) {
+              const chunk = data.slice(i, i + chunkSize);
+              const { error } = await supabase.from(tableName).upsert(chunk);
+              if (error) return { error };
+            }
+            return { error: null };
+          };
+
+          const tablesToSync = [
+            { name: 'clients', data: state.clients.map(c => ({
               id: c.id,
               name: c.name,
               document: c.document,
@@ -721,8 +755,8 @@ export const useStore = create<AppState>()(
               pets: c.pets,
               cistern_volume: c.cisternVolume,
               reservoir_volume: c.reservoirVolume
-            }))),
-            supabase.from('tickets').upsert(state.tickets.map(t => ({
+            })) },
+            { name: 'tickets', data: state.tickets.map(t => ({
               id: t.id,
               os_number: t.osNumber,
               title: t.title,
@@ -747,16 +781,16 @@ export const useStore = create<AppState>()(
               color: t.color,
               history: t.history,
               used_materials: t.usedMaterials
-            }))),
-            supabase.from('products').upsert(state.products.map(p => ({
+            })) },
+            { name: 'products', data: state.products.map(p => ({
               id: p.id,
               code: p.code,
               name: p.name,
               description: p.description,
               price: p.price,
               unit: p.unit
-            }))),
-            supabase.from('quotes').upsert(state.quotes.map(q => ({
+            })) },
+            { name: 'quotes', data: state.quotes.map(q => ({
               id: q.id,
               client_id: q.clientId,
               date: q.date,
@@ -764,22 +798,22 @@ export const useStore = create<AppState>()(
               status: q.status,
               items: q.items,
               installments: q.installments
-            }))),
-            supabase.from('receipts').upsert(state.receipts.map(r => ({
+            })) },
+            { name: 'receipts', data: state.receipts.map(r => ({
               id: r.id,
               client_id: r.clientId,
               date: r.date,
               value: r.value,
               description: r.description
-            }))),
-            supabase.from('costs').upsert(state.costs.map(c => ({
+            })) },
+            { name: 'costs', data: state.costs.map(c => ({
               id: c.id,
               description: c.description,
               value: c.value,
               date: c.date,
               category: c.category
-            }))),
-            supabase.from('appointments').upsert(state.appointments.map(a => ({
+            })) },
+            { name: 'appointments', data: state.appointments.map(a => ({
               id: a.id,
               title: a.title,
               start_time: a.start,
@@ -787,23 +821,23 @@ export const useStore = create<AppState>()(
               type: a.type,
               ticket_id: a.ticketId,
               notes: a.notes
-            }))),
-            supabase.from('checklist_items').upsert(state.checklistItems.map(i => ({
+            })) },
+            { name: 'checklist_items', data: state.checklistItems.map(i => ({
               id: i.id,
               task: i.task,
               category: i.category,
               client_id: i.clientId,
               client_ids: i.clientIds
-            }))),
-            supabase.from('suppliers').upsert(state.suppliers.map(s => ({
+            })) },
+            { name: 'suppliers', data: state.suppliers.map(s => ({
               id: s.id,
               name: s.name,
               contact: s.contact,
               phone: s.phone,
               email: s.email,
               category: s.category
-            }))),
-            supabase.from('supply_items').upsert(state.supplyItems.map(i => ({
+            })) },
+            { name: 'supply_items', data: state.supplyItems.map(i => ({
               id: i.id,
               name: i.name,
               category: i.category,
@@ -812,8 +846,8 @@ export const useStore = create<AppState>()(
               unit: i.unit,
               last_price: i.lastPrice,
               client_id: i.clientId
-            }))),
-            supabase.from('payments').upsert(state.payments.map(p => ({
+            })) },
+            { name: 'payments', data: state.payments.map(p => ({
               id: p.id,
               client_id: p.clientId,
               amount: p.amount,
@@ -821,8 +855,8 @@ export const useStore = create<AppState>()(
               payment_date: p.paymentDate,
               status: p.status,
               reference: p.reference
-            }))),
-            supabase.from('legal_agreements').upsert(state.legalAgreements.map(a => ({
+            })) },
+            { name: 'legal_agreements', data: state.legalAgreements.map(a => ({
               id: a.id,
               client_id: a.clientId,
               total_amount: a.totalAmount,
@@ -831,8 +865,8 @@ export const useStore = create<AppState>()(
               status: a.status,
               start_date: a.startDate,
               notes: a.notes
-            }))),
-            supabase.from('scheduled_maintenances').upsert(state.scheduledMaintenances.map(m => ({
+            })) },
+            { name: 'scheduled_maintenances', data: state.scheduledMaintenances.map(m => ({
               id: m.id,
               client_id: m.clientId,
               standard_id: m.standardId,
@@ -842,8 +876,8 @@ export const useStore = create<AppState>()(
               next_date: m.nextDate,
               status: m.status,
               category: m.category
-            }))),
-            supabase.from('consumption_readings').upsert(state.consumptionReadings.map(r => ({
+            })) },
+            { name: 'consumption_readings', data: state.consumptionReadings.map(r => ({
               id: r.id,
               client_id: r.clientId,
               type: r.type,
@@ -853,8 +887,8 @@ export const useStore = create<AppState>()(
               date: r.date,
               unit: r.unit,
               billed: r.billed
-            }))),
-            supabase.from('assemblies').upsert(state.assemblies.map(a => ({
+            })) },
+            { name: 'assemblies', data: state.assemblies.map(a => ({
               id: a.id,
               title: a.title,
               description: a.description,
@@ -863,8 +897,8 @@ export const useStore = create<AppState>()(
               options: a.options,
               votes: a.votes,
               legal_validity_hash: a.legalValidityHash
-            }))),
-            supabase.from('notices').upsert(state.notices.map(n => ({
+            })) },
+            { name: 'notices', data: state.notices.map(n => ({
               id: n.id,
               title: n.title,
               content: n.content,
@@ -873,8 +907,8 @@ export const useStore = create<AppState>()(
               tower: n.tower,
               apartment_line: n.apartmentLine,
               client_id: n.clientId
-            }))),
-            supabase.from('packages').upsert(state.packages.map(p => ({
+            })) },
+            { name: 'packages', data: state.packages.map(p => ({
               id: p.id,
               resident_name: p.residentName,
               apartment: p.apartment,
@@ -887,8 +921,8 @@ export const useStore = create<AppState>()(
               qr_code: p.qrCode,
               photo_url: p.photoUrl,
               client_id: p.clientId
-            }))),
-            supabase.from('visitors').upsert(state.visitors.map(v => ({
+            })) },
+            { name: 'visitors', data: state.visitors.map(v => ({
               id: v.id,
               name: v.name,
               document: v.document,
@@ -898,8 +932,8 @@ export const useStore = create<AppState>()(
               valid_until: v.validUntil,
               qr_code: v.qrCode,
               status: v.status
-            }))),
-            supabase.from('critical_events').upsert(state.criticalEvents.map(e => ({
+            })) },
+            { name: 'critical_events', data: state.criticalEvents.map(e => ({
               id: e.id,
               device: e.device,
               location: e.location,
@@ -907,8 +941,8 @@ export const useStore = create<AppState>()(
               status: e.status,
               last_update: e.lastUpdate,
               description: e.description
-            }))),
-            supabase.from('digital_folder').upsert(state.digitalFolder.map(i => ({
+            })) },
+            { name: 'digital_folder', data: state.digitalFolder.map(i => ({
               id: i.id,
               client_id: i.clientId,
               title: i.title,
@@ -919,15 +953,15 @@ export const useStore = create<AppState>()(
               file_url: i.fileUrl,
               status: i.status,
               signatures: i.signatures
-            }))),
-            supabase.from('supply_quotations').upsert(state.supplyQuotations.map(q => ({
+            })) },
+            { name: 'supply_quotations', data: state.supplyQuotations.map(q => ({
               id: q.id,
               date: q.date,
               items: q.items,
               responses: q.responses,
               status: q.status
-            }))),
-            supabase.from('notifications').upsert(state.notifications.map(n => ({
+            })) },
+            { name: 'notifications', data: state.notifications.map(n => ({
               id: n.id,
               title: n.title,
               message: n.message,
@@ -935,8 +969,8 @@ export const useStore = create<AppState>()(
               date: n.date,
               read: n.read,
               link: n.link
-            }))),
-            supabase.from('savings_goals').upsert(state.savingsGoals.map(g => ({
+            })) },
+            { name: 'savings_goals', data: state.savingsGoals.map(g => ({
               id: g.id,
               title: g.title,
               target_amount: g.targetAmount,
@@ -945,8 +979,8 @@ export const useStore = create<AppState>()(
               category: g.category,
               icon: g.icon,
               status: g.status
-            }))),
-            supabase.from('document_templates').upsert(state.documentTemplates.map(t => ({
+            })) },
+            { name: 'document_templates', data: state.documentTemplates.map(t => ({
               id: t.id,
               title: t.title,
               category: t.category,
@@ -954,8 +988,8 @@ export const useStore = create<AppState>()(
               legal_basis: t.legalBasis,
               content: t.content,
               file_url: t.fileUrl
-            }))),
-            supabase.from('sales').upsert(state.sales.map(s => ({
+            })) },
+            { name: 'sales', data: state.sales.map(s => ({
               id: s.id,
               client_id: s.clientId,
               date: s.date,
@@ -964,8 +998,8 @@ export const useStore = create<AppState>()(
               status: s.status,
               area: s.area,
               notes: s.notes
-            }))),
-            supabase.from('contracts').upsert(state.contracts.map(c => ({
+            })) },
+            { name: 'contracts', data: state.contracts.map(c => ({
               id: c.id,
               title: c.title,
               supplier_id: c.supplierId,
@@ -977,8 +1011,8 @@ export const useStore = create<AppState>()(
               status: c.status,
               notes: c.notes,
               file_url: c.fileUrl
-            }))),
-            supabase.from('renovations').upsert(state.renovations.map(r => ({
+            })) },
+            { name: 'renovations', data: state.renovations.map(r => ({
               id: r.id,
               client_id: r.clientId,
               title: r.title,
@@ -988,8 +1022,8 @@ export const useStore = create<AppState>()(
               end_date: r.endDate,
               art_file_url: r.artFileUrl,
               technician_name: r.technicianName
-            }))),
-            supabase.from('moves').upsert(state.moves.map(m => ({
+            })) },
+            { name: 'moves', data: state.moves.map(m => ({
               id: m.id,
               client_id: m.clientId,
               type: m.type,
@@ -997,16 +1031,16 @@ export const useStore = create<AppState>()(
               status: m.status,
               company: m.company,
               notes: m.notes
-            }))),
-            supabase.from('billing_rules').upsert(state.billingRules.map(b => ({
+            })) },
+            { name: 'billing_rules', data: state.billingRules.map(b => ({
               id: b.id,
               name: b.name,
               days_before_due: b.daysBeforeDue,
               days_after_due: b.daysAfterDue,
               message_template: b.messageTemplate,
               active: b.active
-            }))),
-            supabase.from('budget_forecasts').upsert(state.budgetForecasts.map(f => ({
+            })) },
+            { name: 'budget_forecasts', data: state.budgetForecasts.map(f => ({
               id: f.id,
               created_at: f.createdAt,
               month: f.month,
@@ -1014,15 +1048,15 @@ export const useStore = create<AppState>()(
               categories: f.categories,
               insights: f.insights,
               confidence: f.confidence
-            }))),
-            supabase.from('feedbacks').upsert(state.feedbacks.map(f => ({
+            })) },
+            { name: 'feedbacks', data: state.feedbacks.map(f => ({
               id: f.id,
               client_id: f.clientId,
               rating: f.rating,
               comment: f.comment,
               date: f.date
-            }))),
-            supabase.from('reservations').upsert(state.reservations.map(r => ({
+            })) },
+            { name: 'reservations', data: state.reservations.map(r => ({
               id: r.id,
               client_id: r.clientId,
               area_name: r.areaName,
@@ -1031,8 +1065,8 @@ export const useStore = create<AppState>()(
               end_time: r.endTime,
               status: r.status,
               notes: r.notes
-            }))),
-            supabase.from('staff').upsert(state.staff.map(s => ({
+            })) },
+            { name: 'staff', data: state.staff.map(s => ({
               id: s.id,
               name: s.name,
               role: s.role,
@@ -1040,8 +1074,8 @@ export const useStore = create<AppState>()(
               email: s.email,
               shift: s.shift,
               status: s.status
-            }))),
-            supabase.from('keys').upsert(state.keys.map(k => ({
+            })) },
+            { name: 'keys', data: state.keys.map(k => ({
               id: k.id,
               key_name: k.keyName,
               location: k.location,
@@ -1049,37 +1083,49 @@ export const useStore = create<AppState>()(
               borrowed_by: k.borrowedBy,
               borrowed_at: k.borrowedAt,
               returned_at: k.returnedAt
-            }))),
-            supabase.from('company_settings').upsert({
-              id: state.companySettingsId || uuidv4(),
-              name: state.companyData.name,
-              document: state.companyData.document,
-              phone: state.companyData.phone,
-              email: state.companyData.email,
-              address: state.companyData.address,
-              website: state.companyData.website,
-              logo_url: state.companyLogo,
-              signature_url: state.companySignature,
-              background_image: state.backgroundImage,
-              theme: state.theme,
-              menu_order: state.menuOrder,
-              hidden_tiles: state.hiddenTiles,
-              tile_sizes: state.tileSizes,
-              tile_order: state.tileOrder,
-              energy_data: state.energyData,
-              iot_state: state.iotState
-            })
+            })) }
           ];
 
-          const results = await Promise.all(syncTasks);
-          
-          const errors = results.filter(r => r.error);
-          if (errors.length > 0) {
-            console.error('Erros na sincronização:', errors);
-            toast.error('Alguns dados não puderam ser sincronizados. Verifique o console.', { id: loadingToast });
-          } else {
-            toast.success('Todos os dados foram sincronizados com o servidor!', { id: loadingToast });
+          // Sync tables sequentially to avoid overwhelming the server
+          for (const table of tablesToSync) {
+            const { error } = await syncTable(table.name, table.data);
+            if (error) {
+              console.error(`Erro ao sincronizar tabela ${table.name}:`, error);
+              toast.error(`Erro ao sincronizar ${table.name}.`, { id: loadingToast });
+              return;
+            }
           }
+
+          // Sync company settings separately as it's a single object
+          const { error: settingsError } = await supabase.from('company_settings').upsert({
+            id: state.companySettingsId || uuidv4(),
+            name: state.companyData.name,
+            document: state.companyData.document,
+            phone: state.companyData.phone,
+            email: state.companyData.email,
+            address: state.companyData.address,
+            website: state.companyData.website,
+            logo_url: state.companyLogo,
+            signature_url: state.companySignature,
+            background_image: state.backgroundImage,
+            theme: state.theme,
+            menu_order: state.menuOrder,
+            hidden_tiles: state.hiddenTiles,
+            tile_sizes: state.tileSizes,
+            tile_order: state.tileOrder,
+            energy_data: state.energyData,
+            iot_state: state.iotState
+          });
+
+          if (settingsError) {
+            console.error('Erro ao sincronizar configurações:', settingsError);
+            toast.error('Erro ao sincronizar configurações.', { id: loadingToast });
+            return;
+          }
+
+          const now = new Date().toISOString();
+          set({ lastSync: now });
+          toast.success('Sincronização concluída com sucesso!', { id: loadingToast });
         } catch (error: any) {
           console.error('Erro fatal na sincronização:', error);
           toast.error(`Erro na sincronização: ${error.message}`, { id: loadingToast });

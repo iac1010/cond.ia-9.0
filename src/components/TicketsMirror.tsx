@@ -107,8 +107,8 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
               <Hammer className="w-4 h-4 md:w-5 md:h-5 text-rose-400" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-[10px] md:text-sm font-black uppercase tracking-[0.1em] md:tracking-[0.2em] text-white/90 truncate">Gestão de OS</h3>
-              <p className="text-[8px] md:text-[10px] text-white/40 font-bold uppercase tracking-widest truncate">Monitoramento Live</p>
+              <h3 className="text-[10px] md:text-sm font-black uppercase tracking-[0.1em] md:tracking-[0.2em] text-white truncate">Gestão de OS</h3>
+              <p className="text-[8px] md:text-[10px] text-white/80 font-bold uppercase tracking-widest truncate">Monitoramento Live</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 bg-white/5 px-2 md:px-3 py-1 md:py-1.5 rounded-full border border-white/10 backdrop-blur-md shrink-0">
@@ -122,7 +122,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
         {/* Column 1: General Situation */}
         <div className="space-y-6">
           <div className="bg-white/5 rounded-2xl md:rounded-3xl p-3 md:p-4 border border-white/5 backdrop-blur-sm">
-            <h4 className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/50 mb-3 md:mb-4 flex items-center gap-2 truncate">
+            <h4 className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white mb-3 md:mb-4 flex items-center gap-2 truncate">
               <Activity className="w-2.5 md:w-3 h-2.5 md:h-3" /> Situação Geral
             </h4>
             <div className="relative h-32 md:h-40 flex items-center justify-center">
@@ -161,7 +161,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
           </div>
 
           <div className="bg-white/5 rounded-2xl md:rounded-3xl p-3 md:p-4 border border-white/5 backdrop-blur-sm">
-            <h4 className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/50 mb-2 md:mb-3 flex items-center gap-2 truncate">
+            <h4 className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white mb-2 md:mb-3 flex items-center gap-2 truncate">
               <Building2 className="w-2.5 md:w-3 h-2.5 md:h-3" /> OS por Torre
             </h4>
             <div className="space-y-2 md:space-y-3">
@@ -190,7 +190,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
         <div className="space-y-6">
           <div className="bg-white/5 rounded-3xl p-4 border border-white/5 backdrop-blur-sm">
             <div className="flex justify-between items-start mb-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-white/50">Visão Detalhada</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Visão Detalhada</h4>
               <TrendingUp className="w-3 h-3 text-emerald-400" />
             </div>
             <div className="flex flex-col items-center text-center gap-3">
@@ -238,7 +238,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
           </div>
 
           <div className="bg-white/5 rounded-3xl p-4 border border-white/5 h-48">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-4">Soluções de OS (Dias)</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white mb-4">Soluções de OS (Dias)</h4>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={lineData}>
                 <Line 
@@ -261,7 +261,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
         {/* Column 3: Weekly Flow & Alerts */}
         <div className="space-y-6">
           <div className="bg-white/5 rounded-3xl p-4 border border-white/5">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-4">Fluxo de OS Semanal</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white mb-4">Fluxo de OS Semanal</h4>
             <div className="space-y-1.5">
               {realWeeklyFlow.map((item, idx) => (
                 <div 
@@ -290,7 +290,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
           </div>
 
           <div className="bg-white/5 rounded-3xl p-4 border border-white/5">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-4">Notificações & Alertas</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white mb-4">Notificações & Alertas</h4>
             <div className="space-y-3">
               <div className="flex gap-3">
                 <div className="p-2 bg-orange-500/20 rounded-xl h-fit">
