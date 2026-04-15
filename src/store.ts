@@ -107,15 +107,25 @@ export const useStore = create<AppState>()(
         if (!isSupabaseConfigured) {
           console.warn('Supabase não configurado. Usando dados locais.');
           if (window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
-            toast.error('Supabase não configurado. Verifique as variáveis de ambiente.');
+            toast.error('Banco de dados não configurado. Vá em Ajustes para sincronizar ou verifique as variáveis de ambiente.');
           }
           set({ isLoading: false });
           return;
         }
 
         set({ isLoading: true });
+        const state = get();
         
         try {
+          // Test connection first
+          const { error: pingError } = await supabase.from('company_settings').select('id').limit(1);
+          if (pingError && pingError.code !== 'PGRST116' && pingError.code !== 'PGRST205') {
+            console.error('Erro de conexão com Supabase:', pingError);
+            toast.error(`Erro de conexão com o banco de dados: ${pingError.message}`);
+            set({ isLoading: false });
+            return;
+          }
+
           // Helper to wrap supabase calls with individual error handling
           const safeFetch = async (promise: any, tableName: string) => {
             try {
@@ -676,16 +686,17 @@ export const useStore = create<AppState>()(
             const companySettingsData = companySettingsRes.data;
             newState.companySettingsId = companySettingsData.id;
             newState.companyData = {
-              name: companySettingsData.name,
-              document: companySettingsData.document,
-              phone: companySettingsData.phone,
-              email: companySettingsData.email,
-              address: companySettingsData.address,
-              website: companySettingsData.website
+              name: companySettingsData.name || state.companyData.name,
+              document: companySettingsData.document || state.companyData.document,
+              phone: companySettingsData.phone || state.companyData.phone,
+              email: companySettingsData.email || state.companyData.email,
+              address: companySettingsData.address || state.companyData.address,
+              website: companySettingsData.website || state.companyData.website
             };
-            newState.companyLogo = companySettingsData.logo_url;
-            newState.companySignature = companySettingsData.signature_url;
-            newState.theme = companySettingsData.theme as any;
+            newState.companyLogo = companySettingsData.logo_url || state.companyLogo;
+            newState.companySignature = companySettingsData.signature_url || state.companySignature;
+            newState.backgroundImage = companySettingsData.background_image || state.backgroundImage;
+            newState.theme = (companySettingsData.theme as any) || state.theme;
             if (companySettingsData.menu_order) {
               newState.menuOrder = companySettingsData.menu_order;
             }
@@ -707,8 +718,9 @@ export const useStore = create<AppState>()(
           }
 
           set(newState);
-        } catch (error) {
+        } catch (error: any) {
           console.error('Erro ao buscar dados iniciais do Supabase:', error);
+          toast.error(`Erro ao carregar dados do banco: ${error.message || 'Erro desconhecido'}`);
         } finally {
           set({ isLoading: false });
         }

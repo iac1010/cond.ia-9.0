@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../store';
-import { Download, Printer, Edit, CheckCircle2, XCircle, DollarSign, Camera, MapPin, User, MessageSquare, Plus, QrCode, Share2, Sparkles, Wrench } from 'lucide-react';
+import { Download, Printer, Edit, CheckCircle2, XCircle, DollarSign, Camera, MapPin, User, MessageSquare, Plus, QrCode, Share2, Sparkles, Wrench, ClipboardList } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -144,16 +144,26 @@ export default function TicketView() {
             )}
             <button 
               onClick={() => {
-                let description = '';
-                if (ticket.type === 'CORRETIVA') {
-                  description = `Problema relatado: ${ticket.reportedProblem}\n\nRelato do serviço: ${ticket.serviceReport || ''}`;
-                } else {
-                  const checklistText = ticket.checklistResults?.map(r => {
+                const sections = [];
+                if (ticket.reportedProblem) sections.push(`Problema relatado: ${ticket.reportedProblem}`);
+                if (ticket.serviceReport) sections.push(`Relato do serviço: ${ticket.serviceReport}`);
+                
+                if (ticket.checklistResults && ticket.checklistResults.length > 0) {
+                  const checklistText = ticket.checklistResults.map(r => {
                     const item = checklistItems.find(i => i.id === r.taskId);
-                    return `- ${item?.task}: ${r.status}${r.notes ? ` (${r.notes})` : ''}`;
+                    return `- ${item?.task || 'Tarefa'}: ${r.status}${r.notes ? ` (${r.notes})` : ''}`;
                   }).join('\n');
-                  description = `Checklist Preventiva:\n${checklistText}\n\nObservações: ${ticket.observations || ''}`;
+                  sections.push(`Checklist Realizado:\n${checklistText}`);
                 }
+
+                if (ticket.usedMaterials && ticket.usedMaterials.length > 0) {
+                  const materialsText = ticket.usedMaterials.map(m => `- ${m.name}: ${m.quantity}`).join('\n');
+                  sections.push(`Materiais Utilizados:\n${materialsText}`);
+                }
+
+                if (ticket.observations) sections.push(`Observações: ${ticket.observations}`);
+                
+                const description = sections.join('\n\n');
                 navigate('/technical-report', { state: { description, clientId: ticket.clientId } });
               }}
               className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg"
@@ -339,25 +349,32 @@ export default function TicketView() {
 
         {/* Conteúdo Específico */}
         <div className="space-y-10">
-          {ticket.type === 'CORRETIVA' ? (
-            <>
-              <div className="break-inside-avoid page-break-inside-avoid bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
-                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div> Problema Relatado
-                </h3>
-                <p className="text-zinc-800 whitespace-pre-wrap text-lg leading-relaxed">{ticket.reportedProblem}</p>
-              </div>
+          {/* Problema Relatado (Corretiva) */}
+          {ticket.reportedProblem && (
+            <div className="break-inside-avoid page-break-inside-avoid bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
+              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div> Problema Relatado
+              </h3>
+              <p className="text-zinc-800 whitespace-pre-wrap text-lg leading-relaxed">{ticket.reportedProblem}</p>
+            </div>
+          )}
 
-              <div className="break-inside-avoid page-break-inside-avoid bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
-                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Relato da Manutenção
-                </h3>
-                <p className="text-zinc-800 whitespace-pre-wrap text-lg leading-relaxed">{ticket.serviceReport || 'Nenhum relato preenchido.'}</p>
-              </div>
-            </>
-          ) : (
+          {/* Relato da Manutenção (Corretiva) */}
+          {ticket.serviceReport && (
+            <div className="break-inside-avoid page-break-inside-avoid bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
+              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Relato da Manutenção
+              </h3>
+              <p className="text-zinc-800 whitespace-pre-wrap text-lg leading-relaxed">{ticket.serviceReport}</p>
+            </div>
+          )}
+
+          {/* Resultados do Checklist */}
+          {ticket.checklistResults && ticket.checklistResults.length > 0 && (
             <div className="break-inside-avoid page-break-inside-avoid">
-              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">Resultados do Checklist</h3>
+              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2 flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-emerald-500" /> Resultados do Checklist
+              </h3>
               <div className="overflow-hidden border border-zinc-200 rounded-3xl shadow-sm">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
@@ -368,12 +385,11 @@ export default function TicketView() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 bg-white">
-                    {ticket.checklistResults?.map(result => {
+                    {ticket.checklistResults.map(result => {
                       const item = checklistItems.find(i => i.id === result.taskId);
-                      if (!item) return null;
                       return (
                         <tr key={result.taskId} className="break-inside-avoid">
-                          <td className="p-5 text-zinc-900 font-bold text-base">{item.task}</td>
+                          <td className="p-5 text-zinc-900 font-bold text-base">{item?.task || 'Tarefa removida'}</td>
                           <td className="p-5 text-center">
                             <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block w-full ${
                               result.status === 'OK' ? 'bg-emerald-100 text-emerald-700' :
@@ -387,6 +403,33 @@ export default function TicketView() {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Materiais Usados */}
+          {ticket.usedMaterials && ticket.usedMaterials.length > 0 && (
+            <div className="break-inside-avoid page-break-inside-avoid">
+              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2 flex items-center gap-2">
+                <Wrench className="w-4 h-4 text-orange-500" /> Materiais Utilizados
+              </h3>
+              <div className="overflow-hidden border border-zinc-200 rounded-3xl shadow-sm">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-zinc-50 text-zinc-500">
+                      <th className="p-5 font-black uppercase tracking-widest border-b border-zinc-200">Material</th>
+                      <th className="p-5 font-black uppercase tracking-widest border-b border-zinc-200 w-32 text-center">Quantidade</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 bg-white">
+                    {ticket.usedMaterials.map((material, index) => (
+                      <tr key={index} className="break-inside-avoid">
+                        <td className="p-5 text-zinc-900 font-bold text-base">{material.name}</td>
+                        <td className="p-5 text-center text-zinc-600 font-bold">{material.quantity}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

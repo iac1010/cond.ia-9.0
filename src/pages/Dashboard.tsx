@@ -1216,21 +1216,21 @@ export default function Dashboard() {
             <FileText className="w-6 h-6 text-white drop-shadow-lg group-hover:scale-110 transition-transform" />
           </Link>
           <Link 
-            to={isEditMode ? '#' : "/clients"} 
+            to={isEditMode ? '#' : "/financial?action=add-cost"} 
             onClick={(e) => isEditMode && e.preventDefault()}
-            title="Novo Cliente" 
+            title="Adicionar Custo" 
             className="bg-gradient-to-br from-[#da532c] to-[#b94322] hover:brightness-110 transition-all flex items-center justify-center relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-90 group"
           >
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none" />
-            <UserPlus className="w-6 h-6 text-white drop-shadow-lg group-hover:scale-110 transition-transform" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none" />
+            <TrendingDown className="w-6 h-6 text-white drop-shadow-lg group-hover:scale-110 transition-transform" />
           </Link>
           <Link 
-            to={isEditMode ? '#' : "/financial"} 
+            to={isEditMode ? '#' : "/financial?action=add-income"} 
             onClick={(e) => isEditMode && e.preventDefault()}
-            title="Novo Gasto" 
+            title="Adicionar Receita" 
             className="bg-gradient-to-br from-[#00a300] to-[#008000] hover:brightness-110 transition-all flex items-center justify-center relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-90 group"
           >
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none" />
             <DollarSign className="w-6 h-6 text-white drop-shadow-lg group-hover:scale-110 transition-transform" />
           </Link>
         </div>

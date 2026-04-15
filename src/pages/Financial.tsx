@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { Cost } from '../types';
 import { 
   DollarSign, TrendingUp, TrendingDown, Plus, Trash2, Wallet, 
   FileSpreadsheet, BarChart3, Lightbulb, ArrowUpRight, ArrowDownRight, 
   X, Calendar, Tag, User, ShieldCheck, FolderOpen, 
-  FileText, UserCheck, Target, Brain, Loader2, Sparkles
+  FileText, UserCheck, Target, Brain, Loader2, Sparkles, ShieldAlert, AlertCircle
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Modal } from '../components/Modal';
@@ -18,13 +18,15 @@ import {
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
   AreaChart, Area, ReferenceLine
 } from 'recharts';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 export default function Financial() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const { 
     receipts, costs, addCost, deleteCost, addReceipt, deleteReceipt, 
     updateCost, updateReceipt, clients, payments, savingsGoals, 
@@ -43,6 +45,20 @@ export default function Financial() {
   const [moneyToAdd, setMoneyToAdd] = useState(0);
   const [editingTransaction, setEditingTransaction] = useState<{ type: 'cost' | 'income' | 'goal', id: string } | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get('action');
+    if (action === 'add-cost') {
+      setIsAddingCost(true);
+    } else if (action === 'add-income') {
+      setIsAddingIncome(true);
+    }
+    // Limpar o parâmetro da URL para não reabrir ao atualizar
+    if (action) {
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash.split('?')[0]);
+    }
+  }, [location]);
   
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'REPORTS'>('DASHBOARD');
   
@@ -193,6 +209,7 @@ export default function Financial() {
 
   const totalIncome = receipts.reduce((sum, r) => sum + r.value, 0);
   const totalCosts = costs.reduce((sum, c) => sum + c.value, 0);
+  const estimatedTax = totalIncome * 0.08;
   const balance = totalIncome - totalCosts;
   const profitMargin = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
 
@@ -326,6 +343,7 @@ export default function Financial() {
       const financialData = {
         totalIncome,
         totalCosts,
+        estimatedTax,
         balance,
         profitMargin,
         accountsReceivable,
@@ -545,7 +563,23 @@ export default function Financial() {
           </div>
         </GlassCard>
 
-        <GlassCard title="Resumo por Categoria" className="md:col-span-2">
+        <GlassCard title="Resumo de Impostos">
+          <div className="space-y-4">
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-1">Total de Receitas</p>
+              <p className="text-xl font-black text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalIncome)}</p>
+            </div>
+            <div className="p-4 bg-orange-500/10 rounded-2xl border border-orange-500/20">
+              <p className="text-[10px] font-black uppercase tracking-widest text-orange-400/60 mb-1">Imposto Estimado (8%)</p>
+              <p className="text-xl font-black text-orange-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estimatedTax)}</p>
+            </div>
+            <p className="text-[10px] text-white/20 italic px-2">
+              * Cálculo baseado na alíquota média de 8% sobre o faturamento bruto.
+            </p>
+          </div>
+        </GlassCard>
+
+        <GlassCard title="Resumo por Categoria">
           <div className="space-y-4">
             {expensesByCategory.map((cat, idx) => (
               <div key={cat.name} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
@@ -570,6 +604,7 @@ export default function Financial() {
                 <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40">Data</th>
                 <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40">Descrição</th>
                 <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40">Categoria/Cliente</th>
+                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Imposto (8%)</th>
                 <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Valor</th>
               </tr>
             </thead>
@@ -580,6 +615,9 @@ export default function Financial() {
                   <td className="py-4 text-sm font-bold text-white">{t.description}</td>
                   <td className="py-4 text-sm text-white/40">
                     {t.type === 'income' ? (clients.find(c => c.id === (t as any).clientId)?.name || 'Cliente') : (t as any).category}
+                  </td>
+                  <td className="py-4 text-sm font-bold text-right text-orange-400/60">
+                    {t.type === 'income' ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value * 0.08) : '-'}
                   </td>
                   <td className={`py-4 text-sm font-black text-right ${t.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {t.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}
@@ -844,6 +882,28 @@ export default function Financial() {
           <div className="flex items-center gap-2 text-white/20 text-[8px] font-bold uppercase tracking-widest">
             <ShieldCheck className="w-2 h-2" />
             <span>Healthy Cashflow</span>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white/5 rounded-[2.5rem] p-6 border border-white/10 shadow-2xl backdrop-blur-3xl relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/20 transition-all duration-700" />
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Imposto Estimado (8%)</h3>
+            <div className="p-2 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-white tracking-tighter mb-2">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estimatedTax)}
+          </p>
+          <div className="flex items-center gap-2 text-orange-400/60 text-[8px] font-bold uppercase tracking-widest">
+            <AlertCircle className="w-2 h-2" />
+            <span>Provisão de Impostos</span>
           </div>
         </motion.div>
 

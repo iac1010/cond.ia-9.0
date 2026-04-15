@@ -93,6 +93,19 @@ export default function TicketForm() {
     }
   }, [id, tickets]);
 
+  // Filter checklist items based on selected client
+  const filteredChecklistItems = checklistItems.filter(item => {
+    const itemClientIds = item.clientIds || (item.clientId ? [item.clientId] : []);
+    return itemClientIds.length === 0 || itemClientIds.includes(clientId);
+  });
+
+  // Auto-select checklist for new preventive tickets
+  useEffect(() => {
+    if (!id && type === 'PREVENTIVA' && clientId && selectedTasks.size === 0) {
+      setSelectedTasks(new Set(filteredChecklistItems.map(i => i.id)));
+    }
+  }, [type, clientId, filteredChecklistItems, id]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -129,12 +142,6 @@ export default function TicketForm() {
     }
     navigate('/tickets');
   };
-
-  // Filter checklist items based on selected client
-  const filteredChecklistItems = checklistItems.filter(item => {
-    const itemClientIds = item.clientIds || (item.clientId ? [item.clientId] : []);
-    return itemClientIds.length === 0 || itemClientIds.includes(clientId);
-  });
 
   const handleAddMaterial = () => {
     if (!materialName.trim()) return;
@@ -459,6 +466,39 @@ export default function TicketForm() {
                         placeholder="Nome do técnico"
                       />
                     </div>
+
+                    {/* Atalho para Checklist no Geral */}
+                    <div className="md:col-span-2 pt-6 border-t border-white/10">
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-white/40 ml-1">Checklist Selecionado</label>
+                        <button 
+                          type="button"
+                          onClick={() => setActiveTab('checklist')}
+                          className="text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-2"
+                        >
+                          <Plus className="w-3 h-3" /> Gerenciar Checklist
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedTasks.size > 0 ? (
+                          Array.from(selectedTasks).slice(0, 8).map(taskId => {
+                            const item = checklistItems.find(i => i.id === taskId);
+                            return (
+                              <span key={taskId} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-bold">
+                                {item?.task || 'Tarefa'}
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-white/20 italic">Nenhum item selecionado. Clique em "Gerenciar Checklist" para adicionar.</p>
+                        )}
+                        {selectedTasks.size > 8 && (
+                          <span className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-[10px] font-bold">
+                            + {selectedTasks.size - 8} itens
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -516,6 +556,59 @@ export default function TicketForm() {
                         className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-2xl px-6 py-5 outline-none transition-all text-white text-lg min-h-[120px] resize-none"
                         placeholder="Descreva o que foi identificado ou realizado..."
                       />
+                    </div>
+
+                    {/* Checklist Rápido no Detalhes do Serviço */}
+                    <div className="pt-6 border-t border-white/10">
+                      <div className="flex items-center justify-between mb-6">
+                        <label className="block text-sm font-bold uppercase tracking-widest text-white/40 ml-1">Checklist da OS</label>
+                        <button 
+                          type="button"
+                          onClick={() => setActiveTab('checklist')}
+                          className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          Ver Checklist Completo
+                        </button>
+                      </div>
+                      
+                      {selectedTasks.size > 0 ? (
+                        <div className="space-y-3">
+                          {Array.from(selectedTasks).slice(0, 5).map(taskId => {
+                            const item = checklistItems.find(i => i.id === taskId);
+                            if (!item) return null;
+                            return (
+                              <div key={taskId} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
+                                <span className="text-sm font-medium">{item.task}</span>
+                                <div className="flex items-center gap-3">
+                                  <span className={`text-[10px] font-black px-2 py-1 rounded ${
+                                    checklistResults[taskId]?.status === 'OK' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    checklistResults[taskId]?.status === 'NOK' ? 'bg-red-500/20 text-red-400' :
+                                    'bg-white/10 text-white/40'
+                                  }`}>
+                                    {checklistResults[taskId]?.status || 'OK'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {selectedTasks.size > 5 && (
+                            <p className="text-[10px] text-white/20 text-center uppercase tracking-widest font-black">
+                              + {selectedTasks.size - 5} itens no checklist
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center bg-white/5 rounded-2xl border border-dashed border-white/10">
+                          <p className="text-sm text-white/20 italic">Nenhum item selecionado no checklist.</p>
+                          <button 
+                            type="button"
+                            onClick={() => setActiveTab('checklist')}
+                            className="mt-4 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                          >
+                            Selecionar Itens
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -6,16 +6,23 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Supabase credentials missing in server environment!');
+const isSupabaseConfigured = 
+  !!supabaseUrl && 
+  !!supabaseKey && 
+  supabaseUrl.startsWith('https://') &&
+  !supabaseUrl.includes('placeholder') &&
+  !supabaseUrl.includes('YOUR_SUPABASE_PROJECT_URL');
+
+if (!isSupabaseConfigured) {
+  console.error('❌ Supabase credentials missing or invalid in server environment!');
 }
 
 const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder-key'
+  isSupabaseConfigured ? supabaseUrl : 'https://placeholder-project.supabase.co',
+  isSupabaseConfigured ? supabaseKey : 'placeholder-key'
 );
 
 let lastWebhookReceived: string | null = null;
@@ -41,7 +48,7 @@ async function startServer() {
   apiRouter.get('/status', (req, res) => {
     res.json({ 
       status: 'online', 
-      supabaseConfigured: !!supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co',
+      supabaseConfigured: isSupabaseConfigured,
       geminiConfigured: !!(process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY),
       lastWebhookReceived,
       lastMessageExtracted,
