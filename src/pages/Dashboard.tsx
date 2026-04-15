@@ -323,6 +323,7 @@ export default function Dashboard() {
     hiddenTiles, toggleTileVisibility, companySignature, companyData,
     assemblies, savingsGoals, consumptionReadings,
     contracts, renovations, moves, billingRules, budgetForecasts,
+    reservations,
     backgroundImage,
     tileSizes: storeTileSizes,
     tileOrder: storeTileOrder,
@@ -482,30 +483,49 @@ export default function Dashboard() {
         icon: <CalendarIcon className="w-2 h-2 text-blue-400" />
       }));
 
-    const maintenances = scheduledMaintenances
-      .filter(m => m.nextDate && new Date(m.nextDate) > now)
-      .map(m => ({
-        id: m.id,
-        title: `Manut. Prev: ${m.item}`,
-        date: m.nextDate,
-        type: 'Manutenção',
-        icon: <Hammer className="w-2 h-2 text-amber-400" />
-      }));
-
     const tasks = tickets
-      .filter(t => t.type === 'TAREFA' && t.date && new Date(t.date) > now && t.status !== 'CONCLUIDO')
+      .filter(t => (t.type === 'TAREFA' || t.type === 'CORRETIVA') && t.date && new Date(t.date) > now && t.status !== 'CONCLUIDO')
       .map(t => ({
         id: t.id,
-        title: t.title || `Tarefa #${t.osNumber || t.id.slice(0, 5)}`,
+        title: t.title || (t.type === 'CORRETIVA' ? `Corretiva: ${t.reportedProblem || t.id.slice(0, 5)}` : `Tarefa #${t.osNumber || t.id.slice(0, 5)}`),
         date: t.date,
-        type: 'Tarefa',
-        icon: <ClipboardList className="w-2 h-2 text-emerald-400" />
+        type: t.type === 'CORRETIVA' ? 'Corretiva' : 'Tarefa',
+        icon: t.type === 'CORRETIVA' ? <AlertTriangle className="w-2 h-2 text-red-400" /> : <ClipboardList className="w-2 h-2 text-emerald-400" />
       }));
 
-    return [...appts, ...maintenances, ...tasks]
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 4);
-  }, [appointments, scheduledMaintenances, tickets]);
+    const movesList = moves
+      .filter(m => m.date && new Date(m.date) > now && m.status !== 'CANCELLED')
+      .map(m => ({
+        id: m.id,
+        title: `Mudança: ${m.type === 'IN' ? 'Entrada' : 'Saída'}`,
+        date: m.date,
+        type: 'Mudança',
+        icon: <Truck className="w-2 h-2 text-orange-400" />
+      }));
+
+    const renovationsList = renovations
+      .filter(r => r.startDate && new Date(r.startDate) > now && r.status !== 'REJECTED')
+      .map(r => ({
+        id: r.id,
+        title: `Obra: ${r.title}`,
+        date: r.startDate,
+        type: 'Obra',
+        icon: <Hammer className="w-2 h-2 text-red-400" />
+      }));
+
+    const reservationsList = reservations
+      .filter(r => r.date && new Date(r.date) > now && r.status !== 'CANCELLED')
+      .map(r => ({
+        id: r.id,
+        title: `Reserva: ${r.areaName}`,
+        date: r.date,
+        type: 'Reserva',
+        icon: <Clock className="w-2 h-2 text-purple-400" />
+      }));
+
+    return [...appts, ...tasks, ...movesList, ...renovationsList, ...reservationsList]
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [appointments, tickets, moves, renovations, reservations]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -980,10 +1000,10 @@ export default function Dashboard() {
               <p className="text-[10px] font-black uppercase text-white/50 tracking-[0.2em] truncate">Agenda</p>
             </div>
             
-            <div className="flex-1 space-y-2 overflow-hidden">
+            <div className="flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar scrollbar-hide">
               {nextEvents.length > 0 ? (
                 nextEvents.map((event) => (
-                  <div key={event.id} className="border-l-2 border-white/20 pl-2 py-1 hover:bg-white/5 transition-colors rounded-r-lg">
+                  <div key={event.id} className="border-l-2 border-white/20 pl-2 py-1.5 hover:bg-white/5 transition-colors rounded-r-lg shrink-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       {event.icon}
                       <p className="text-[11px] font-bold truncate leading-tight text-white/90">{event.title}</p>
@@ -1001,7 +1021,10 @@ export default function Dashboard() {
                   </div>
                 ))
               ) : (
-                <p className="text-[10px] italic text-white/40">Sem compromissos</p>
+                <div className="h-full flex flex-col items-center justify-center opacity-40 py-4">
+                  <CalendarIcon className="w-8 h-8 mb-2" />
+                  <p className="text-[10px] italic">Sem compromissos</p>
+                </div>
               )}
             </div>
           </div>
@@ -1749,7 +1772,7 @@ export default function Dashboard() {
   }, [
     clients.length, tickets.length, products.length, receipts.length, 
     saldo, nextEvents, notices.length, packages.length, 
-    visitors.length, criticalEvents, energyData.length, supplyItems.length, payments.length, scheduledMaintenances.length,
+    visitors.length, criticalEvents, energyData.length, supplyItems.length, payments.length,
     savingsGoals.length, costs.length, consumptionReadings.length,
     contracts.length, renovations.length, moves.length, billingRules.length, budgetForecasts.length
   ]);

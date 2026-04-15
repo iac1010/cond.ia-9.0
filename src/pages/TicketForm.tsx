@@ -10,7 +10,7 @@ import { MAINTENANCE_CATEGORIES } from '../constants/maintenance';
 export default function TicketForm() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { clients, checklistItems, addTicket, updateTicket, tickets, addChecklistItem, supplyItems } = useStore();
+  const { clients, checklistItems, addTicket, updateTicket, tickets, addChecklistItem, updateChecklistItem, deleteChecklistItem, supplyItems } = useStore();
   
   const [title, setTitle] = useState('');
   const [osNumber, setOsNumber] = useState('');
@@ -34,6 +34,11 @@ export default function TicketForm() {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskCategory, setNewTaskCategory] = useState('Geral');
   const [isAddingTask, setIsAddingTask] = useState(false);
+  
+  // Edit task state
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskName, setEditTaskName] = useState('');
+  const [editTaskCategory, setEditTaskCategory] = useState('');
   
   // Corretiva
   const [reportedProblem, setReportedProblem] = useState('');
@@ -223,6 +228,35 @@ export default function TicketForm() {
     
     setNewTaskName('');
     setIsAddingTask(false);
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingTaskId || !editTaskName.trim()) return;
+    
+    const item = checklistItems.find(i => i.id === editingTaskId);
+    if (!item) return;
+
+    await updateChecklistItem(editingTaskId, {
+      ...item,
+      task: editTaskName,
+      category: editTaskCategory
+    });
+    
+    setEditingTaskId(null);
+    setEditTaskName('');
+    setEditTaskCategory('');
+  };
+
+  const handleDeleteTask = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Tem certeza que deseja excluir esta tarefa do checklist?')) {
+      await deleteChecklistItem(id);
+      
+      // Remove from selected tasks if it was selected
+      const newSelected = new Set(selectedTasks);
+      newSelected.delete(id);
+      setSelectedTasks(newSelected);
+    }
   };
 
   return (
@@ -712,6 +746,51 @@ export default function TicketForm() {
                         <div className="space-y-4">
                           {filteredChecklistItems.filter(item => item.category === category).map(item => {
                             const isSelected = selectedTasks.has(item.id);
+                            const isEditing = editingTaskId === item.id;
+
+                            if (isEditing) {
+                              return (
+                                <div key={item.id} className="bg-white/10 border border-white/20 rounded-3xl p-6 space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Nome da Tarefa</label>
+                                      <input 
+                                        type="text"
+                                        value={editTaskName}
+                                        onChange={(e) => setEditTaskName(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500/50 transition-all"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Categoria</label>
+                                      <input 
+                                        type="text"
+                                        value={editTaskCategory}
+                                        onChange={(e) => setEditTaskCategory(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500/50 transition-all"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end gap-3">
+                                    <button 
+                                      type="button"
+                                      onClick={() => setEditingTaskId(null)}
+                                      className="px-6 py-2 text-white/40 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                                    >
+                                      Cancelar
+                                    </button>
+                                    <button 
+                                      type="button"
+                                      onClick={handleUpdateTask}
+                                      className="px-6 py-2 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+                                    >
+                                      Atualizar
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             return (
                               <div 
                                 key={item.id} 
@@ -731,8 +810,32 @@ export default function TicketForm() {
                                   }`}>
                                     {isSelected && <CheckCircle2 className="w-4 h-4 text-black" />}
                                   </div>
-                                  <div className={`font-bold text-lg transition-colors ${isSelected ? 'text-white' : 'text-white/60 group-hover:text-white'}`}>
+                                  <div className={`font-bold text-lg transition-colors flex-1 ${isSelected ? 'text-white' : 'text-white/60 group-hover:text-white'}`}>
                                     {item.task}
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingTaskId(item.id);
+                                        setEditTaskName(item.task);
+                                        setEditTaskCategory(item.category);
+                                      }}
+                                      className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
+                                      title="Editar tarefa"
+                                    >
+                                      <Wrench className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleDeleteTask(item.id, e)}
+                                      className="p-2 hover:bg-red-500/20 rounded-lg text-white/40 hover:text-red-400 transition-all"
+                                      title="Excluir tarefa"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </div>
                                 
