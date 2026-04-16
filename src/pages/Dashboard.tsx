@@ -14,6 +14,7 @@ import {
   Box, UserCheck, Activity, Maximize2, CheckCircle2, Presentation, LogOut,
   X, Download, FileUp, Database as DatabaseIcon, MessageSquare, Target,
   Wifi, WifiOff, GripVertical, ClipboardList, LayoutList,
+  Eye, EyeOff,
   Bell, Truck, Brain, ExternalLink, Sparkles, LineChart
 } from 'lucide-react';
 import { KanbanMirror } from '../components/KanbanMirror';
@@ -332,6 +333,8 @@ export default function Dashboard() {
     biaOnline,
     biaEnabled,
     toggleBia,
+    showBalance,
+    setShowBalance,
     lastSync,
     syncToSupabase
   } = useStore();
@@ -900,9 +903,25 @@ export default function Dashboard() {
             >
               <div className="flex flex-col items-center justify-center text-center">
                 <p className="text-[10px] font-black uppercase text-white/40 mb-2 tracking-[0.3em]">Saldo Atual</p>
-                <span className="text-5xl font-black text-white group-hover/fin:text-emerald-400 transition-all duration-500 scale-100 group-hover/fin:scale-110">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(saldo)}
-                </span>
+                <div className="relative group/balance">
+                  <span className={`text-5xl font-black text-white group-hover/fin:text-emerald-400 transition-all duration-500 scale-100 group-hover/fin:scale-110 ${!showBalance ? 'blur-md select-none' : ''}`}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(saldo)}
+                  </span>
+                  {!showBalance && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <EyeOff className="w-8 h-8 text-white/20" />
+                    </div>
+                  )}
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowBalance(!showBalance);
+                    }}
+                    className="absolute -right-12 top-1/2 -translate-y-1/2 p-2 bg-white/5 hover:bg-white/10 rounded-full opacity-0 group-hover/fin:opacity-100 transition-opacity"
+                  >
+                    {showBalance ? <Eye className="w-4 h-4 text-white/40" /> : <EyeOff className="w-4 h-4 text-white/40" />}
+                  </button>
+                </div>
                 <div className="mt-6 flex items-center gap-3 bg-emerald-500/10 px-4 py-2 rounded-2xl border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
                   <span className="text-xs font-black text-emerald-400 uppercase tracking-[0.2em]">Fluxo de Caixa Ativo</span>

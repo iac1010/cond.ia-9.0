@@ -92,6 +92,7 @@ export const useStore = create<AppState>()(
       theme: 'light',
       isAuthenticated: localStorage.getItem('isAuthenticated') === 'true',
       menuOrder: ['dashboard', 'accountability', 'consumption', 'clients', 'products', 'supplies', 'tickets', 'kanban', 'quotes', 'receipts', 'financial', 'calendar', 'settings'],
+      showBalance: true,
       hiddenTiles: [],
       tileSizes: {},
       tileOrder: null,
@@ -1144,6 +1145,7 @@ export const useStore = create<AppState>()(
         }
       },
       setBiaOnline: (online) => set({ biaOnline: online }),
+      setShowBalance: (show) => set({ showBalance: show }),
       setCompanyLogo: async (logo) => {
         set({ companyLogo: logo });
         const id = get().companySettingsId;

@@ -523,6 +523,7 @@ export interface AppState {
   theme: 'light' | 'dark';
   isAuthenticated: boolean;
   menuOrder: string[];
+  showBalance: boolean;
   hiddenTiles: string[];
   tileSizes: { [key: string]: 'small' | 'medium' | 'large' };
   tileOrder: string[] | null;
@@ -536,6 +537,7 @@ export interface AppState {
   fetchInitialData: () => Promise<void>;
   syncToSupabase: () => Promise<void>;
   setBiaOnline: (online: boolean) => void;
+  setShowBalance: (show: boolean) => void;
   setCompanyLogo: (logo: string | null) => Promise<void>;
   setCompanySignature: (signature: string | null) => Promise<void>;
   setBackgroundImage: (image: string | null) => Promise<void>;

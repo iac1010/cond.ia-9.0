@@ -25,6 +25,7 @@ export default function Settings() {
     restoreData, logout,
     whatsappEnabled, toggleWhatsApp,
     biaEnabled, toggleBia,
+    showBalance, setShowBalance,
     syncToSupabase
   } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -208,15 +209,35 @@ export default function Settings() {
     quotes: 'Orçamentos',
     receipts: 'Recibos',
     financial: 'Financeiro',
+    'financial-brain': 'Cérebro Financeiro',
+    'budget-forecast': 'Previsão Orçamentária',
     calendar: 'Agenda',
-    accountability: 'Central de Custos',
+    'intelligent-checklist': 'Manutenção Preventiva',
+    'qr-codes': 'QR Codes',
+    'qr-reports': 'Relatos de Moradores',
+    approvals: 'Reservatório de OS',
+    'sys-health': 'Saúde do Sistema',
+    'quick-actions': 'Ações Rápidas',
+    'incoming-money': 'Entradas de Dinheiro',
+    supplies: 'Insumos',
     consumption: 'Consumo (Água/Gás)',
     locker: 'Locker Digital',
     monitoring: 'Automações IoT',
     settings: 'Ajustes',
     'document-factory': 'Central de Documentos',
+    'document-factory-wide': 'Central de Documentos (Largo)',
     'system-presentation': 'Apresentação',
+    'water-management': 'Gestão de Água',
+    'billing-rules': 'Regras de Cobrança',
+    contracts: 'Contratos',
+    'renovations-moves': 'Obras & Mudanças',
     'demo-data': 'Backup / Demo',
+    'sales-planning': 'Planejamento de Vendas',
+    'condfy-ia-login': 'Login Condfy.IA',
+    'execution-center': 'Central de Execução',
+    'technical-report': 'Relatório Técnico',
+    'commercial-mirror': 'Espelho Comercial',
+    'whatsapp-status': 'Status WhatsApp',
   };
 
   const containerVariants = {
@@ -554,6 +575,34 @@ export default function Settings() {
               </button>
             </div>
           </form>
+        </motion.div>
+
+        {/* Privacy Section */}
+        <motion.div variants={itemVariants} className="bg-zinc-50 rounded-3xl border border-zinc-200 p-8 shadow-xl">
+          <h2 className="text-2xl font-bold mb-8 flex items-center gap-3 text-zinc-900">
+            <EyeOff className="w-6 h-6 text-red-600" />
+            Privacidade
+          </h2>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-6 bg-white rounded-2xl border border-zinc-200">
+              <div>
+                <h3 className="text-lg font-bold text-zinc-900">Exibir Saldo no Dashboard</h3>
+                <p className="text-zinc-500 font-light">Bloqueie ou desbloqueie a visualização do saldo financeiro na tela inicial.</p>
+              </div>
+              <button
+                onClick={() => setShowBalance(!showBalance)}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none ${
+                  showBalance ? 'bg-emerald-500' : 'bg-zinc-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                    showBalance ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </motion.div>
 
         {/* Dashboard Visibility Section */}
