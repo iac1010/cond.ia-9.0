@@ -94,6 +94,12 @@ export const useStore = create<AppState>()(
       menuOrder: ['dashboard', 'accountability', 'consumption', 'clients', 'products', 'supplies', 'tickets', 'kanban', 'quotes', 'receipts', 'financial', 'calendar', 'settings'],
       showBalance: true,
       hiddenTiles: [],
+      costCategories: [
+        "Material", "Manutenção", "Limpeza", "Segurança", "Energia Elétrica", 
+        "Água e Esgoto", "Internet / Tecnologia", "Combustível", "Alimentação", 
+        "Ferramentas", "Seguros", "Impostos", "Marketing", "Salários / RH", 
+        "Encargos", "Outros"
+      ],
       tileSizes: {},
       tileOrder: null,
       documentTemplates: [],
@@ -709,6 +715,9 @@ export const useStore = create<AppState>()(
             }
             if (companySettingsData.hidden_tiles) {
               newState.hiddenTiles = companySettingsData.hidden_tiles;
+            }
+            if (companySettingsData.cost_categories) {
+              newState.costCategories = companySettingsData.cost_categories;
             }
             if (companySettingsData.energy_data) {
               newState.energyData = companySettingsData.energy_data;
@@ -1794,6 +1803,40 @@ export const useStore = create<AppState>()(
         } catch (e: any) { 
           console.error(e);
           toast.error('Erro de conexão ao deletar custo.');
+        }
+      },
+
+      addCostCategory: async (category) => {
+        const state = get();
+        if (state.costCategories.includes(category)) {
+          toast.error('Esta categoria já existe');
+          return;
+        }
+        const newCategories = [...state.costCategories, category];
+        set({ costCategories: newCategories });
+        
+        const id = get().companySettingsId;
+        if (id) {
+          try {
+            await supabase.from('company_settings').update({ cost_categories: newCategories }).eq('id', id);
+            toast.success('Categoria adicionada com sucesso!');
+          } catch (e) { console.error(e); }
+        } else {
+          toast.success('Categoria adicionada localmente!');
+        }
+      },
+
+      deleteCostCategory: async (category) => {
+        const state = get();
+        const newCategories = state.costCategories.filter(c => c !== category);
+        set({ costCategories: newCategories });
+        
+        const id = get().companySettingsId;
+        if (id) {
+          try {
+            await supabase.from('company_settings').update({ cost_categories: newCategories }).eq('id', id);
+            toast.success('Categoria removida com sucesso!');
+          } catch (e) { console.error(e); }
         }
       },
 
@@ -4049,6 +4092,7 @@ export const useStore = create<AppState>()(
           theme: data.theme || state.theme,
           menuOrder: data.menuOrder || state.menuOrder,
           hiddenTiles: data.hiddenTiles || state.hiddenTiles,
+          costCategories: data.costCategories || state.costCategories,
           tileSizes: data.tileSizes || state.tileSizes,
           tileOrder: data.tileOrder || state.tileOrder,
         }));

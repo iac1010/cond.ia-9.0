@@ -525,6 +525,7 @@ export interface AppState {
   menuOrder: string[];
   showBalance: boolean;
   hiddenTiles: string[];
+  costCategories: string[];
   tileSizes: { [key: string]: 'small' | 'medium' | 'large' };
   tileOrder: string[] | null;
   documentTemplates: DocumentTemplate[];
@@ -677,6 +678,9 @@ export interface AppState {
   addKey: (key: Omit<KeyControl, 'id'>) => void;
   updateKey: (id: string, key: Partial<KeyControl>) => void;
   deleteKey: (id: string) => void;
+
+  addCostCategory: (category: string) => void;
+  deleteCostCategory: (category: string) => void;
 
   addSale: (sale: Omit<Sale, 'id'>) => Promise<void>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;

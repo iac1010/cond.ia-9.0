@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useStore } from '../store';
+import toast from 'react-hot-toast';
 import { Payment, LegalAgreement, Client, SavingsGoal } from '../types';
 import { BackButton } from '../components/BackButton';
 import { 
@@ -34,7 +35,10 @@ import {
   Coins,
   ArrowRight,
   Sparkles,
-  Zap
+  Zap,
+  Trash2,
+  Pencil,
+  EyeOff
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -56,6 +60,7 @@ import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'd
 import { safeFormatDate } from '../utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import jsPDF from 'jspdf';
 import { toPng } from 'html-to-image';
 
@@ -68,6 +73,8 @@ export default function AccountabilityDashboard() {
     legalAgreements, 
     receipts, 
     costs, 
+    deleteCost,
+    updateCost,
     companyData,
     digitalFolder,
     validateDigitalFolderItem,
@@ -75,11 +82,16 @@ export default function AccountabilityDashboard() {
     savingsGoals,
     addSavingsGoal,
     updateSavingsGoal,
-    deleteSavingsGoal
+    deleteSavingsGoal,
+    showBalance,
+    setShowBalance
   } = useStore();
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAddCostModalOpen, setIsAddCostModalOpen] = useState(false);
+  const [editingCostId, setEditingCostId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDeleteGoalId, setConfirmDeleteGoalId] = useState<string | null>(null);
   const [isAddGoalModalOpen, setIsAddGoalModalOpen] = useState(false);
   const [isEditGoalModalOpen, setIsEditGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null);
@@ -417,6 +429,38 @@ export default function AccountabilityDashboard() {
           </button>
         </div>
       </header>
+
+      <ConfirmationModal
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+          if (confirmDeleteId) {
+            deleteCost(confirmDeleteId);
+            setConfirmDeleteId(null);
+            toast.success('Custo excluído com sucesso');
+          }
+        }}
+        title="Excluir Custo"
+        message="Tem certeza que deseja excluir permanentemente este custo? Esta ação não pode ser desfeita."
+        confirmText="Sim, Excluir"
+        cancelText="Cancelar"
+      />
+
+      <ConfirmationModal
+        isOpen={!!confirmDeleteGoalId}
+        onClose={() => setConfirmDeleteGoalId(null)}
+        onConfirm={() => {
+          if (confirmDeleteGoalId) {
+            deleteSavingsGoal(confirmDeleteGoalId);
+            setConfirmDeleteGoalId(null);
+            toast.success('Meta excluída com sucesso');
+          }
+        }}
+        title="Excluir Meta"
+        message="Tem certeza que deseja excluir permanentemente esta meta e todo o progresso associado? Esta ação não pode ser desfeita."
+        confirmText="Sim, Excluir Meta"
+        cancelText="Cancelar"
+      />
 
       {activeTab === 'financial' ? (
         <div className="space-y-8 relative z-10">
@@ -824,6 +868,7 @@ export default function AccountabilityDashboard() {
                         <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40">Categoria</th>
                         <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40">Data</th>
                         <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-white/40">Valor</th>
+                        <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-white/40">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -838,6 +883,24 @@ export default function AccountabilityDashboard() {
                           <td className="py-4 text-white/60 text-sm">{safeFormatDate(cost.date)}</td>
                           <td className="py-4 text-right font-black text-emerald-400">
                             R$ {cost.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-4 text-right">
+                            <div className="flex justify-end gap-1">
+                              <button 
+                                onClick={() => navigate(`/financeiro?action=edit&id=${cost.id}`)}
+                                className="p-2 text-white/20 hover:text-cyan-400 hover:bg-white/10 rounded-lg transition-all"
+                                title="Editar"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => setConfirmDeleteId(cost.id)}
+                                className="p-2 text-white/20 hover:text-rose-400 hover:bg-white/10 rounded-lg transition-all"
+                                title="Excluir"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1008,14 +1071,14 @@ export default function AccountabilityDashboard() {
                         className="p-2.5 bg-white/5 hover:bg-white/10 text-white/60 rounded-xl transition-all"
                         title="Editar Meta"
                       >
-                        <FileText className="w-4 h-4" />
+                        <Pencil className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => deleteSavingsGoal(goal.id)}
+                        onClick={() => setConfirmDeleteGoalId(goal.id)}
                         className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all"
                         title="Excluir Meta"
                       >
-                        <XCircle className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>

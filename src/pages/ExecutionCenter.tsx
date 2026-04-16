@@ -14,13 +14,13 @@ import { Modal } from '../components/Modal';
 export default function ExecutionCenter() {
   const { 
     tickets, clients, supplyItems, checklistItems, updateTicket, 
-    addReceipt, addCost, updateStock, addChecklistItem 
+    addReceipt, addCost, updateStock, addChecklistItem, costCategories
   } = useStore();
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isExecutionModalOpen, setIsExecutionModalOpen] = useState(false);
   const [usedMaterials, setUsedMaterials] = useState<{ itemId?: string; name?: string; quantity: number }[]>([]);
   const [materialName, setMaterialName] = useState('');
-  const [extraCosts, setExtraCosts] = useState<{ description: string; value: number }[]>([]);
+  const [extraCosts, setExtraCosts] = useState<{ description: string; value: number; category: string }[]>([]);
   const [checklistProgress, setChecklistProgress] = useState<{ [taskId: string]: boolean }>({});
   
   // New task state for modal
@@ -76,11 +76,33 @@ export default function ExecutionCenter() {
   };
 
   const handleAddExtraCost = () => {
-    setExtraCosts(prev => [...prev, { description: '', value: 0 }]);
+    setExtraCosts(prev => [...prev, { description: '', value: 0, category: 'Operacional' }]);
   };
 
-  const handleUpdateExtraCost = (index: number, field: 'description' | 'value', value: string | number) => {
+  const handleUpdateExtraCost = (index: number, field: 'description' | 'value' | 'category', value: string | number) => {
     setExtraCosts(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));
+  };
+
+  const handleSaveExtraCostsToStore = () => {
+    if (!selectedTicket) return;
+    
+    const validCosts = extraCosts.filter(c => c.value > 0 && c.description.trim());
+    if (validCosts.length === 0) {
+      toast.error('Preencha a descrição e valor para salvar.');
+      return;
+    }
+    
+    validCosts.forEach(c => {
+      addCost({
+        description: `Gasto Extra OS ${selectedTicket.osNumber}: ${c.description}`,
+        value: c.value,
+        date: new Date().toISOString(),
+        category: c.category
+      });
+    });
+
+    toast.success(`${validCosts.length} gastos registrados no financeiro.`);
+    setExtraCosts([]); // Limpa a lista local após salvar para evitar duplicidade ao finalizar
   };
 
   const handleRemoveExtraCost = (index: number) => {
@@ -208,7 +230,7 @@ export default function ExecutionCenter() {
             description: `Gasto Extra OS ${selectedTicket.osNumber}: ${c.description}`,
             value: c.value,
             date: new Date().toISOString(),
-            category: 'Operacional'
+            category: c.category || 'Operacional'
           });
         }
       });
@@ -528,31 +550,57 @@ export default function ExecutionCenter() {
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-4">
                   {extraCosts.map((cost, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <input 
-                        type="text"
-                        placeholder="Ex: Almoço, Combustível"
-                        className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
-                        value={cost.description}
-                        onChange={(e) => handleUpdateExtraCost(idx, 'description', e.target.value)}
-                      />
-                      <input 
-                        type="number"
-                        placeholder="R$ 0,00"
-                        className="w-24 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
-                        value={cost.value || ''}
-                        onChange={(e) => handleUpdateExtraCost(idx, 'value', parseFloat(e.target.value) || 0)}
-                      />
-                      <button 
-                        onClick={() => handleRemoveExtraCost(idx)}
-                        className="p-2 text-white/40 hover:text-red-400 transition-colors"
-                      >
-                        <X size={20} />
-                      </button>
+                    <div key={idx} className="space-y-2 p-4 bg-white/5 rounded-2xl border border-white/10 group animate-in slide-in-from-top-1">
+                      <div className="flex gap-2">
+                        <input 
+                          type="text"
+                          placeholder="Descrição do gasto (ex: Almoço, Combustível)"
+                          className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500 transition-all font-bold"
+                          value={cost.description}
+                          onChange={(e) => handleUpdateExtraCost(idx, 'description', e.target.value)}
+                        />
+                        <button 
+                          onClick={() => handleRemoveExtraCost(idx)}
+                          className="p-2 text-white/40 hover:text-red-400 transition-colors"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <select 
+                          className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-amber-500 appearance-none cursor-pointer"
+                          value={cost.category}
+                          onChange={(e) => handleUpdateExtraCost(idx, 'category', e.target.value)}
+                        >
+                          {costCategories.map(cat => (
+                            <option key={cat} value={cat} className="bg-[#1a1a1a]">{cat}</option>
+                          ))}
+                        </select>
+                        <div className="relative w-32">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs font-bold">R$</span>
+                          <input 
+                            type="number"
+                            placeholder="0,00"
+                            className="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500 font-black text-amber-400"
+                            value={cost.value || ''}
+                            onChange={(e) => handleUpdateExtraCost(idx, 'value', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
+                  
+                  {extraCosts.length > 0 && (
+                    <button 
+                      onClick={handleSaveExtraCostsToStore}
+                      className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] border border-amber-500/20 transition-all active:scale-95 shadow-lg shadow-amber-500/5 mb-4"
+                    >
+                      Salvar Gastos no Financeiro
+                    </button>
+                  )}
+
                   {extraCosts.length === 0 && (
                     <p className="text-center py-4 text-xs text-white/40 italic bg-white/5 rounded-2xl border border-white/10">Nenhum gasto extra registrado</p>
                   )}

@@ -5,10 +5,12 @@ import {
   DollarSign, TrendingUp, TrendingDown, Plus, Trash2, Wallet, 
   FileSpreadsheet, BarChart3, Lightbulb, ArrowUpRight, ArrowDownRight, 
   X, Calendar, Tag, User, ShieldCheck, FolderOpen, 
-  FileText, UserCheck, Target, Brain, Loader2, Sparkles, ShieldAlert, AlertCircle
+  FileText, UserCheck, Target, Brain, Loader2, Sparkles, ShieldAlert, AlertCircle,
+  Pencil, Eye, EyeOff, Check
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Modal } from '../components/Modal';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { SavingsMirror } from '../components/SavingsMirror';
 import { safeFormatDate } from '../utils/dateUtils';
 import Papa from 'papaparse';
@@ -30,7 +32,8 @@ export default function Financial() {
   const { 
     receipts, costs, addCost, deleteCost, addReceipt, deleteReceipt, 
     updateCost, updateReceipt, clients, payments, savingsGoals, 
-    addSavingsGoal, updateSavingsGoal, deleteSavingsGoal 
+    addSavingsGoal, updateSavingsGoal, deleteSavingsGoal,
+    showBalance, setShowBalance, costCategories, addCostCategory
   } = useStore();
   
   const [isAIProcessing, setIsAIProcessing] = useState(false);
@@ -45,20 +48,32 @@ export default function Financial() {
   const [moneyToAdd, setMoneyToAdd] = useState(0);
   const [editingTransaction, setEditingTransaction] = useState<{ type: 'cost' | 'income' | 'goal', id: string } | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ type: 'income' | 'cost' | 'goal', id: string } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const action = params.get('action');
+    const id = params.get('id');
+    
     if (action === 'add-cost') {
       setIsAddingCost(true);
     } else if (action === 'add-income') {
       setIsAddingIncome(true);
+    } else if (action === 'edit' && id) {
+      const isCost = costs.some(c => c.id === id);
+      const isIncome = receipts.some(r => r.id === id);
+      const isGoal = savingsGoals.some(g => g.id === id);
+      
+      if (isCost) handleEdit('cost', id);
+      else if (isIncome) handleEdit('income', id);
+      else if (isGoal) handleEdit('goal', id);
     }
+
     // Limpar o parâmetro da URL para não reabrir ao atualizar
     if (action) {
       window.history.replaceState({}, '', window.location.pathname + window.location.hash.split('?')[0]);
     }
-  }, [location]);
+  }, [location, costs, receipts, savingsGoals]);
   
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'REPORTS'>('DASHBOARD');
   
@@ -68,6 +83,8 @@ export default function Financial() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [category, setCategory] = useState('Material');
   const [clientId, setClientId] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingNewCat, setIsAddingNewCat] = useState(false);
   
   // Goal specific states
   const [goalTitle, setGoalTitle] = useState('');
@@ -417,6 +434,17 @@ export default function Financial() {
     setIsAddingCost(false);
   };
 
+  const handleCreateNewCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast.error('Insira um nome para a categoria');
+      return;
+    }
+    addCostCategory(newCategoryName.trim());
+    setCategory(newCategoryName.trim());
+    setNewCategoryName('');
+    setIsAddingNewCat(false);
+  };
+
   const handleAddIncome = (e: React.FormEvent) => {
     e.preventDefault();
     if (!description || value <= 0 || !clientId || !date) {
@@ -606,6 +634,7 @@ export default function Financial() {
                 <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40">Categoria/Cliente</th>
                 <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Imposto (8%)</th>
                 <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Valor</th>
+                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -621,6 +650,24 @@ export default function Financial() {
                   </td>
                   <td className={`py-4 text-sm font-black text-right ${t.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {t.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}
+                  </td>
+                  <td className="py-4 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button 
+                        onClick={() => handleEdit(t.type === 'income' ? 'income' : 'cost', t.id)}
+                        className="p-2 text-white/20 hover:text-cyan-400 hover:bg-cyan-500/20 rounded-lg transition-all"
+                        title="Editar"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setConfirmDelete({ type: t.type === 'income' ? 'income' : 'cost', id: t.id })}
+                        className="p-2 text-white/20 hover:text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -717,7 +764,16 @@ export default function Financial() {
                 <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-cyan-400/60">Live Financial Intelligence</span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white leading-none">Financeiro</h1>
+              <div className="flex items-center gap-4">
+                <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white leading-none">Financeiro</h1>
+                <button 
+                  onClick={() => setShowBalance(!showBalance)}
+                  className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-white/40 hover:text-white transition-all backdrop-blur-md"
+                  title={showBalance ? "Ocultar Valores" : "Mostrar Valores"}
+                >
+                  {showBalance ? <EyeOff className="w-6 h-6" /> : <Eye className="w-6 h-6" />}
+                </button>
+              </div>
               <p className="text-sm text-white/40 mt-2 font-light max-w-md leading-relaxed">Análise preditiva e controle de fluxo de caixa em tempo real.</p>
             </div>
           </div>
@@ -832,7 +888,7 @@ export default function Financial() {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-white tracking-tighter mb-2">
+          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-all duration-700 ${!showBalance && 'blur-xl select-none'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalIncome)}
           </p>
           <div className="flex items-center gap-2 text-cyan-400/60 text-[8px] font-bold uppercase tracking-widest">
@@ -854,7 +910,7 @@ export default function Financial() {
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-white tracking-tighter mb-2">
+          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-all duration-700 ${!showBalance && 'blur-xl select-none'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCosts)}
           </p>
           <div className="flex items-center gap-2 text-rose-400/60 text-[8px] font-bold uppercase tracking-widest">
@@ -876,7 +932,7 @@ export default function Financial() {
               <Wallet className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-2xl font-black tracking-tighter mb-2 ${balance >= 0 ? 'text-white' : 'text-orange-400'}`}>
+          <p className={`text-2xl font-black tracking-tighter mb-2 transition-all duration-700 ${!showBalance && 'blur-xl select-none'} ${balance >= 0 ? 'text-white' : 'text-orange-400'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
           </p>
           <div className="flex items-center gap-2 text-white/20 text-[8px] font-bold uppercase tracking-widest">
@@ -898,7 +954,7 @@ export default function Financial() {
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-white tracking-tighter mb-2">
+          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-all duration-700 ${!showBalance && 'blur-xl select-none'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estimatedTax)}
           </p>
           <div className="flex items-center gap-2 text-orange-400/60 text-[8px] font-bold uppercase tracking-widest">
@@ -970,7 +1026,7 @@ export default function Financial() {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black tracking-tighter mb-2 text-white">
+          <p className={`text-2xl font-black tracking-tighter mb-2 text-white transition-all duration-700 ${!showBalance && 'blur-xl select-none'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(accountsReceivable)}
           </p>
           <div className="flex items-center gap-2 text-cyan-400/60 text-[8px] font-bold uppercase tracking-widest">
@@ -1448,7 +1504,7 @@ export default function Financial() {
                       className="p-3 text-cyan-400 hover:bg-cyan-500/20 rounded-xl transition-all border border-cyan-500/20"
                       title="Editar Meta"
                     >
-                      <Plus className="w-5 h-5 rotate-45" />
+                      <Pencil className="w-5 h-5" />
                     </button>
                     <button 
                       onClick={() => handleDelete('goal', goal.id)}
@@ -1545,14 +1601,14 @@ export default function Financial() {
                 <div className="flex gap-2">
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleEdit(t.type === 'income' ? 'income' : 'cost', t.id); }}
-                    className="p-3 text-white/20 hover:text-cyan-400 hover:bg-cyan-500/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                    className="p-3 text-white/40 hover:text-cyan-400 hover:bg-cyan-500/20 rounded-xl transition-all"
                     title="Editar"
                   >
-                    <Plus className="w-5 h-5 rotate-45" />
+                    <Pencil className="w-5 h-5" />
                   </button>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); handleDelete(t.type === 'income' ? 'income' : 'cost', t.id); }}
-                    className="p-3 text-white/20 hover:text-rose-400 hover:bg-rose-500/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: t.type === 'income' ? 'income' : 'cost', id: t.id }); }}
+                    className="p-3 text-white/40 hover:text-rose-400 hover:bg-rose-500/20 rounded-xl transition-all"
                     title="Excluir"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -1731,19 +1787,49 @@ export default function Financial() {
               </div>
 
               {editingTransaction?.type === 'cost' && (
-                <div>
-                  <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Categoria</label>
-                  <select 
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
-                  >
-                    <option value="Material" className="bg-[#004a7c]">Material</option>
-                    <option value="Combustível" className="bg-[#004a7c]">Combustível</option>
-                    <option value="Alimentação" className="bg-[#004a7c]">Alimentação</option>
-                    <option value="Ferramentas" className="bg-[#004a7c]">Ferramentas</option>
-                    <option value="Outros" className="bg-[#004a7c]">Outros</option>
-                  </select>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-bold uppercase tracking-wider text-white/60">Categoria</label>
+                      <button 
+                        type="button"
+                        onClick={() => setIsAddingNewCat(!isAddingNewCat)}
+                        className="text-[10px] font-black uppercase tracking-widest text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded-lg border border-cyan-400/20 hover:bg-cyan-400/20 transition-all"
+                      >
+                        {isAddingNewCat ? 'Cancelar' : '+ Nova'}
+                      </button>
+                    </div>
+                    
+                    {!isAddingNewCat ? (
+                      <select 
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+                      >
+                        {costCategories.map(cat => (
+                          <option key={cat} value={cat} className="bg-[#004a7c]">{cat}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input 
+                          type="text"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          className="flex-1 bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
+                          placeholder="Nome da categoria..."
+                          autoFocus
+                        />
+                        <button 
+                          type="button"
+                          onClick={handleCreateNewCategory}
+                          className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all"
+                        >
+                          <Check className="w-5 h-5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </>
@@ -1910,18 +1996,46 @@ export default function Financial() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Categoria</label>
-            <select 
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
-            >
-              <option value="Material" className="bg-[#004a7c]">Material</option>
-              <option value="Combustível" className="bg-[#004a7c]">Combustível</option>
-              <option value="Alimentação" className="bg-[#004a7c]">Alimentação</option>
-              <option value="Ferramentas" className="bg-[#004a7c]">Ferramentas</option>
-              <option value="Outros" className="bg-[#004a7c]">Outros</option>
-            </select>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/60">Categoria</label>
+              <button 
+                type="button"
+                onClick={() => setIsAddingNewCat(!isAddingNewCat)}
+                className="text-[10px] font-black uppercase tracking-widest text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded-lg border border-cyan-400/20 hover:bg-cyan-400/20 transition-all"
+              >
+                {isAddingNewCat ? 'Cancelar' : '+ Nova'}
+              </button>
+            </div>
+            
+            {!isAddingNewCat ? (
+              <select 
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+              >
+                {costCategories.map(cat => (
+                  <option key={cat} value={cat} className="bg-[#004a7c]">{cat}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex gap-2">
+                <input 
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="flex-1 bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
+                  placeholder="Nome da categoria..."
+                  autoFocus
+                />
+                <button 
+                  type="button"
+                  onClick={handleCreateNewCategory}
+                  className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all"
+                >
+                  <Check className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="pt-6 flex justify-end gap-3">
@@ -2130,6 +2244,15 @@ export default function Financial() {
             <div className="pt-6 flex justify-end gap-4">
               <button
                 onClick={() => {
+                  setConfirmDelete({ type: selectedTransaction.type, id: selectedTransaction.id });
+                  setSelectedTransaction(null);
+                }}
+                className="px-6 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl font-bold transition-all border border-rose-500/20"
+              >
+                Excluir
+              </button>
+              <button
+                onClick={() => {
                   handleEdit(selectedTransaction.type, selectedTransaction.id);
                   setSelectedTransaction(null);
                 }}
@@ -2147,6 +2270,22 @@ export default function Financial() {
           </div>
         )}
       </Modal>
+
+      <ConfirmationModal
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) {
+            handleDelete(confirmDelete.type, confirmDelete.id);
+            setConfirmDelete(null);
+            toast.success('Lançamento excluído com sucesso');
+          }
+        }}
+        title="Excluir Lançamento"
+        message="Tem certeza que deseja excluir permanentemente este lançamento financeiro? Esta ação não pode ser desfeita."
+        confirmText="Sim, Excluir"
+        cancelText="Cancelar"
+      />
     </div>
   );
 }
