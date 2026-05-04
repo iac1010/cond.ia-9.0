@@ -6,7 +6,7 @@ const COLUMNS: { id: TicketStatus; color: string }[] = [
   { id: 'APROVADO', color: 'text-blue-400' },
   { id: 'AGUARDANDO_MATERIAL', color: 'text-amber-400' },
   { id: 'REALIZANDO', color: 'text-purple-400' },
-  { id: 'CONCLUIDO', color: 'text-emerald-400' },
+  { id: 'CONCLUIDO', color: 'text-white' },
 ];
 
 interface KanbanMirrorProps {
@@ -67,8 +67,8 @@ export function KanbanMirror({ tickets, className = '', onColumnClick, showLabel
         <div className="mt-3 md:mt-5 flex justify-between items-center px-1 relative z-10 gap-2">
           <div className="flex items-center gap-1.5 md:gap-2.5 min-w-0">
             <div className="relative shrink-0">
-              <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400 animate-ping absolute inset-0" />
-              <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400 relative" />
+              <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white animate-ping absolute inset-0" />
+              <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white relative" />
             </div>
             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.3em] text-white/50 truncate">Board Mirror</span>
           </div>

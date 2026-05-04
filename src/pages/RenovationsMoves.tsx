@@ -182,20 +182,20 @@ export default function RenovationsMoves() {
           <div className="lg:col-span-4 space-y-6">
             <GlassCard title="SITUAÇÃO GERAL (Obras & Mudanças)" icon={TrendingUp}>
               <div className="flex flex-col items-center gap-6 py-4">
-                <div className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]">TOTAL DE TAREFAS: <span className="text-emerald-400">95%</span></div>
+                <div className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]">TOTAL DE TAREFAS: <span className="text-white">95%</span></div>
                 <CircularProgress 
                   value={95} 
                   label="TOTAL DE TAREFAS" 
                   sublabel="Meta de Conclusão 98%"
-                  color="emerald"
+                  color="white"
                 />
                 <div className="w-full space-y-2 mt-4">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <div className="w-2 h-2 rounded-full bg-white" />
                       <span className="text-white/70">Obras Prédio (Conc.):</span>
                     </div>
-                    <span className="text-emerald-400">95%</span>
+                    <span className="text-white">95%</span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase">
                     <div className="flex items-center gap-2">
@@ -236,7 +236,7 @@ export default function RenovationsMoves() {
                     />
                     <Bar dataKey="rate" radius={[4, 4, 0, 0]} barSize={40}>
                       {towerData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : index === 1 ? '#3b82f6' : '#0ea5e9'} fillOpacity={0.8} />
+                        <Cell key={`cell-${index}`} fill={index === 0 ? '#ffffff' : index === 1 ? '#3b82f6' : '#0ea5e9'} fillOpacity={0.8} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -268,8 +268,8 @@ export default function RenovationsMoves() {
                             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                           </linearGradient>
                           <linearGradient id="colorMud" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#ffffff" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
@@ -293,7 +293,7 @@ export default function RenovationsMoves() {
                         <Area 
                           type="monotone" 
                           dataKey="mudancas" 
-                          stroke="#10b981" 
+                          stroke="#ffffff" 
                           fillOpacity={1} 
                           fill="url(#colorMud)" 
                           strokeWidth={3}
@@ -311,10 +311,10 @@ export default function RenovationsMoves() {
                   <div className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]">AGENDA DE MUDANÇAS (SEMANAL)</div>
                   <div className="space-y-2">
                     {[
-                      { day: 'Seg', label: 'Fornecedor A', status: 'Concl.', color: 'emerald' },
-                      { day: 'Ter', label: 'Locação B', status: 'Concl.', color: 'emerald' },
+                      { day: 'Seg', label: 'Fornecedor A', status: 'Concl.', color: 'white' },
+                      { day: 'Ter', label: 'Locação B', status: 'Concl.', color: 'white' },
                       { day: 'Qua', label: 'Cisterna C', status: 'Em And.', color: 'amber' },
-                      { day: 'Qui', label: 'Cisterna C', status: 'Concl.', color: 'emerald' },
+                      { day: 'Qui', label: 'Cisterna C', status: 'Concl.', color: 'white' },
                       { day: 'Sex', label: 'Piscina A', status: 'Em And.', color: 'amber' },
                       { day: 'Sab', label: 'Elevador A', status: 'Pend.', color: 'white' },
                     ].map((item, i) => (
@@ -324,7 +324,7 @@ export default function RenovationsMoves() {
                           <span className="text-xs font-bold text-white/80">{item.label}</span>
                         </div>
                         <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${
-                          item.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-400' : 
+                          item.color === 'white' ? 'bg-white/10 text-white' : 
                           item.color === 'amber' ? 'bg-amber-500/20 text-amber-400' : 'bg-white/10 text-white/40'
                         }`}>
                           {item.status}
@@ -469,7 +469,7 @@ export default function RenovationsMoves() {
                         <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
                           <div className="text-right">
                             <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${
-                              renovation.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' : 
+                              renovation.status === 'COMPLETED' ? 'bg-white/10 text-white' : 
                               renovation.status === 'APPROVED' ? 'bg-blue-500/20 text-blue-400' : 
                               renovation.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
                             }`}>
@@ -480,7 +480,7 @@ export default function RenovationsMoves() {
                           
                           <div className="flex items-center gap-2">
                             {renovation.status === 'PENDING' && (
-                              <button onClick={() => updateRenovation(renovation.id, { status: 'APPROVED' })} className="p-2 text-white/20 hover:text-emerald-400 transition-colors">
+                              <button onClick={() => updateRenovation(renovation.id, { status: 'APPROVED' })} className="p-2 text-white/20 hover:text-white transition-colors">
                                 <CheckCircle2 className="w-5 h-5" />
                               </button>
                             )}
@@ -506,8 +506,8 @@ export default function RenovationsMoves() {
                     return (
                       <div key={move.id} className="group flex flex-col md:flex-row justify-between items-start md:items-center p-6 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all gap-4">
                         <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${move.type === 'IN' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
-                            <Truck className={`w-6 h-6 ${move.type === 'IN' ? 'text-emerald-400' : 'text-amber-400'}`} />
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${move.type === 'IN' ? 'bg-white/10 border-white/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+                            <Truck className={`w-6 h-6 ${move.type === 'IN' ? 'text-white' : 'text-amber-400'}`} />
                           </div>
                           <div>
                             <h3 className="font-bold text-white group-hover:text-blue-400 transition-colors">
@@ -530,7 +530,7 @@ export default function RenovationsMoves() {
                         <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
                           <div className="text-right">
                             <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${
-                              move.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' : 
+                              move.status === 'COMPLETED' ? 'bg-white/10 text-white' : 
                               move.status === 'APPROVED' ? 'bg-blue-500/20 text-blue-400' : 
                               move.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
                             }`}>
@@ -541,7 +541,7 @@ export default function RenovationsMoves() {
 
                           <div className="flex items-center gap-2">
                             {move.status === 'PENDING' && (
-                              <button onClick={() => updateMove(move.id, { status: 'APPROVED' })} className="p-2 text-white/20 hover:text-emerald-400 transition-colors">
+                              <button onClick={() => updateMove(move.id, { status: 'APPROVED' })} className="p-2 text-white/20 hover:text-white transition-colors">
                                 <CheckCircle2 className="w-5 h-5" />
                               </button>
                             )}

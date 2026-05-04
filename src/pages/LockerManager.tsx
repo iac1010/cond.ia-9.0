@@ -167,8 +167,8 @@ export default function LockerManager() {
         </div>
 
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-[40px] p-8 flex flex-col items-center justify-center text-center group hover:bg-white/10 transition-all">
-          <div className="p-4 bg-emerald-500/10 rounded-2xl mb-4 group-hover:scale-110 transition-transform">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          <div className="p-4 bg-white/10 rounded-2xl mb-4 group-hover:scale-110 transition-transform">
+            <CheckCircle2 className="w-8 h-8 text-white" />
           </div>
           <span className="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-2">Já Retiradas</span>
           <span className="text-5xl font-black text-white">{packages.filter(p => p.status === 'PICKED_UP').length}</span>
@@ -205,13 +205,13 @@ export default function LockerManager() {
             >
               <div className="flex items-center justify-between mb-6">
                 <div className={`p-3 rounded-2xl ${
-                  pkg.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
+                  pkg.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' : 'bg-white/10 text-white'
                 }`}>
                   <PackageIcon className="w-6 h-6" />
                 </div>
                 <div className="text-right">
                   <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${
-                    pkg.status === 'PENDING' ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white'
+                    pkg.status === 'PENDING' ? 'bg-amber-500 text-white' : 'bg-black text-white'
                   }`}>
                     {pkg.status === 'PENDING' ? 'Aguardando' : 'Retirado'}
                   </span>
@@ -262,7 +262,7 @@ export default function LockerManager() {
                   </button>
                 </div>
               ) : (
-                <div className="pt-6 border-t border-white/5 flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                <div className="pt-6 border-t border-white/5 flex items-center gap-2 text-white font-bold text-sm">
                   <CheckCircle2 className="w-4 h-4" />
                   Retirado em {safeFormatDate(pkg.pickedUpAt!, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </div>
@@ -415,7 +415,7 @@ export default function LockerManager() {
                       className="w-5 h-5 rounded border-slate-300 text-[#004a7c] focus:ring-[#004a7c]"
                     />
                     <label htmlFor="send-whatsapp" className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-                      <MessageCircle className="w-4 h-4 text-emerald-500" />
+                      <MessageCircle className="w-4 h-4 text-slate-900" />
                       Enviar notificação via WhatsApp
                     </label>
                   </div>
@@ -454,9 +454,9 @@ export default function LockerManager() {
 
               <div className="aspect-square bg-slate-900 rounded-[32px] mb-8 relative overflow-hidden flex items-center justify-center">
                 <div className="absolute inset-0 opacity-20">
-                  <div className="w-full h-1 bg-emerald-500 absolute top-0 animate-scan" />
+                  <div className="w-full h-1 bg-white absolute top-0 animate-scan" />
                 </div>
-                <ScanLine className="w-24 h-24 text-emerald-500 animate-pulse" />
+                <ScanLine className="w-24 h-24 text-white animate-pulse" />
                 <div className="absolute bottom-6 left-0 right-0 text-center">
                   <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Posicione o QR Code</p>
                 </div>

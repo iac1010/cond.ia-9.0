@@ -11,7 +11,7 @@ const VIBRANT_GRADIENTS = [
   'from-[#00aba9] to-[#008a88]', // Teal
   'from-[#da532c] to-[#b94322]', // Orange
   'from-[#7e3878] to-[#632c5e]', // Purple
-  'from-[#60a917] to-[#4d8712]', // Green
+  'from-[#1a1a1a] to-[#000000]', // Black
   'from-[#ee1111] to-[#cc0000]', // Red
   'from-[#f0a30a] to-[#d38b00]', // Yellow/Gold
   'from-[#2d89ef] to-[#1e71cd]', // Sky Blue

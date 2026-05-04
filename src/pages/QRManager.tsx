@@ -322,9 +322,9 @@ export default function QRManager() {
 
                 <button
                   onClick={handleShareAll}
-                  className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3 border border-emerald-500/20 backdrop-blur-xl active:scale-95"
+                  className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3 border border-blue-500/20 backdrop-blur-xl active:scale-95"
                 >
-                  <Share2 className="w-5 h-5 text-emerald-400" />
+                  <Share2 className="w-5 h-5 text-blue-400" />
                   Compartilhar Lote
                 </button>
 
@@ -343,7 +343,7 @@ export default function QRManager() {
               {[
                 { label: 'Total Pontos', value: stats.total, icon: MapPin, color: 'text-white' },
                 { label: 'Ativos', value: stats.active, icon: Smartphone, color: 'text-cyan-400' },
-                { label: 'Impressos', value: stats.total, icon: Printer, color: 'text-emerald-400' },
+                { label: 'Impressos', value: stats.total, icon: Printer, color: 'text-blue-400' },
                 { label: 'Relatos Pendentes', value: stats.pending, icon: MessageSquare, color: 'text-amber-400' },
               ].map((stat, i) => (
                 <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-xl relative overflow-hidden group">
@@ -382,7 +382,7 @@ export default function QRManager() {
                         </span>
                         <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${
                           report.status === 'PENDENTE_APROVACAO' ? 'bg-amber-500/20 text-amber-400' :
-                          report.status === 'APROVADO' ? 'bg-emerald-500/20 text-emerald-400' :
+                          report.status === 'APROVADO' ? 'bg-blue-500/20 text-blue-400' :
                           'bg-red-500/20 text-red-400'
                         }`}>
                           {report.status === 'PENDENTE_APROVACAO' ? 'Pendente' : 

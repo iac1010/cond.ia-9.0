@@ -39,7 +39,7 @@ export default function Tickets() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'CONCLUIDO': return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+      case 'CONCLUIDO': return 'bg-white/10 border-white/20 text-white';
       case 'REALIZANDO': return 'bg-blue-500/10 border-blue-500/20 text-blue-400';
       case 'PENDENTE_APROVACAO': return 'bg-amber-500/10 border-amber-500/20 text-amber-400';
       case 'REJEITADO': return 'bg-red-500/10 border-red-500/20 text-red-400';

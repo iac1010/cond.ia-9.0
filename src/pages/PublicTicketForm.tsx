@@ -101,8 +101,8 @@ export default function PublicTicketForm() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-12 h-12 text-green-600" />
+          <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-12 h-12 text-zinc-900" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">Chamado Enviado!</h1>

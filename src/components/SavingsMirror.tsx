@@ -48,7 +48,7 @@ export function SavingsMirror({
                           e.stopPropagation();
                           onAddMoney(goal.id);
                         }}
-                        className="p-1 bg-emerald-500/20 text-emerald-400 rounded-md hover:bg-emerald-500/40 transition-all"
+                        className="p-1 bg-white/10 text-white rounded-md hover:bg-white/20 transition-all"
                         title="Adicionar Dinheiro"
                       >
                         <Plus className="w-2.5 h-2.5" />
@@ -66,7 +66,7 @@ export function SavingsMirror({
                         <Trash2 className="w-2.5 h-2.5" />
                       </button>
                     )}
-                    <div className={`p-1 rounded-md ${goal.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                    <div className={`p-1 rounded-md ${goal.status === 'COMPLETED' ? 'bg-white/10 text-white' : 'bg-amber-500/20 text-amber-400'}`}>
                       {goal.status === 'COMPLETED' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Target className="w-2.5 h-2.5" />}
                     </div>
                   </div>
@@ -82,7 +82,7 @@ export function SavingsMirror({
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
                       transition={{ duration: 1.5, ease: "easeOut", delay: idx * 0.2 }}
-                      className={`h-full rounded-full ${goal.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                      className={`h-full rounded-full ${goal.status === 'COMPLETED' ? 'bg-white' : 'bg-amber-500'}`}
                     />
                   </div>
                 </div>

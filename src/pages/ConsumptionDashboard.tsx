@@ -411,7 +411,7 @@ export default function ConsumptionDashboard() {
               {isUploading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : uploadSuccess ? (
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                <CheckCircle className="w-4 h-4 text-white" />
               ) : (
                 <FileSpreadsheet className="w-4 h-4" />
               )}
@@ -437,11 +437,11 @@ export default function ConsumptionDashboard() {
                       stroke="url(#gradient)" strokeWidth="8" 
                       strokeDasharray="282.7" strokeDashoffset="56.5" 
                       strokeLinecap="round"
-                      className="drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                      className="drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                     />
                     <defs>
                       <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#34d399" />
+                        <stop offset="0%" stopColor="#ffffff" />
                         <stop offset="100%" stopColor="#3b82f6" />
                       </linearGradient>
                     </defs>
@@ -469,12 +469,12 @@ export default function ConsumptionDashboard() {
                   </div>
 
                   <div className="flex items-center gap-4 w-full mt-2">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center border-2 ${readings[0]?.faixa?.includes('2') ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'}`}>
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center border-2 ${readings[0]?.faixa?.includes('2') ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-white/10 border-white/20 text-white'}`}>
                       <AlertTriangle className="w-6 h-6" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Status de Consumo:</p>
-                      <p className={`text-lg font-black ${readings[0]?.faixa?.includes('2') ? 'text-orange-400' : 'text-emerald-400'}`}>
+                      <p className={`text-lg font-black ${readings[0]?.faixa?.includes('2') ? 'text-orange-400' : 'text-white'}`}>
                         {readings[0]?.faixa || 'Faixa 1'}
                       </p>
                     </div>
@@ -571,7 +571,7 @@ export default function ConsumptionDashboard() {
                   <CloudRain className="w-8 h-8 text-blue-300 drop-shadow-[0_0_10px_rgba(147,197,253,0.6)]" />
                 </div>
                 <p className="text-center text-[11px] text-white/70 uppercase tracking-wider">
-                  Próxima Chuva: <span className="font-bold text-white">Moderada (Sáb)</span> | Est. Captação: <span className="font-bold text-emerald-400">+4.000 L</span>
+                  Próxima Chuva: <span className="font-bold text-white">Moderada (Sáb)</span> | Est. Captação: <span className="font-bold text-white">+4.000 L</span>
                 </p>
               </GlassPanel>
             </div>
@@ -647,7 +647,7 @@ export default function ConsumptionDashboard() {
                   </div>
                   <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
                     <p className="text-sm font-bold text-white/70 uppercase tracking-widest mb-2">Status</p>
-                    <p className="text-2xl font-black text-emerald-400">Nível Adequado</p>
+                    <p className="text-2xl font-black text-white">Nível Adequado</p>
                   </div>
                 </div>
               </div>
@@ -685,12 +685,12 @@ export default function ConsumptionDashboard() {
                         <td className="p-4 font-bold text-blue-400">{reading.consumption}</td>
                         <td className={`p-4 ${
                           reading.variation.includes('↑') ? 'text-red-400' : 
-                          reading.variation.includes('↓') ? 'text-emerald-400' : 'text-white/50'
+                          reading.variation.includes('↓') ? 'text-white' : 'text-white/50'
                         }`}>
                           {reading.variation}
                         </td>
                         <td className={`p-4 font-bold ${
-                          reading.faixa?.includes('2') ? 'text-orange-400' : 'text-emerald-400'
+                          reading.faixa?.includes('2') ? 'text-orange-400' : 'text-white'
                         }`}>
                           {reading.faixa || 'Faixa 1'}
                         </td>

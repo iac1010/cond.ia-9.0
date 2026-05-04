@@ -34,7 +34,7 @@ const salesSteps = [
     id: 'presentation',
     title: 'Apresentação e Demonstração',
     icon: <Map className="w-6 h-6" />,
-    color: 'from-emerald-500 to-teal-500',
+    color: 'from-zinc-700 to-black',
     description: 'Mostrar como a solução resolve os problemas específicos do cliente.',
     details: [
       'Foque nas funcionalidades que resolvem as dores mapeadas.',
@@ -60,7 +60,7 @@ const salesSteps = [
     id: 'closing',
     title: 'Fechamento e Onboarding',
     icon: <CheckCircle className="w-6 h-6" />,
-    color: 'from-green-500 to-emerald-600',
+    color: 'from-black to-zinc-900',
     description: 'Assinatura do contrato e transição para a equipe de sucesso do cliente.',
     details: [
       'Facilite o processo de assinatura (use assinatura digital).',
@@ -239,7 +239,7 @@ export default function SalesPlanning() {
                   <p className="text-sm text-white/70 leading-tight">Sempre saia de uma reunião com o próximo passo agendado.</p>
                 </li>
                 <li className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-xs font-bold">3</div>
+                  <div className="w-6 h-6 rounded-full bg-zinc-500/20 text-zinc-400 flex items-center justify-center shrink-0 text-xs font-bold">3</div>
                   <p className="text-sm text-white/70 leading-tight">Venda o valor e a transformação, não apenas as funcionalidades do sistema.</p>
                 </li>
               </ul>

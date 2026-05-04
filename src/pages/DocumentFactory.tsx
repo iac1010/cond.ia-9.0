@@ -110,7 +110,10 @@ export default function DocumentFactory() {
     addDocumentTemplate, 
     updateDocumentTemplate, 
     deleteDocumentTemplate,
-    clients
+    clients,
+    companyLogo,
+    companyData,
+    companySignature
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<'list' | 'form'>('list');
@@ -699,29 +702,62 @@ export default function DocumentFactory() {
             <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-[2rem] p-8 shadow-inner h-[600px] overflow-y-auto font-serif text-slate-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap text-sm">
               <div ref={printRef} className="bg-white text-black min-h-full">
                 {/* Cabeçalho do PDF */}
-                <div className="border-b-2 border-black pb-6 mb-8 flex justify-between items-end">
-                  <div>
-                    <h1 className="text-2xl font-bold uppercase tracking-tighter">{fillingTemplate?.title}</h1>
-                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Documento Gerado via Condfy.IA</p>
+                <div className="border-b border-zinc-200 pb-6 mb-8 flex justify-between items-start break-inside-avoid">
+                  <div className="flex gap-4 items-center">
+                    {companyLogo ? (
+                      <div className="bg-zinc-50 p-2 rounded-xl border border-zinc-100 flex items-center justify-center">
+                        <img src={companyLogo} alt="Logo" className="h-10 w-auto object-contain" />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                        <FileSignature className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                    <div>
+                      <h1 className="text-xl font-black uppercase tracking-tighter leading-tight">{fillingTemplate?.title}</h1>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none mt-1">Instrumento Particular • {companyData?.name || 'IA COMPANY'}</p>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold">{format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+                    <p className="text-xs font-black text-blue-600 uppercase tracking-widest">{format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
                   </div>
                 </div>
 
                 {/* Conteúdo */}
-                <div className="text-justify">
-                  {getFilledContent()}
+                <div className="text-justify text-zinc-800 leading-relaxed text-sm space-y-4">
+                  {getFilledContent().split('\n').map((line, i) => (
+                    <p key={i} className={line.trim().startsWith('CLÁUSULA') || line.trim().startsWith('CAPÍTULO') ? 'font-black text-black pt-4' : ''}>
+                      {line}
+                    </p>
+                  ))}
                 </div>
 
                 {/* Rodapé / Assinaturas */}
-                <div className="mt-20 grid grid-cols-2 gap-12" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                  <div className="text-center pt-4 border-t border-black">
-                    <p className="text-xs font-bold uppercase">Assinatura 1</p>
+                <div className="mt-20 grid grid-cols-2 gap-20 break-inside-avoid pt-12 border-t border-zinc-100">
+                  <div className="text-center flex flex-col items-center">
+                    <div className="h-20 flex items-end justify-center mb-2 w-full">
+                      {companySignature && (
+                        <img src={companySignature} alt="Assinatura" className="max-h-full max-w-[200px] object-contain opacity-90" />
+                      )}
+                    </div>
+                    <div className="w-full border-t border-zinc-300 pt-4">
+                      <p className="text-sm font-black text-black leading-none mb-1">{companyData?.name || 'IA COMPANY'}</p>
+                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Pelo Condomínio</p>
+                    </div>
                   </div>
-                  <div className="text-center pt-4 border-t border-black">
-                    <p className="text-xs font-bold uppercase">Assinatura 2</p>
+                  <div className="text-center flex flex-col items-center">
+                    <div className="h-20 mb-2 w-full"></div>
+                    <div className="w-full border-t border-zinc-300 pt-4">
+                      <p className="text-sm font-black text-black leading-none mb-1">Responsável / Outorgado</p>
+                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Pela Contratada</p>
+                    </div>
                   </div>
+                </div>
+
+                {/* Ultra Footer */}
+                <div className="mt-20 pt-8 border-t border-zinc-100 flex justify-between items-center text-[9px] font-bold text-zinc-300 uppercase tracking-widest">
+                  <span>Documento gerado eletronicamente • Autenticidade garantida por Condfy.IA</span>
+                  <span>PG 01/01</span>
                 </div>
                 {/* Spacer to prevent cutting off at the bottom of the page */}
                 <div style={{ height: '40px', color: 'transparent', overflow: 'hidden' }}>.</div>

@@ -266,9 +266,9 @@ export default function ExecutionCenter() {
           <h1 className="text-4xl font-black text-black uppercase tracking-tighter">Central de Execução</h1>
           <p className="text-black/60 uppercase tracking-widest text-xs mt-2">Monitoramento e Execução em Tempo Real</p>
         </div>
-        <div className="flex items-center gap-3 bg-neon-green/10 px-4 py-2 rounded-2xl border border-neon-green/20">
-          <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-          <span className="text-xs font-black text-neon-green uppercase tracking-[0.2em]">Live Monitoring</span>
+            <div className="flex items-center gap-3 bg-black/10 px-4 py-2 rounded-2xl border border-black/20">
+          <div className="w-2 h-2 rounded-full bg-black animate-pulse" />
+          <span className="text-xs font-black text-black uppercase tracking-[0.2em]">Live Monitoring</span>
         </div>
       </div>
 
@@ -286,15 +286,15 @@ export default function ExecutionCenter() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   className="group relative"
                 >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-neon-green/50 to-emerald-500/50 rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-500" />
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-black/50 to-zinc-500/50 rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-500" />
                   <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-neon-green uppercase tracking-widest mb-1">{ticket.osNumber}</span>
+                        <span className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">{ticket.osNumber}</span>
                         <h3 className="text-xl font-bold text-white leading-tight">{ticket.title || 'Sem Título'}</h3>
                       </div>
                       <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                        ticket.status === 'REALIZANDO' ? 'bg-neon-green text-black animate-pulse' : 'bg-white/10 text-white/60'
+                        ticket.status === 'REALIZANDO' ? 'bg-black text-white animate-pulse' : 'bg-white/10 text-white/60'
                       }`}>
                         {ticket.status}
                       </div>
@@ -302,18 +302,18 @@ export default function ExecutionCenter() {
 
                     <div className="space-y-3 mb-6 flex-1">
                       <div className="flex items-center gap-3 text-white/70">
-                        <MapPin className="w-4 h-4 text-neon-green" />
+                        <MapPin className="w-4 h-4 text-white/60" />
                         <span className="text-xs font-medium truncate">{client?.name || 'Cliente não encontrado'}</span>
                       </div>
                       <div className="flex items-center gap-3 text-white/70">
-                        <Clock className="w-4 h-4 text-neon-green" />
+                        <Clock className="w-4 h-4 text-white/60" />
                         <span className="text-xs font-medium">{new Date(ticket.date).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
 
                     <button
                       onClick={() => handleStartExecution(ticket)}
-                      className="w-full py-4 bg-neon-green hover:bg-neon-green/90 text-black font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(57,255,20,0.2)]"
+                      className="w-full py-4 bg-black hover:bg-zinc-800 text-white font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-black/20"
                     >
                       <Play size={20} fill="currentColor" />
                       DAR O PLAY
@@ -343,15 +343,15 @@ export default function ExecutionCenter() {
           {/* Header Info */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white/10 p-5 rounded-2xl border border-white/20 shadow-xl backdrop-blur-xl hover:bg-white/15 transition-all">
-              <p className="text-[10px] font-black text-neon-green uppercase tracking-widest mb-1 opacity-70">Cliente</p>
+              <p className="text-[10px] font-black text-black/60 uppercase tracking-widest mb-1 opacity-70">Cliente</p>
               <p className="text-base font-bold text-white tracking-tight leading-tight">{clients.find(c => c.id === selectedTicket?.clientId)?.name}</p>
             </div>
             <div className="bg-white/10 p-5 rounded-2xl border border-white/20 shadow-xl backdrop-blur-xl hover:bg-white/15 transition-all">
-              <p className="text-[10px] font-black text-neon-green uppercase tracking-widest mb-1 opacity-70">Localização</p>
+              <p className="text-[10px] font-black text-black/60 uppercase tracking-widest mb-1 opacity-70">Localização</p>
               <p className="text-base font-bold text-white truncate tracking-tight leading-tight">{clients.find(c => c.id === selectedTicket?.clientId)?.address}</p>
             </div>
             <div className="bg-white/10 p-5 rounded-2xl border border-white/20 shadow-xl backdrop-blur-xl hover:bg-white/15 transition-all">
-              <p className="text-[10px] font-black text-neon-green uppercase tracking-widest mb-1 opacity-70">Tipo</p>
+              <p className="text-[10px] font-black text-black/60 uppercase tracking-widest mb-1 opacity-70">Tipo</p>
               <p className="text-base font-bold text-white tracking-tight leading-tight">{selectedTicket?.type}</p>
             </div>
           </div>
@@ -361,14 +361,14 @@ export default function ExecutionCenter() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-neon-green/20 rounded-xl">
-                    <CheckCircle2 className="w-5 h-5 text-neon-green" />
+                  <div className="p-2 bg-black/20 rounded-xl border border-black/10">
+                    <CheckCircle2 className="w-5 h-5 text-black" />
                   </div>
                   <h3 className="text-lg font-black text-white uppercase tracking-tight">Checklist de Passos</h3>
                 </div>
                 <button 
                   onClick={() => setIsAddingTask(!isAddingTask)}
-                  className="p-2 bg-neon-green/20 hover:bg-neon-green/30 text-neon-green rounded-xl transition-all shadow-lg"
+                  className="p-2 bg-black/20 hover:bg-black/30 text-black rounded-xl transition-all shadow-lg border border-black/10"
                 >
                   <Plus size={20} />
                 </button>
@@ -390,7 +390,7 @@ export default function ExecutionCenter() {
                             type="text"
                             value={newTaskName}
                             onChange={(e) => setNewTaskName(e.target.value)}
-                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-neon-green/50 transition-all"
+                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-white/50 transition-all"
                             placeholder="Ex: Verificar pressão"
                           />
                         </div>
@@ -400,7 +400,7 @@ export default function ExecutionCenter() {
                             type="text"
                             value={newTaskCategory}
                             onChange={(e) => setNewTaskCategory(e.target.value)}
-                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-neon-green/50 transition-all"
+                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-white/50 transition-all"
                             placeholder="Ex: Hidráulica"
                           />
                         </div>
@@ -414,7 +414,7 @@ export default function ExecutionCenter() {
                         </button>
                         <button 
                           onClick={handleAddNewTask}
-                          className="px-4 py-2 bg-neon-green text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105"
+                          className="px-4 py-2 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 border border-white/10"
                         >
                           Adicionar
                         </button>
@@ -430,7 +430,7 @@ export default function ExecutionCenter() {
                     key={item.taskId}
                     className={`flex items-center gap-4 p-5 rounded-2xl border transition-all cursor-pointer shadow-lg ${
                       checklistProgress[item.taskId] 
-                        ? 'bg-neon-green/20 border-neon-green/50 text-white shadow-[0_0_15px_rgba(57,255,20,0.1)]' 
+                        ? 'bg-black/40 border-black text-white shadow-[0_0_15px_rgba(0,0,0,0.3)]' 
                         : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
                     }`}
                   >
@@ -441,9 +441,9 @@ export default function ExecutionCenter() {
                       onChange={(e) => setChecklistProgress(prev => ({ ...prev, [item.taskId]: e.target.checked }))}
                     />
                     <div className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all ${
-                      checklistProgress[item.taskId] ? 'bg-neon-green border-neon-green shadow-[0_0_10px_rgba(57,255,20,0.5)]' : 'border-white/30'
+                      checklistProgress[item.taskId] ? 'bg-black border-black shadow-[0_0_10px_rgba(0,0,0,0.5)]' : 'border-white/30'
                     }`}>
-                      {checklistProgress[item.taskId] && <CheckCircle2 className="w-5 h-5 text-black" />}
+                      {checklistProgress[item.taskId] && <CheckCircle2 className="w-5 h-5 text-white" />}
                     </div>
                     <span className="text-base font-bold tracking-tight">
                       {idx + 1}. {checklistItems.find(ci => ci.id === item.taskId)?.task || item.taskId}
@@ -456,7 +456,7 @@ export default function ExecutionCenter() {
                     <div className="flex gap-3">
                       <button 
                         onClick={() => setIsAddingTask(true)}
-                        className="px-4 py-2 bg-neon-green text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105"
+                        className="px-4 py-2 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105"
                       >
                         Nova Tarefa
                       </button>
@@ -612,12 +612,12 @@ export default function ExecutionCenter() {
           {/* Footer Action */}
           <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3 text-white/40">
-              <Info size={16} className="text-neon-green" />
+              <Info size={16} className="text-white" />
               <p className="text-xs">Ao finalizar, os valores serão registrados automaticamente no financeiro.</p>
             </div>
             <button
               onClick={handleFinishProject}
-              className="w-full md:w-auto px-12 py-4 bg-neon-green text-black font-black uppercase tracking-widest rounded-2xl hover:bg-neon-green/90 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(57,255,20,0.3)]"
+              className="w-full md:w-auto px-12 py-4 bg-black text-white font-black uppercase tracking-widest rounded-2xl hover:bg-zinc-800 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-black/30"
             >
               FINALIZAR PROJETO
               <ArrowRight size={20} />

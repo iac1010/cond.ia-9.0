@@ -166,10 +166,10 @@ export const CommercialCenter: React.FC = () => {
             className="p-6 bg-white/5 rounded-2xl border border-white/10"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 bg-emerald-500/20 rounded-lg">
-                <DollarSign className="w-5 h-5 text-emerald-400" />
+              <div className="p-2 bg-white/10 rounded-lg">
+                <DollarSign className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xs text-emerald-400 font-medium">+12%</span>
+              <span className="text-xs text-white font-medium">+12%</span>
             </div>
             <p className="text-sm text-white/40">Vendas Totais</p>
             <p className="text-2xl font-bold text-white">
@@ -251,7 +251,7 @@ export const CommercialCenter: React.FC = () => {
             </button>
             <button
               onClick={() => setFilterStatus('SALE')}
-              className={`px-4 py-1.5 rounded-lg text-sm transition-all ${filterStatus === 'SALE' ? 'bg-emerald-500/20 text-emerald-400' : 'text-white/40 hover:text-white'}`}
+              className={`px-4 py-1.5 rounded-lg text-sm transition-all ${filterStatus === 'SALE' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}
             >
               Vendas
             </button>
@@ -319,7 +319,7 @@ export const CommercialCenter: React.FC = () => {
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                             sale.status === 'SALE' 
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                              ? 'bg-white/10 text-white border border-white/20' 
                               : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                           }`}>
                             {sale.status === 'SALE' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
@@ -474,7 +474,7 @@ export const CommercialCenter: React.FC = () => {
                         onClick={() => setFormData({ ...formData, status: 'SALE' })}
                         className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
                           formData.status === 'SALE' 
-                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
+                            ? 'bg-white/10 border-white/40 text-white' 
                             : 'bg-white/5 border-white/10 text-white/40 hover:text-white'
                         }`}
                       >

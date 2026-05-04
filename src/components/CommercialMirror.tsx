@@ -44,7 +44,7 @@ export const CommercialMirror: React.FC = () => {
         <div className="p-3 bg-white/5 rounded-xl border border-white/10">
           <p className="text-xs text-white/40 mb-1">Vendas (Mês)</p>
           <p className="text-2xl font-bold text-white">{monthlySales.length}</p>
-          <div className="mt-2 flex items-center gap-1 text-[10px] text-emerald-400">
+          <div className="mt-2 flex items-center gap-1 text-[10px] text-white">
             <TrendingUp className="w-3 h-3" />
             <span>Meta: 10</span>
           </div>

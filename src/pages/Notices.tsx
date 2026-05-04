@@ -203,7 +203,7 @@ export default function Notices() {
                   )}
                   
                   {notice.apartmentLine && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded-md">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300 bg-zinc-500/20 px-2 py-1 rounded-md">
                       <Home className="w-3.5 h-3.5" />
                       {notice.apartmentLine}
                     </div>

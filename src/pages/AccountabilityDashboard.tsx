@@ -193,7 +193,7 @@ export default function AccountabilityDashboard() {
     return result;
   }, [totalStaffCost, totalManagerCost, costs]);
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+  const COLORS = ['#3b82f6', '#ffffff', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   const handleExportPDF = async () => {
     if (!reportRef.current) return;
@@ -472,15 +472,15 @@ export default function AccountabilityDashboard() {
             className="bg-white/5 p-8 rounded-[40px] border border-white/10 backdrop-blur-md group hover:bg-white/10 transition-all duration-500"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="bg-emerald-500/20 p-3 rounded-2xl group-hover:scale-110 transition-transform">
-                <DollarSign className="w-6 h-6 text-emerald-400" />
+              <div className="bg-white/10 p-3 rounded-2xl group-hover:scale-110 transition-transform">
+                <DollarSign className="w-6 h-6 text-white" />
               </div>
-              <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">Mensal</span>
+              <span className="text-[10px] font-black text-white bg-white/10 px-3 py-1 rounded-full">Mensal</span>
             </div>
             <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-1">Custo Operacional Total</p>
             <h3 className="text-3xl font-black text-white">R$ {totalOperationalCost.toLocaleString('pt-BR')}</h3>
             <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 w-[65%]" />
+              <div className="h-full bg-white/40 w-[65%]" />
             </div>
           </motion.div>
 
@@ -566,7 +566,7 @@ export default function AccountabilityDashboard() {
                   />
                   <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                   <Bar dataKey="staff" name="Colaboradores" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="manager" name="Síndico" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="manager" name="Síndico" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="others" name="Outros" stackId="a" fill="rgba(255,255,255,0.1)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -581,7 +581,7 @@ export default function AccountabilityDashboard() {
           >
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-2xl font-black flex items-center gap-3">
-                <PieChartIcon className="w-6 h-6 text-emerald-400" /> Distribuição de Custos
+                <PieChartIcon className="w-6 h-6 text-white" /> Distribuição de Custos
               </h3>
             </div>
             <div className="h-[350px]">
@@ -627,7 +627,7 @@ export default function AccountabilityDashboard() {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Total Economizado</p>
-                <p className="text-2xl font-black text-emerald-400">R$ {totalSaved.toLocaleString('pt-BR')}</p>
+                <p className="text-2xl font-black text-white">R$ {totalSaved.toLocaleString('pt-BR')}</p>
               </div>
               <div className="h-12 w-px bg-white/10 mx-2" />
               <div className="text-right">
@@ -650,26 +650,26 @@ export default function AccountabilityDashboard() {
                       <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">{goal.category}</p>
                     </div>
                   </div>
-                  {goal.status === 'COMPLETED' && (
-                    <div className="bg-emerald-500/20 p-1.5 rounded-full">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      {goal.status === 'COMPLETED' && (
+                        <div className="bg-white/20 p-1.5 rounded-full">
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-white/60">R$ {goal.currentAmount.toLocaleString('pt-BR')}</span>
-                    <span className="text-white/40">R$ {goal.targetAmount.toLocaleString('pt-BR')}</span>
-                  </div>
-                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(goal.currentAmount / goal.targetAmount) * 100}%` }}
-                      className={`h-full ${goal.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                    />
-                  </div>
-                </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-white/60">R$ {goal.currentAmount.toLocaleString('pt-BR')}</span>
+                        <span className="text-white/40">R$ {goal.targetAmount.toLocaleString('pt-BR')}</span>
+                      </div>
+                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(goal.currentAmount / goal.targetAmount) * 100}%` }}
+                          className={`h-full ${goal.status === 'COMPLETED' ? 'bg-white' : 'bg-amber-500'}`}
+                        />
+                      </div>
+                    </div>
               </div>
             ))}
             
@@ -738,13 +738,13 @@ export default function AccountabilityDashboard() {
                       </td>
                       <td className="px-8 py-6 text-white/80">{member.role}</td>
                       <td className="px-8 py-6 font-bold text-white">R$ {member.salary.toLocaleString('pt-BR')}</td>
-                      <td className="px-8 py-6 text-white/60">R$ {member.benefits.toLocaleString('pt-BR')}</td>
-                      <td className="px-8 py-6 font-black text-emerald-400">R$ {(member.salary + member.benefits).toLocaleString('pt-BR')}</td>
-                      <td className="px-8 py-6">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          Ativo
-                        </span>
-                      </td>
+                          <td className="px-8 py-6 text-white/60">R$ {member.benefits.toLocaleString('pt-BR')}</td>
+                          <td className="px-8 py-6 font-black text-white">R$ {(member.salary + member.benefits).toLocaleString('pt-BR')}</td>
+                          <td className="px-8 py-6">
+                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-white/10 text-white border border-white/20">
+                              Ativo
+                            </span>
+                          </td>
                     </tr>
                   ))}
                 </tbody>
@@ -785,7 +785,7 @@ export default function AccountabilityDashboard() {
                             <div className="flex items-center gap-4">
                               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
                                 item.category === 'BALANCE_SHEET' ? 'bg-blue-500/20 text-blue-400' : 
-                                item.category === 'INVOICE' ? 'bg-emerald-500/20 text-emerald-400' : 
+                                item.category === 'INVOICE' ? 'bg-white/10 text-white' : 
                                 'bg-amber-500/20 text-amber-400'
                               }`}>
                                 <FileText className="w-6 h-6" />
@@ -817,7 +817,7 @@ export default function AccountabilityDashboard() {
                                 ))}
                               </div>
                               <span className={`text-[10px] font-black uppercase tracking-widest ${
-                                item.status === 'VALIDATED' ? 'text-emerald-400' : 'text-amber-400'
+                                item.status === 'VALIDATED' ? 'text-white' : 'text-amber-400'
                               }`}>
                                 {item.signatures.length}/3
                               </span>
@@ -831,7 +831,7 @@ export default function AccountabilityDashboard() {
                               <button 
                                 onClick={() => validateDigitalFolderItem(item.id, 'Carlos Silva', 'Presidente do Conselho')}
                                 disabled={item.signatures.some(s => s.userName === 'Carlos Silva')}
-                                className="p-2 hover:bg-white/10 rounded-lg transition-all text-white/40 hover:text-emerald-400 disabled:opacity-30"
+                                className="p-2 hover:bg-white/10 rounded-lg transition-all text-white/40 hover:text-white disabled:opacity-30"
                               >
                                 <UserCheck className="w-5 h-5" />
                               </button>
@@ -881,7 +881,7 @@ export default function AccountabilityDashboard() {
                             </span>
                           </td>
                           <td className="py-4 text-white/60 text-sm">{safeFormatDate(cost.date)}</td>
-                          <td className="py-4 text-right font-black text-emerald-400">
+                          <td className="py-4 text-right font-black text-white">
                             R$ {cost.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                           <td className="py-4 text-right">
@@ -912,7 +912,7 @@ export default function AccountabilityDashboard() {
 
             <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 backdrop-blur-md">
                 <h3 className="text-2xl font-black mb-6 flex items-center gap-3">
-                  <ShieldCheck className="w-6 h-6 text-emerald-400" /> Conselho Fiscal
+                  <ShieldCheck className="w-6 h-6 text-white" /> Conselho Fiscal
                 </h3>
                 <p className="text-sm text-white/60 mb-8">Aprovação digital necessária. Mínimo de 3 assinaturas.</p>
                 <div className="space-y-4">
@@ -922,7 +922,7 @@ export default function AccountabilityDashboard() {
                       <p className="font-bold text-white">Carlos Oliveira</p>
                       <p className="text-xs text-white/40">Síndico</p>
                     </div>
-                    <div className="ml-auto text-emerald-400">
+                    <div className="ml-auto text-white">
                       <CheckCircle className="w-5 h-5" />
                     </div>
                   </div>
@@ -990,20 +990,20 @@ export default function AccountabilityDashboard() {
                   key={goal.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className={`relative group bg-white/5 border border-white/10 rounded-[40px] p-8 overflow-hidden transition-all hover:bg-white/10 ${isCompleted ? 'border-emerald-500/30' : ''}`}
+                  className={`relative group bg-white/5 border border-white/10 rounded-[40px] p-8 overflow-hidden transition-all hover:bg-white/10 ${isCompleted ? 'border-white/30' : ''}`}
                 >
                   {/* Progress Glow */}
                   <div 
-                    className={`absolute bottom-0 left-0 h-1 transition-all duration-1000 ${isCompleted ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.5)]'}`}
+                    className={`absolute bottom-0 left-0 h-1 transition-all duration-1000 ${isCompleted ? 'bg-white shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.5)]'}`}
                     style={{ width: `${progress}%` }}
                   />
 
                   <div className="flex items-start justify-between mb-6">
-                    <div className={`p-4 rounded-3xl ${isCompleted ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'}`}>
+                    <div className={`p-4 rounded-3xl ${isCompleted ? 'bg-white/20 text-white' : 'bg-indigo-500/20 text-indigo-400'}`}>
                       {getGoalIcon(goal.icon)}
                     </div>
                     <div className="text-right">
-                      <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${isCompleted ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/60'}`}>
+                      <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${isCompleted ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'}`}>
                         {goal.category}
                       </span>
                       <p className="text-xs text-white/40 mt-2 font-bold">Expira em {safeFormatDate(goal.deadline)}</p>
@@ -1019,13 +1019,13 @@ export default function AccountabilityDashboard() {
                   <div className="space-y-4">
                     <div className="flex justify-between text-xs font-black uppercase tracking-widest">
                       <span className="text-white/40">Progresso</span>
-                      <span className={isCompleted ? 'text-emerald-400' : 'text-indigo-400'}>{progress.toFixed(0)}%</span>
+                      <span className={isCompleted ? 'text-white' : 'text-indigo-400'}>{progress.toFixed(0)}%</span>
                     </div>
                     <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-1">
                       <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
-                        className={`h-full rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-indigo-600 to-blue-500'}`}
+                        className={`h-full rounded-full ${isCompleted ? 'bg-white' : 'bg-gradient-to-r from-indigo-600 to-blue-500'}`}
                       />
                     </div>
                   </div>
@@ -1087,10 +1087,10 @@ export default function AccountabilityDashboard() {
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3"
+                      className="mt-6 p-4 bg-white/10 border border-white/20 rounded-2xl flex items-center gap-3"
                     >
-                      <Sparkles className="w-5 h-5 text-emerald-400" />
-                      <p className="text-xs font-bold text-emerald-400">Objetivo Alcançado! Recompensa liberada.</p>
+                      <Sparkles className="w-5 h-5 text-white" />
+                      <p className="text-xs font-bold text-white">Objetivo Alcançado! Recompensa liberada.</p>
                     </motion.div>
                   )}
                 </motion.div>
@@ -1139,7 +1139,7 @@ export default function AccountabilityDashboard() {
             <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 backdrop-blur-md">
               <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-2">Próxima Recompensa</p>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-white">
                   <Zap className="w-8 h-8" />
                 </div>
                 <div>

@@ -140,7 +140,7 @@ export default function QRReports() {
                       <div className="flex items-center gap-4">
                         <button
                           onClick={() => handleApprove(report)}
-                          className="bg-emerald-500 hover:bg-emerald-400 text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-3 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                          className="bg-blue-500 hover:bg-blue-400 text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-3 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                           Aprovar OS

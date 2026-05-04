@@ -280,7 +280,7 @@ export default function SuppliesManager() {
           {clients.length === 0 && (
             <div className="col-span-full py-20 text-center text-white/30">
               <p className="text-xl">Nenhum prédio cadastrado.</p>
-              <button onClick={() => navigate('/clients')} className="mt-4 text-emerald-400 hover:underline">Cadastrar Prédios</button>
+              <button onClick={() => navigate('/clients')} className="mt-4 text-white hover:underline">Cadastrar Prédios</button>
             </div>
           )}
         </div>
@@ -399,7 +399,7 @@ export default function SuppliesManager() {
                   <div className="relative z-10">
                     <div className="flex justify-between items-start mb-6">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                      item.category === 'PISCINA' ? 'bg-blue-500/20 text-blue-400 border-blue-500/20' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20'
+                      item.category === 'PISCINA' ? 'bg-blue-500/20 text-blue-400 border-blue-500/20' : 'bg-white/10 text-white border-white/20'
                     }`}>
                       {item.category}
                     </span>
@@ -441,7 +441,7 @@ export default function SuppliesManager() {
                     <div className="mt-6 pt-6 border-t border-white/5 flex justify-between items-center text-xs">
                       <span className="text-white/40">Mínimo: {item.minStock} {item.unit}</span>
                       {item.lastPrice && (
-                        <span className="text-emerald-400/60">Último: R$ {item.lastPrice.toFixed(2)}</span>
+                        <span className="text-white/60">Último: R$ {item.lastPrice.toFixed(2)}</span>
                       )}
                     </div>
                   </div>
@@ -511,7 +511,7 @@ export default function SuppliesManager() {
                     </div>
                     <div className="pt-4 border-t border-white/5 flex items-center justify-between">
                       <span className="text-xs text-white/40">Contato: {supplier.contact}</span>
-                      <button className="text-emerald-400 hover:text-emerald-300 text-sm font-bold transition-colors">Ver Histórico</button>
+                      <button className="text-white hover:text-white/80 text-sm font-bold transition-colors">Ver Histórico</button>
                     </div>
                   </div>
                 </motion.div>
@@ -576,7 +576,7 @@ export default function SuppliesManager() {
                         </button>
                       </div>
                       <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                        quotation.status === 'OPEN' ? 'bg-amber-500/20 text-amber-400 border-amber-500/20 animate-pulse' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20'
+                        quotation.status === 'OPEN' ? 'bg-amber-500/20 text-amber-400 border-amber-500/20 animate-pulse' : 'bg-white/10 text-white border-white/20'
                       }`}>
                         {quotation.status === 'OPEN' ? 'Em Aberto' : 'Finalizada'}
                       </span>
@@ -610,14 +610,14 @@ export default function SuppliesManager() {
                               <div className="flex justify-between items-start mb-3">
                                 <span className="font-bold">{supplier?.name}</span>
                                 {resp.status === 'RECEIVED' ? (
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                  <CheckCircle2 className="w-4 h-4 text-white" />
                                 ) : (
                                   <Clock className="w-4 h-4 text-amber-400 animate-spin-slow" />
                                 )}
                               </div>
                               {resp.status === 'RECEIVED' ? (
                                 <div className="flex justify-between items-end">
-                                  <span className="text-2xl font-light text-emerald-400">R$ {total.toFixed(2)}</span>
+                                  <span className="text-2xl font-light text-white">R$ {total.toFixed(2)}</span>
                                   <button className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Ver Detalhes</button>
                                 </div>
                               ) : (
@@ -864,7 +864,7 @@ export default function SuppliesManager() {
 
                       <button 
                         onClick={handleCreateQuotation}
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                        className="w-full bg-white/20 hover:bg-white/30 text-white py-4 rounded-2xl font-bold shadow-lg border border-white/20 transition-all active:scale-95 flex items-center justify-center gap-3"
                       >
                         <Printer className="w-5 h-5" /> DISPARAR COTAÇÃO AUTOMÁTICA
                       </button>

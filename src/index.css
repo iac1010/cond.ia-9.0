@@ -54,16 +54,16 @@
   --color-blue-800: #1e40af;
   --color-blue-900: #1e3a8a;
 
-  --color-green-50: #f0fdf4;
-  --color-green-100: #dcfce7;
-  --color-green-200: #bbf7d0;
-  --color-green-300: #86efac;
-  --color-green-400: #4ade80;
-  --color-green-500: #22c55e;
-  --color-green-600: #16a34a;
-  --color-green-700: #15803d;
-  --color-green-800: #166534;
-  --color-green-900: #14532d;
+  --color-green-50: #fafafa;
+  --color-green-100: #f4f4f5;
+  --color-green-200: #e4e4e7;
+  --color-green-300: #d4d4d8;
+  --color-green-400: #a1a1aa;
+  --color-green-500: #71717a;
+  --color-green-600: #52525b;
+  --color-green-700: #3f3f46;
+  --color-green-800: #27272a;
+  --color-green-900: #18181b;
 
   --color-slate-50: #f8fafc;
   --color-slate-100: #f1f5f9;
@@ -109,16 +109,16 @@
   --color-amber-800: #92400e;
   --color-amber-900: #78350f;
 
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-100: #d1fae5;
-  --color-emerald-200: #a7f3d0;
-  --color-emerald-300: #6ee7b7;
-  --color-emerald-400: #34d399;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
-  --color-emerald-700: #047857;
-  --color-emerald-800: #065f46;
-  --color-emerald-900: #064e3b;
+  --color-emerald-50: #fafafa;
+  --color-emerald-100: #f4f4f5;
+  --color-emerald-200: #e4e4e7;
+  --color-emerald-300: #d4d4d8;
+  --color-emerald-400: #a1a1aa;
+  --color-emerald-500: #71717a;
+  --color-emerald-600: #52525b;
+  --color-emerald-700: #3f3f46;
+  --color-emerald-800: #27272a;
+  --color-emerald-900: #18181b;
 
   --color-orange-50: #fff7ed;
   --color-orange-100: #ffedd5;
@@ -145,7 +145,7 @@
   --color-white: #ffffff;
   --color-black: #000000;
   --color-transparent: transparent;
-  --color-neon-green: #39FF14;
+  --color-neon-green: #000000;
   
   /* Redefine shadows in HEX */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -294,15 +294,9 @@
   --tw-shadow: 0 0 #0000 !important;
   --tw-shadow-colored: 0 0 #0000 !important;
   
-  /* Force standard colors for common elements */
+  /* Force standard colors for the root container */
   background-color: #ffffff !important;
-  color: #000000 !important;
-  
-  /* Ensure all children use standard colors */
-  * {
-    border-color: #000000 !important;
-    color: inherit !important;
-  }
+  color: #18181b !important;
 }
 
 /* Global reset for Tailwind v4 variables that might cause oklch/oklab errors in html2canvas */
@@ -314,6 +308,7 @@
 
 @media print {
   @page {
+    size: A4;
     margin: 0;
   }
   

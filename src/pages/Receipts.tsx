@@ -251,7 +251,7 @@ export default function Receipts() {
             whileTap={{ scale: 0.98 }}
             onClick={handleSaveAndShare}
             disabled={isGenerating || !clientId || value <= 0 || !description || !date}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 flex items-center gap-3 border border-emerald-400/20 backdrop-blur-md transition-all disabled:opacity-30 disabled:cursor-not-allowed group shadow-lg shadow-emerald-500/20"
+            className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 flex items-center gap-3 border border-white/20 backdrop-blur-md transition-all disabled:opacity-30 disabled:cursor-not-allowed group shadow-lg shadow-white/10"
           >
             <Share2 className="w-6 h-6 group-hover:scale-110 transition-transform" /> 
             <span className="text-lg font-medium">{isGenerating ? 'Gerando...' : 'Salvar e Compartilhar'}</span>
@@ -500,7 +500,7 @@ export default function Receipts() {
                           <td className="px-6 py-4 text-white/60 max-w-md truncate">
                             {receipt.description}
                           </td>
-                          <td className="px-6 py-4 font-black text-emerald-400">
+                          <td className="px-6 py-4 font-black text-white">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(receipt.value)}
                           </td>
                           <td className="px-6 py-4 text-right">
@@ -514,7 +514,7 @@ export default function Receipts() {
                               </button>
                               <button 
                                 onClick={() => handleShareReceipt(receipt)}
-                                className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-lg transition-all"
+                                className="p-2 bg-white/10 hover:bg-white/30 text-white rounded-lg transition-all"
                                 title="Compartilhar"
                               >
                                 <Share2 className="w-5 h-5" />

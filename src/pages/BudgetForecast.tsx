@@ -214,7 +214,7 @@ export default function BudgetForecast() {
                   >
                     <div className="mt-1">
                       {insight.toLowerCase().includes('reduz') || insight.toLowerCase().includes('econom') ? (
-                        <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                        <div className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg">
                           <TrendingDown className="w-3 h-3" />
                         </div>
                       ) : (
@@ -280,12 +280,12 @@ export default function BudgetForecast() {
               <GlassCard title="Agenda de Pagamentos" icon={Calendar} className="md:col-span-4">
                 <div className="space-y-3 mt-2">
                   {[
-                    { day: 'Seg', title: 'Aviso Seg (Elevador A)', status: 'Conc.', color: 'emerald' },
+                    { day: 'Seg', title: 'Aviso Seg (Elevador A)', status: 'Conc.', color: 'blue' },
                     { day: 'Ter', title: 'Aluguel Ter (Cozinha)', status: 'Em And.', color: 'amber' },
                     { day: 'Qua', title: 'Segurança Qui', status: 'Em And.', color: 'amber' },
-                    { day: 'Qui', title: 'Segurança Qui', status: 'Conc.', color: 'emerald' },
+                    { day: 'Qui', title: 'Segurança Qui', status: 'Conc.', color: 'blue' },
                     { day: 'Sex', title: 'Piscina A', status: 'Em And.', color: 'amber' },
-                    { day: 'Sab', title: 'Elevador A', status: 'Conc.', color: 'emerald' },
+                    { day: 'Sab', title: 'Elevador A', status: 'Conc.', color: 'blue' },
                     { day: 'Dom', title: 'Bomba 2', status: 'Pend.', color: 'rose' },
                   ].map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all group">
@@ -294,7 +294,7 @@ export default function BudgetForecast() {
                         <span className="text-[11px] text-white/70 font-medium truncate max-w-[100px]">{item.title}</span>
                       </div>
                       <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-md ${
-                        item.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-400' :
+                        item.color === 'blue' ? 'bg-blue-500/10 text-blue-400' :
                         item.color === 'amber' ? 'bg-amber-500/10 text-amber-400' :
                         'bg-rose-500/10 text-rose-400'
                       }`}>
@@ -328,7 +328,7 @@ export default function BudgetForecast() {
                       />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                         {[0, 1, 2].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : index === 1 ? '#f59e0b' : '#10b981'} fillOpacity={0.6} />
+                          <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : index === 1 ? '#f59e0b' : '#3b82f6'} fillOpacity={0.6} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -390,7 +390,7 @@ export default function BudgetForecast() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all cursor-pointer group">
-                    <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl group-hover:bg-emerald-500/20 transition-all">
+                    <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl group-hover:bg-blue-500/20 transition-all">
                       <FolderOpen className="w-4 h-4" />
                     </div>
                     <div>

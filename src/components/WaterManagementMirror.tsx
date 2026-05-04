@@ -79,8 +79,8 @@ export function WaterManagementMirror({ readings, events, className = "", hideFo
               <span className="text-[8px] font-black uppercase tracking-wider">Status Bombas</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${hasCriticalPump ? 'bg-red-500' : allPumpsNormal ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <span className={`text-[10px] font-bold uppercase ${hasCriticalPump ? 'text-red-400' : allPumpsNormal ? 'text-emerald-400' : 'text-amber-400'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${hasCriticalPump ? 'bg-red-500' : allPumpsNormal ? 'bg-white' : 'bg-amber-500'}`} />
+              <span className={`text-[10px] font-bold uppercase ${hasCriticalPump ? 'text-red-400' : allPumpsNormal ? 'text-white' : 'text-amber-400'}`}>
                 {hasCriticalPump ? 'Crítico' : allPumpsNormal ? 'Normal' : 'Alerta'}
               </span>
             </div>

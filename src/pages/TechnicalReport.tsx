@@ -136,7 +136,7 @@ Gere apenas o conteúdo do relatório em Markdown.`;
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-indigo-950/30" />
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 blur-[120px] rounded-full mix-blend-screen" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 blur-[120px] rounded-full mix-blend-screen" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/10 blur-[120px] rounded-full mix-blend-screen" />
       </div>
 
       <div className="relative z-10 max-w-[1600px] mx-auto space-y-8">
@@ -279,7 +279,7 @@ Gere apenas o conteúdo do relatório em Markdown.`;
                       className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors border border-white/5"
                       title="Copiar texto"
                     >
-                      {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      {copied ? <CheckCircle2 className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
                     </button>
                     <button
                       onClick={handleDownloadPDF}

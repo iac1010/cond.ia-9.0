@@ -11,7 +11,7 @@ interface StatCardProps {
 const colorStyles = {
   red: 'bg-red-50 text-red-600',
   blue: 'bg-blue-50 text-blue-600',
-  emerald: 'bg-emerald-50 text-emerald-600',
+  emerald: 'bg-zinc-50 text-zinc-600',
   orange: 'bg-orange-50 text-orange-600',
   indigo: 'bg-indigo-50 text-indigo-600',
 };
@@ -19,7 +19,7 @@ const colorStyles = {
 const iconBgStyles = {
   red: 'bg-red-600',
   blue: 'bg-blue-600',
-  emerald: 'bg-emerald-600',
+  emerald: 'bg-zinc-900',
   orange: 'bg-orange-600',
   indigo: 'bg-indigo-600',
 };
@@ -27,7 +27,7 @@ const iconBgStyles = {
 const subtitleColorStyles = {
   red: 'text-red-600',
   blue: 'text-blue-600',
-  emerald: 'text-emerald-600',
+  emerald: 'text-zinc-600',
   orange: 'text-orange-600',
   indigo: 'text-indigo-600',
 };

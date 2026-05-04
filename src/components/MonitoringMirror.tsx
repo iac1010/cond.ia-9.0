@@ -35,7 +35,7 @@ export function MonitoringMirror({ className = '', showLabel = true, isEditMode 
     if (isEditMode) return;
     setIsGateOpen(!isGateOpen);
     toast.success(isGateOpen ? 'Portão Garagem Fechado' : 'Portão Garagem Aberto', {
-      icon: isGateOpen ? <Lock className="text-slate-400" /> : <Unlock className="text-emerald-500" />,
+      icon: isGateOpen ? <Lock className="text-slate-400" /> : <Unlock className="text-white" />,
       style: {
         borderRadius: '1rem',
         background: '#1e293b',
@@ -82,18 +82,18 @@ export function MonitoringMirror({ className = '', showLabel = true, isEditMode 
           onPointerDown={(e) => e.stopPropagation()}
           className={`flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl border transition-all duration-300 ${isEditMode ? 'cursor-grab' : 'cursor-pointer'} ${
             isGateOpen 
-              ? 'bg-emerald-600/30 border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
+              ? 'bg-white/10 border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.1)]' 
               : 'bg-white/5 border-white/10 hover:bg-white/10'
           }`}
         >
-          <div className={`p-2 rounded-xl transition-colors ${isGateOpen ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white/50'}`}>
+          <div className={`p-2 rounded-xl transition-colors ${isGateOpen ? 'bg-black text-white' : 'bg-white/10 text-white/50'}`}>
             {isGateOpen ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
           </div>
           <span className={`text-[9px] font-black uppercase tracking-wider ${isGateOpen ? 'text-white' : 'text-white/40'}`}>
             Portão Garagem
           </span>
           {isGateOpen && (
-            <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-white animate-ping" />
           )}
         </motion.button>
       </div>
@@ -102,8 +102,8 @@ export function MonitoringMirror({ className = '', showLabel = true, isEditMode 
         <div className="mt-4 flex justify-between items-center px-1 relative z-10">
           <div className="flex items-center gap-2">
             <div className="relative">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping absolute inset-0" />
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 relative" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white animate-ping absolute inset-0" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white relative" />
             </div>
             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Acionamento Rápido</span>
           </div>

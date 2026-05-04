@@ -36,7 +36,7 @@ export function QuotesMirror({ quotes, clients, className = '', showLabel = true
               <span className="text-[8px] font-bold text-white/50">{pendingQuotes.length}</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white" />
               <span className="text-[8px] font-bold text-white/50">{approvedQuotes.length}</span>
             </div>
           </div>
@@ -52,7 +52,7 @@ export function QuotesMirror({ quotes, clients, className = '', showLabel = true
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0 border border-white/5">
                 {quote.status === 'APPROVED' ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-white" />
                 ) : quote.status === 'REJECTED' ? (
                   <XCircle className="w-4 h-4 text-red-400" />
                 ) : (

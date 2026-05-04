@@ -45,7 +45,7 @@ export default function VirtualAssembly() {
 
   const getStatusColor = (status: Assembly['status']) => {
     switch (status) {
-      case 'ACTIVE': return 'text-emerald-400 bg-emerald-500/20 border-emerald-500/20';
+      case 'ACTIVE': return 'text-white bg-white/10 border-white/20';
       case 'UPCOMING': return 'text-amber-400 bg-amber-500/20 border-amber-500/20';
       case 'CLOSED': return 'text-white/40 bg-white/5 border-white/10';
     }
@@ -78,7 +78,7 @@ export default function VirtualAssembly() {
           </div>
         </div>
         <div className="flex items-center gap-3 bg-white/10 px-6 py-3 rounded-2xl border border-white/10 backdrop-blur-md shadow-xl">
-          <ShieldCheck className="w-6 h-6 text-emerald-400" />
+          <ShieldCheck className="w-6 h-6 text-white" />
           <span className="text-sm font-bold">Criptografia Ativa</span>
         </div>
       </header>
@@ -283,7 +283,7 @@ export default function VirtualAssembly() {
                           {selectedAssembly.votes.slice(0, 3).map((vote) => (
                             <div key={vote.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
                               <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                <div className="w-2 h-2 rounded-full bg-white" />
                                 <span className="text-xs font-bold text-white/60">{vote.userName}</span>
                               </div>
                               <code className="text-[10px] text-blue-400 font-mono">{vote.signature}</code>
@@ -331,8 +331,8 @@ export default function VirtualAssembly() {
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
           >
             <div className="bg-white p-12 rounded-[48px] text-center max-w-md shadow-2xl">
-              <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-8">
-                <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+              <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-8">
+                <CheckCircle2 className="w-12 h-12 text-slate-900" />
               </div>
               <h2 className="text-3xl font-black text-slate-900 mb-4">Voto Confirmado!</h2>
               <p className="text-slate-500 mb-8 font-medium">

@@ -23,7 +23,7 @@ export default function TicketForm() {
   const [technician, setTechnician] = useState('');
   const [observations, setObservations] = useState('');
   const [color, setColor] = useState<string>(() => {
-    const palette = ['#16a34a', '#2563eb', '#ca8a04', '#dc2626', '#9333ea', '#ea580c', '#db2777', '#0891b2'];
+    const palette = ['#3b82f6', '#2563eb', '#ca8a04', '#dc2626', '#9333ea', '#ea580c', '#db2777', '#0891b2'];
     return palette[Math.floor(Math.random() * palette.length)];
   });
   const [images, setImages] = useState<string[]>([]);
@@ -456,7 +456,7 @@ export default function TicketForm() {
                       <div className="flex flex-wrap gap-2 md:gap-4 p-3 md:p-4 bg-white/5 rounded-xl md:rounded-2xl border border-white/10">
                         {[
                           { name: 'Padrão', value: '' },
-                          { name: 'Verde', value: '#16a34a' },
+                          { name: 'Zinc', value: '#52525b' },
                           { name: 'Azul', value: '#2563eb' },
                           { name: 'Amarelo', value: '#ca8a04' },
                           { name: 'Vermelho', value: '#dc2626' },
@@ -508,7 +508,7 @@ export default function TicketForm() {
                         <button 
                           type="button"
                           onClick={() => setActiveTab('checklist')}
-                          className="text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-2"
+                          className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2"
                         >
                           <Plus className="w-3 h-3" /> Gerenciar Checklist
                         </button>
@@ -518,7 +518,7 @@ export default function TicketForm() {
                           Array.from(selectedTasks).slice(0, 8).map(taskId => {
                             const item = checklistItems.find(i => i.id === taskId);
                             return (
-                              <span key={taskId} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-bold">
+                              <span key={taskId} className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg text-[10px] font-bold">
                                 {item?.task || 'Tarefa'}
                               </span>
                             );
@@ -615,7 +615,7 @@ export default function TicketForm() {
                                 <span className="text-sm font-medium">{item.task}</span>
                                 <div className="flex items-center gap-3">
                                   <span className={`text-[10px] font-black px-2 py-1 rounded ${
-                                    checklistResults[taskId]?.status === 'OK' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    checklistResults[taskId]?.status === 'OK' ? 'bg-blue-500/20 text-blue-400' :
                                     checklistResults[taskId]?.status === 'NOK' ? 'bg-red-500/20 text-red-400' :
                                     'bg-white/10 text-white/40'
                                   }`}>
@@ -659,14 +659,14 @@ export default function TicketForm() {
                 <div className="bg-white/5 backdrop-blur-md rounded-[2.5rem] border border-white/10 p-10 shadow-2xl space-y-10">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                     <h2 className="text-2xl font-bold flex items-center gap-3">
-                      <ClipboardList className="w-6 h-6 text-emerald-400" />
+                      <ClipboardList className="w-6 h-6 text-blue-400" />
                       Checklist de Execução
                     </h2>
                     <div className="flex gap-4">
                       <button 
                         type="button"
                         onClick={() => setIsAddingTask(!isAddingTask)}
-                        className="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                        className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
                       >
                         <Plus className="w-3 h-3" /> Adicionar Tarefa
                       </button>

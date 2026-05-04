@@ -245,7 +245,7 @@ export default function Weather() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 bg-white/5 p-4 rounded-2xl">
-                    <Wind className="w-6 h-6 text-emerald-300" />
+                    <Wind className="w-6 h-6 text-white" />
                     <div>
                       <p className="text-xs opacity-60 uppercase font-bold">Vento</p>
                       <p className="text-xl font-medium">{weatherData.wind} km/h</p>

@@ -139,7 +139,7 @@ export default function Operational() {
         >
           <div className="flex justify-between items-start mb-6">
             <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-              member.status === 'ACTIVE' ? 'text-green-400 bg-green-400/10 border-green-400/20' : 
+              member.status === 'ACTIVE' ? 'text-white bg-white/10 border-white/20' : 
               member.status === 'ON_LEAVE' ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 
               'text-red-400 bg-red-400/10 border-red-400/20'
             }`}>
@@ -198,7 +198,7 @@ export default function Operational() {
         >
           <div className="flex justify-between items-start mb-6">
             <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-              key.status === 'AVAILABLE' ? 'text-green-400 bg-green-400/10 border-green-400/20' : 
+              key.status === 'AVAILABLE' ? 'text-white bg-white/10 border-white/20' : 
               key.status === 'BORROWED' ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 
               'text-red-400 bg-red-400/10 border-red-400/20'
             }`}>
@@ -307,7 +307,7 @@ export default function Operational() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/5 border border-white/5 mb-12 rounded-3xl overflow-hidden">
         <div className="bg-black p-6">
           <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Uptime Sistema</div>
-          <div className="text-2xl font-mono font-bold text-emerald-400">99.98%</div>
+          <div className="text-2xl font-mono font-bold text-zinc-400">99.98%</div>
         </div>
         <div className="bg-black p-6">
           <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Sensores Ativos</div>
@@ -355,7 +355,7 @@ export default function Operational() {
                 <div className="flex items-center gap-6 flex-1">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                     m.status === 'OVERDUE' ? 'bg-red-500/20 text-red-400' : 
-                    m.status === 'DONE' ? 'bg-green-500/20 text-green-400' : 
+                    m.status === 'DONE' ? 'bg-white/10 text-white' : 
                     'bg-white/10 text-white/60'
                   }`}>
                     <Settings className="w-6 h-6" />
@@ -397,7 +397,7 @@ export default function Operational() {
             </div>
             <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-2">Consumo Elétrico</h4>
             <p className="text-3xl font-mono font-bold">1.240 <span className="text-sm text-white/30">kWh</span></p>
-            <div className="mt-4 px-3 py-1 rounded-full bg-green-400/10 border border-green-400/20 text-[10px] font-bold text-green-400">
+            <div className="mt-4 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-white">
               -12% VS MÊS ANTERIOR
             </div>
           </div>
@@ -428,7 +428,7 @@ export default function Operational() {
               <Lock className="w-8 h-8 text-red-400" />
             </div>
             <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-2">Portões & Acessos</h4>
-            <p className="text-3xl font-mono font-bold text-emerald-400">SECURE</p>
+            <p className="text-3xl font-mono font-bold text-white">SECURE</p>
             <p className="text-[10px] font-bold text-white/30 mt-4 uppercase tracking-widest">Todos os portões fechados</p>
           </div>
 
@@ -436,11 +436,11 @@ export default function Operational() {
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
               <Shield className="w-24 h-24" />
             </div>
-            <div className="w-16 h-16 rounded-2xl bg-green-400/10 flex items-center justify-center mb-6 border border-green-400/20">
-              <Shield className="w-8 h-8 text-green-400" />
+            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6 border border-white/20">
+              <Shield className="w-8 h-8 text-white" />
             </div>
             <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-2">Sistema de Incêndio</h4>
-            <p className="text-3xl font-mono font-bold text-emerald-400">READY</p>
+            <p className="text-3xl font-mono font-bold text-white">READY</p>
             <p className="text-[10px] font-bold text-white/30 mt-4 uppercase tracking-widest">Último teste: Hoje, 08:00</p>
           </div>
         </div>

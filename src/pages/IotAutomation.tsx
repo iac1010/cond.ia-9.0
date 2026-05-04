@@ -80,7 +80,7 @@ const VerticalTube = ({ value, height = "h-48" }: { value: number, height?: stri
     </div>
     {/* Indicator arrow */}
     <div 
-      className="absolute right-[-12px] w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[8px] border-r-emerald-400 transition-all duration-1000"
+      className="absolute right-[-12px] w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[8px] border-r-white transition-all duration-1000"
       style={{ bottom: `calc(${value}% - 6px)` }}
     />
   </div>
@@ -92,7 +92,7 @@ const Toggle = ({ checked, onChange, label }: { checked: boolean, onChange: (e: 
       e.stopPropagation();
       onChange(e);
     }}
-    className={`w-14 h-7 rounded-full relative transition-colors duration-300 flex items-center px-1 shadow-inner flex-shrink-0 ${checked ? 'bg-emerald-500' : 'bg-white/20'}`}
+    className={`w-14 h-7 rounded-full relative transition-colors duration-300 flex items-center px-1 shadow-inner flex-shrink-0 ${checked ? 'bg-zinc-100' : 'bg-white/20'}`}
   >
     <motion.div 
       layout
@@ -363,7 +363,7 @@ export default function IotAutomation() {
                 ILUMINAÇÃO: 20%
               </div>
               <div className="flex items-center gap-2 text-xs font-bold text-white/80">
-                <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)]" />
+                <div className="w-3 h-3 rounded-full bg-white shadow-[0_0_5px_rgba(255,255,255,0.8)]" />
                 SEGURANÇA: 15%
               </div>
             </div>
@@ -423,7 +423,7 @@ export default function IotAutomation() {
                   <line x1="80" y1="80" x2="120" y2="80" stroke="#94a3b8" strokeWidth="4" />
                   {/* Tanks */}
                   <rect x="40" y="120" width="40" height="50" rx="4" fill="#3b82f6" opacity="0.8" />
-                  <rect x="120" y="140" width="30" height="30" rx="4" fill="#10b981" opacity="0.8" />
+                  <rect x="120" y="140" width="30" height="30" rx="4" fill="#ffffff" opacity="0.8" />
                   {/* Pipes */}
                   <path d="M80,145 L100,145 L100,155 L120,155" fill="none" stroke="#94a3b8" strokeWidth="4" />
                 </svg>
@@ -442,7 +442,7 @@ export default function IotAutomation() {
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex gap-1">
                     {[1,2,3,4,5].map(i => (
-                      <div key={i} className={`w-3 h-6 rounded-sm ${i <= 4 ? 'bg-emerald-400' : 'bg-white/20'}`} />
+                      <div key={i} className={`w-3 h-6 rounded-sm ${i <= 4 ? 'bg-zinc-200' : 'bg-white/20'}`} />
                     ))}
                   </div>
                 </div>
@@ -523,13 +523,13 @@ export default function IotAutomation() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <Droplets className={`w-5 h-5 ${lights.jardim > 0 ? 'text-emerald-300 drop-shadow-[0_0_5px_rgba(110,231,183,0.8)]' : 'text-white/60'}`} />
+                  <Droplets className={`w-5 h-5 ${lights.jardim > 0 ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]' : 'text-white/60'}`} />
                   <div className="flex-1">
                     <div className="flex justify-between mb-2">
                       <span className="text-xs font-bold text-white uppercase">Jardim</span>
                       <span className="text-[10px] text-white/60">{lights.jardim}%</span>
                     </div>
-                    <Slider value={lights.jardim} onChange={(v) => handleLightChange('jardim', v)} color="from-teal-400 to-emerald-400" />
+                    <Slider value={lights.jardim} onChange={(v) => handleLightChange('jardim', v)} color="from-zinc-400 to-white" />
                   </div>
                 </div>
               </div>
@@ -573,7 +573,7 @@ export default function IotAutomation() {
 
               <div className="mt-6 pt-4 border-t border-white/10 flex items-center gap-2">
                 <span className="text-xs font-bold text-white/60 uppercase">Status Alarme:</span>
-                <span className={`text-xs font-bold uppercase tracking-widest ${alarmActive ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-xs font-bold uppercase tracking-widest ${alarmActive ? 'text-white' : 'text-red-400'}`}>
                   {alarmActive ? 'Ativado' : 'Desativado'}
                 </span>
               </div>

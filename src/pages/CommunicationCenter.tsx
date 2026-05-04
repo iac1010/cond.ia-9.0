@@ -22,7 +22,7 @@ export default function CommunicationCenter() {
   const tabs = [
     { id: 'NOTICES', label: 'Avisos', icon: Bell, color: 'text-blue-400', bg: 'bg-blue-400/10' },
     { id: 'ASSEMBLIES', label: 'Assembleias', icon: Vote, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-    { id: 'CHAT', label: 'Chat Comunitário', icon: MessageSquare, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+    { id: 'CHAT', label: 'Chat Comunitário', icon: MessageSquare, color: 'text-white', bg: 'bg-white/10' },
     { id: 'FEEDBACK', label: 'Ouvidoria', icon: MessageCircle, color: 'text-amber-400', bg: 'bg-amber-400/10' },
   ];
 
@@ -84,7 +84,7 @@ export default function CommunicationCenter() {
         >
           <div className="flex items-center gap-8 flex-1">
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-              assembly.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 
+              assembly.status === 'ACTIVE' ? 'bg-white/20 text-white' : 
               assembly.status === 'UPCOMING' ? 'bg-blue-500/20 text-blue-400' : 
               'bg-white/10 text-white/40'
             }`}>
@@ -94,7 +94,7 @@ export default function CommunicationCenter() {
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-2xl font-bold">{assembly.title}</h3>
                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                  assembly.status === 'ACTIVE' ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/10' :
+                  assembly.status === 'ACTIVE' ? 'text-white border-white/20 bg-white/10' :
                   assembly.status === 'UPCOMING' ? 'text-blue-400 border-blue-400/20 bg-blue-400/10' :
                   'text-white/20 border-white/10 bg-white/5'
                 }`}>
@@ -139,7 +139,7 @@ export default function CommunicationCenter() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/chat')}
-            className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-8 py-4 flex items-center justify-center gap-3 rounded-xl font-bold transition-all"
+            className="bg-white/10 text-white border border-white/20 px-8 py-4 flex items-center justify-center gap-3 rounded-xl font-bold transition-all"
           >
             <MessageSquare className="w-5 h-5" /> 
             Abrir Chat
@@ -185,7 +185,7 @@ export default function CommunicationCenter() {
           {activeTab === 'ASSEMBLIES' && renderAssemblies()}
           {activeTab === 'CHAT' && (
             <div className="bg-zinc-900/50 border border-white/10 rounded-[3rem] p-12 text-center">
-              <MessageSquare className="w-24 h-24 text-emerald-400/20 mx-auto mb-8" />
+              <MessageSquare className="w-24 h-24 text-white/20 mx-auto mb-8" />
               <h2 className="text-4xl font-light mb-4">Chat Comunitário</h2>
               <p className="text-xl text-white/40 max-w-2xl mx-auto mb-12">
                 Participe das conversas em tempo real com seus vizinhos e a administração.
@@ -194,7 +194,7 @@ export default function CommunicationCenter() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/chat')}
-                className="bg-emerald-500 text-black px-12 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-emerald-500/20"
+                className="bg-white text-black px-12 py-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-white/20"
               >
                 Entrar no Chat Agora
               </motion.button>

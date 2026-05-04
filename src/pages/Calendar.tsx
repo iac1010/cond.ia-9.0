@@ -150,7 +150,7 @@ export default function Calendar() {
     theme: 'dark',
     colors: {
       TICKET: 'rgba(59, 130, 246, 0.4)', // Blue
-      MEETING: 'rgba(16, 185, 129, 0.4)', // Emerald
+      MEETING: 'rgba(255, 255, 255, 0.4)', // White
       OTHER: 'rgba(168, 85, 247, 0.4)' // Purple
     }
   });
@@ -360,7 +360,7 @@ END:VCALENDAR`;
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setIsMaintenanceAdding(true)}
-              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-6 py-4 flex items-center gap-3 border border-emerald-500/20 backdrop-blur-md transition-all rounded-2xl shadow-2xl font-black tracking-widest uppercase text-xs"
+              className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-4 flex items-center gap-3 border border-white/20 backdrop-blur-md transition-all rounded-2xl shadow-2xl font-black tracking-widest uppercase text-xs"
             >
               <Wrench className="w-5 h-5" /> 
               <span className="hidden sm:inline">Manutenção Preventiva</span>
@@ -651,7 +651,7 @@ END:VCALENDAR`;
             <div className="flex items-start gap-6">
               <div className={`p-5 rounded-[2rem] shrink-0 shadow-2xl ${
                 selectedEvent.resource.type === 'TICKET' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                selectedEvent.resource.type === 'MEETING' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                selectedEvent.resource.type === 'MEETING' ? 'bg-white/20 text-white border border-white/30' :
                 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
               }`}>
                 <CalendarIcon className="w-10 h-10" />
@@ -927,7 +927,7 @@ END:VCALENDAR`;
             </button>
             <button 
               type="submit"
-              className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-12 py-4 rounded-2xl font-black tracking-widest border border-emerald-500/30 backdrop-blur-md transition-all active:scale-95 shadow-2xl"
+              className="bg-white/20 hover:bg-white/30 text-white px-12 py-4 rounded-2xl font-black tracking-widest border border-white/30 backdrop-blur-md transition-all active:scale-95 shadow-2xl"
             >
               AGENDAR MANUTENÇÃO
             </button>

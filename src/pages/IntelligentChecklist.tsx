@@ -4,7 +4,7 @@ import { NBR5674_STANDARDS } from '../constants/maintenance';
 import { 
   Calendar, CheckCircle2, AlertTriangle, Clock, Plus, RefreshCw, 
   Building2, Bell, Check, Download, FileText, Home, DollarSign, 
-  MessageSquare, Settings, Users, Wrench, Activity, AlertCircle, Zap, Droplets, Menu, Share2
+  MessageSquare, Settings, Users, Wrench, Activity, AlertCircle, Zap, Droplets, Menu, Share2, MapPin
 } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { format, isAfter, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns';
@@ -16,7 +16,7 @@ import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
 
-const CircularProgress = ({ value, color = "text-emerald-500", size = 120, strokeWidth = 12 }: { value: number, color?: string, size?: number, strokeWidth?: number }) => {
+const CircularProgress = ({ value, color = "text-white", size = 120, strokeWidth = 12 }: { value: number, color?: string, size?: number, strokeWidth?: number }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (value / 100) * circumference;
@@ -44,7 +44,7 @@ const CircularProgress = ({ value, color = "text-emerald-500", size = 120, strok
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={circumference}
-          className={`${color} drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]`}
+          className={`${color} drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]`}
           strokeLinecap="round"
         />
       </svg>
@@ -87,7 +87,7 @@ const DoubleCircularProgress = ({ value }: { value: number }) => {
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={circumference}
-          className="text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.6)]"
+          className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]"
           strokeLinecap="round"
         />
         {/* Inner track */}
@@ -98,7 +98,7 @@ const DoubleCircularProgress = ({ value }: { value: number }) => {
           stroke="currentColor"
           strokeWidth={2}
           fill="transparent"
-          className="text-emerald-500/30"
+          className="text-white/30"
           strokeDasharray="4 4"
         />
       </svg>
@@ -121,7 +121,9 @@ export default function IntelligentChecklist() {
     updateScheduledMaintenance,
     addScheduledMaintenance,
     addNotification,
-    companyLogo
+    companyLogo,
+    companyData,
+    companySignature
   } = useStore();
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -348,7 +350,7 @@ export default function IntelligentChecklist() {
               <BackButton onClick={() => setSelectedClientId(null)} />
             </div>
             <div className="flex items-center gap-4">
-              <div className="relative w-14 h-14 rounded-full bg-gradient-to-br from-blue-500/20 to-emerald-500/20 border border-white/20 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+              <div className="relative w-14 h-14 rounded-full bg-gradient-to-br from-blue-500/20 to-zinc-500/20 border border-white/20 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(59,130,246,0.3)]">
                 {companyLogo ? (
                   <img src={companyLogo} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
@@ -411,7 +413,7 @@ export default function IntelligentChecklist() {
           </button>
           <button
             onClick={handleSharePDF}
-            className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border border-emerald-500/30"
+            className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border border-white/20"
           >
             <Share2 className="w-3 h-3" /> Compartilhar
           </button>
@@ -435,7 +437,7 @@ export default function IntelligentChecklist() {
 
               <div className="space-y-2 mt-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-white/80">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
+                  <div className="w-3 h-3 rounded-full bg-black shadow-[0_0_5px_rgba(0,0,0,0.8)]" />
                   Tarefas Concluídas: {completionRate}%
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-white/80">
@@ -510,7 +512,7 @@ export default function IntelligentChecklist() {
 
               <div className="mt-6 flex justify-between items-center border-t border-white/10 pt-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-white/80">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <div className="w-3 h-3 rounded-full bg-black" />
                   BALANÇO GERAL: 98%
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-orange-400">
@@ -538,7 +540,7 @@ export default function IntelligentChecklist() {
                       {i % 4 === 0 ? <Wrench className="w-5 h-5 text-white/70 group-hover:text-blue-400" /> :
                        i % 4 === 1 ? <Zap className="w-5 h-5 text-white/70 group-hover:text-yellow-400" /> :
                        i % 4 === 2 ? <Droplets className="w-5 h-5 text-white/70 group-hover:text-cyan-400" /> :
-                       <Activity className="w-5 h-5 text-white/70 group-hover:text-emerald-400" />}
+                       <Activity className="w-5 h-5 text-white/70 group-hover:text-white" />}
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white leading-tight line-clamp-2">{task.item}</p>
@@ -583,7 +585,7 @@ export default function IntelligentChecklist() {
                             return (
                               <td key={colIndex} className="py-1 px-1">
                                 {task ? (
-                                  <div className="bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[9px] px-1 py-1 rounded text-center truncate w-14 mx-auto" title={task.item}>
+                                  <div className="bg-white/10 border border-white/20 text-white text-[9px] px-1 py-1 rounded text-center truncate w-14 mx-auto" title={task.item}>
                                     {task.item}
                                   </div>
                                 ) : (
@@ -703,94 +705,192 @@ export default function IntelligentChecklist() {
         <div 
           ref={printRef} 
           ref-name="printRef"
-          className="p-12 bg-white text-zinc-900 font-sans w-[210mm] min-h-[297mm] pdf-content"
+          className="bg-white text-zinc-900 font-sans pdf-content relative overflow-hidden"
+          style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', padding: '0' }}
         >
-          {/* Header */}
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className="text-3xl font-black text-zinc-900 tracking-tight">FLORES MANUTENÇÃO PREDIAL LTDA</h1>
-              <p className="text-zinc-500 font-medium text-sm">Relatório de Inspeção e Manutenção Preventiva</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden">
-              {companyLogo ? (
-                <img src={companyLogo} alt="Logo" className="w-full h-full object-contain p-1" />
-              ) : (
-                <Building2 className="w-8 h-8 text-white" />
-              )}
-            </div>
-          </div>
-          
-          <div className="w-full h-0.5 bg-zinc-300 mb-8" />
+          {/* Top Accent Line */}
+          <div className="h-2 w-full bg-blue-600 mb-0"></div>
 
-          {/* Info Box */}
-          <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-8 mb-10 grid grid-cols-2 gap-x-12 gap-y-6">
-            <div>
-              <p className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-1">Condomínio/Prédio:</p>
-              <p className="text-xl font-bold border-b border-zinc-300 pb-1">{selectedClient?.name || '________________________________'}</p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-1">Data da Inspeção:</p>
-              <p className="text-xl font-bold border-b border-zinc-300 pb-1">____ / ____ / 20____</p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-1">Responsável Técnico:</p>
-              <p className="text-xl font-bold border-b border-zinc-300 pb-1">________________________________</p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-1">Assinatura:</p>
-              <p className="text-xl font-bold border-b border-zinc-300 pb-1">________________________________</p>
-            </div>
-          </div>
-
-          {/* Section Title */}
-          <h2 className="text-2xl font-black uppercase tracking-tight mb-6">ITENS DE VERIFICAÇÃO</h2>
-
-          {/* Table */}
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-zinc-100 border-y border-zinc-300">
-                <th className="py-3 px-2 text-center text-[10px] font-black uppercase tracking-widest text-zinc-600 w-12">OK</th>
-                <th className="py-3 px-2 text-center text-[10px] font-black uppercase tracking-widest text-zinc-600 w-12">NOK</th>
-                <th className="py-3 px-2 text-center text-[10px] font-black uppercase tracking-widest text-zinc-600 w-12">N/A</th>
-                <th className="py-3 px-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-600">Item / Descrição</th>
-                <th className="py-3 px-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-600 w-48">Observações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientSchedules.map((schedule, idx) => (
-                <tr key={idx} className="border-b border-zinc-200">
-                  <td className="py-4 px-2 text-center">
-                    <div className="w-5 h-5 border-2 border-zinc-300 rounded mx-auto" />
-                  </td>
-                  <td className="py-4 px-2 text-center">
-                    <div className="w-5 h-5 border-2 border-zinc-300 rounded mx-auto" />
-                  </td>
-                  <td className="py-4 px-2 text-center">
-                    <div className="w-5 h-5 border-2 border-zinc-300 rounded mx-auto" />
-                  </td>
-                  <td className="py-4 px-4">
-                    <p className="font-bold text-zinc-900">{schedule.item}</p>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-tight">
-                      {schedule.category} - {schedule.frequency}
+          <div className="p-12">
+            {/* Header Section */}
+            <div className="grid grid-cols-12 gap-8 mb-10 pb-8 border-b border-zinc-200 items-start break-inside-avoid">
+              <div className="col-span-7 flex gap-6 items-center">
+                {companyLogo ? (
+                  <div className="bg-zinc-50 p-3 rounded-2xl border border-zinc-100 flex items-center justify-center">
+                    <img src={companyLogo} alt="Logo" className="h-16 w-auto object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
+                    <Wrench className="w-8 h-8 text-white" />
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <h2 className="text-2xl font-black text-black uppercase tracking-tight leading-none mb-2">
+                    {companyData?.name || 'IA COMPANY'}
+                  </h2>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-zinc-300"></div> CNPJ: {companyData?.document || '---'}
                     </p>
-                  </td>
-                  <td className="py-4 px-4 border-l border-zinc-200">
-                    <div className="h-6" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-zinc-300"></div> {companyData?.email || 'contato@empresa.com'}
+                    </p>
+                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-zinc-300"></div> {companyData?.phone || '(00) 0000-0000'}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-          {/* Footer */}
-          <div className="mt-auto pt-20 text-center break-inside-avoid">
-            <p className="text-[10px] text-zinc-400 leading-relaxed">
-              Documento gerado automaticamente pelo sistema de gestão integrada.<br />
-              A conformidade com a manutenção preventiva (NBR 5674) é de responsabilidade do síndico/gestor.
-            </p>
+              <div className="col-span-5 text-right flex flex-col justify-between h-full">
+                <div>
+                  <div className="inline-block px-3 py-1 bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-3 rounded">
+                    ENGENHARIA E MANUTENÇÃO
+                  </div>
+                  <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">
+                    RELATÓRIO TÉCNICO
+                  </h1>
+                </div>
+                <div className="mt-4 flex flex-col gap-1 items-end">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right whitespace-nowrap">Data Referência</span>
+                    <span className="text-sm font-black text-black">{format(new Date(), 'dd/MM/yyyy')}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right whitespace-nowrap">Protocolo</span>
+                    <span className="text-sm font-black text-black">#{selectedClient?.id.substring(0, 8).toUpperCase() || '---'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Client Card */}
+            <div className="mb-10 bg-zinc-50 p-8 rounded-3xl border border-zinc-100 flex flex-col relative overflow-hidden break-inside-avoid">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-5 ml-2">Unidade / Edificação Monitorada</h3>
+              <div className="ml-2">
+                <p className="text-3xl font-black text-black leading-tight mb-6">
+                  {selectedClient?.name || '________________________________'}
+                </p>
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="pt-4 border-t border-zinc-200/50">
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Endereço de Atendimento</p>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-zinc-300 mt-0.5" />
+                      <p className="text-xs font-bold text-black leading-relaxed">{selectedClient?.address || '---'}</p>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-zinc-200/50">
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Responsável Técnico</p>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5" />
+                      <p className="text-xs font-bold text-black leading-relaxed">Engenheiro / Técnico Responsável</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Checklist Section */}
+            <h2 className="text-xl font-black text-black uppercase tracking-tight mb-6 flex items-center gap-3 break-inside-avoid">
+              <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
+              Cronograma de Manutenção Preventiva (NBR 5674)
+            </h2>
+
+            <div className="mb-10 rounded-3xl overflow-hidden border border-zinc-200 shadow-sm">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-zinc-50 border-b border-zinc-200">
+                  <tr className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                    <th className="p-5 w-20 text-center">Status</th>
+                    <th className="p-5">Plano de Manutenção / Atividade</th>
+                    <th className="p-5 text-center w-32">Periodicidade</th>
+                    <th className="p-5 text-right w-40">Próxima Venc.</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 bg-white">
+                  {clientSchedules.map((schedule, idx) => (
+                    <tr key={idx} className="break-inside-avoid">
+                      <td className="p-5">
+                        <div className="flex justify-center">
+                          <div className={`w-6 h-6 rounded-lg border-2 ${schedule.status === 'DONE' ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-zinc-200'} flex items-center justify-center`}>
+                            {schedule.status === 'DONE' && <Check className="w-4 h-4 text-emerald-600" />}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-5 uppercase">
+                        <p className="text-sm font-black text-zinc-900 leading-tight mb-1">{schedule.item}</p>
+                        <p className="text-[10px] font-black text-zinc-400 tracking-wider">CATEGORIA: {schedule.category}</p>
+                      </td>
+                      <td className="p-5 text-center">
+                         <span className="px-2 py-1 bg-zinc-100 text-[9px] font-black text-zinc-500 uppercase rounded">
+                           {schedule.frequency}
+                         </span>
+                      </td>
+                      <td className="p-5 text-right font-black text-zinc-900 text-sm font-mono">
+                        {format(parseISO(schedule.nextDate), 'dd/MM/yyyy')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Tech Observations */}
+            <div className="mb-10 break-inside-avoid">
+               <div className="bg-zinc-900 p-8 rounded-[40px] text-white shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                <div className="relative z-10">
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-400 mb-6 flex items-center gap-3">
+                    <Activity className="w-4 h-4" /> Diagnóstico e Observações Técnicas
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="h-1 w-full bg-white/10 rounded-full mb-6"></div>
+                    <p className="text-xs text-white/40 leading-relaxed font-bold italic">
+                      "A edificação apresenta conformidade parcial com o plano de manutenção preventiva. Recomenda-se a atenção imediata aos itens com data de vencimento expirada para evitar depreciação patrimonial precoce ou falhas sistêmicas em equipamentos críticos."
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Signature Section */}
+            <div className="mt-16 grid grid-cols-2 gap-20 break-inside-avoid pt-12 border-t border-zinc-100">
+              <div className="text-center flex flex-col items-center">
+                <div className="h-20 flex items-end justify-center mb-2 w-full">
+                  {companySignature && (
+                    <img 
+                      src={companySignature} 
+                      alt="Assinatura" 
+                      className="max-h-full max-w-[200px] object-contain opacity-90" 
+                    />
+                  )}
+                </div>
+                <div className="w-full border-t border-zinc-300 pt-4">
+                  <p className="text-lg font-black text-black leading-none mb-1">{companyData?.name || 'IA COMPANY'}</p>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Responsável Técnico</p>
+                </div>
+              </div>
+              <div className="text-center flex flex-col items-center">
+                <div className="h-20 mb-2 w-full"></div>
+                <div className="w-full border-t border-zinc-300 pt-4">
+                  <p className="text-lg font-black text-black leading-none mb-1">{selectedClient?.name.substring(0, 30)}</p>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Ciente do Gestor / Síndico</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-20 pt-10 border-t border-zinc-100 flex justify-between items-center break-inside-avoid">
+              <p className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest italic">
+                Este relatório atesta a realização das inspeções documentadas. Não substitui ensaios laboratoriais ou laudos específicos de engenharia.
+              </p>
+              <div className="flex items-center gap-4">
+                <p className="text-[9px] font-black text-zinc-900 uppercase tracking-widest">
+                   NBR 5674 • PG 01/01
+                </p>
+              </div>
+            </div>
           </div>
-          {/* Spacer to prevent cutting off at the bottom of the page */}
-          <div style={{ height: '40px', color: 'transparent', overflow: 'hidden' }}>.</div>
         </div>
       </div>
     </div>

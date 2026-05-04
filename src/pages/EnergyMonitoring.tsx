@@ -60,7 +60,7 @@ export default function EnergyMonitoring() {
           </div>
         </div>
         
-        <div className="flex items-center gap-3 bg-emerald-500/20 text-emerald-400 px-6 py-3 rounded-2xl font-bold border border-emerald-500/20 backdrop-blur-md shadow-xl">
+        <div className="flex items-center gap-3 bg-white/10 text-white px-6 py-3 rounded-2xl font-bold border border-white/10 backdrop-blur-md shadow-xl">
           <Leaf className="w-5 h-5" />
           Selo Verde Ativo
         </div>
@@ -78,7 +78,7 @@ export default function EnergyMonitoring() {
           </div>
           <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-1">Geração Solar (Total)</p>
           <h3 className="text-3xl font-black text-white">{totalSolar.toLocaleString()} <span className="text-sm font-bold text-white/40">kWh</span></h3>
-          <div className="mt-4 flex items-center gap-1 text-emerald-400 font-bold text-sm">
+          <div className="mt-4 flex items-center gap-1 text-white font-bold text-sm">
             <TrendingDown className="w-4 h-4 rotate-180" />
             <span>+12% vs mês ant.</span>
           </div>
@@ -95,7 +95,7 @@ export default function EnergyMonitoring() {
           </div>
           <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-1">Economia Sensores</p>
           <h3 className="text-3xl font-black text-white">{totalSensorSavings.toLocaleString()} <span className="text-sm font-bold text-white/40">kWh</span></h3>
-          <div className="mt-4 flex items-center gap-1 text-emerald-400 font-bold text-sm">
+          <div className="mt-4 flex items-center gap-1 text-white font-bold text-sm">
             <TrendingDown className="w-4 h-4" />
             <span>-8% desperdício</span>
           </div>
@@ -124,12 +124,12 @@ export default function EnergyMonitoring() {
           transition={{ delay: 0.3 }}
           className="bg-white/5 p-8 rounded-[40px] border border-white/10 backdrop-blur-md"
         >
-          <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl w-fit mb-6">
+          <div className="p-3 bg-white/10 text-white rounded-2xl w-fit mb-6">
             <Leaf className="w-6 h-6" />
           </div>
           <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-1">CO2 Evitado</p>
           <h3 className="text-3xl font-black text-white">{(totalSolar * 0.5).toFixed(1)} <span className="text-sm font-bold text-white/40">kg</span></h3>
-          <div className="mt-4 flex items-center gap-1 text-emerald-400 font-bold text-sm">
+          <div className="mt-4 flex items-center gap-1 text-white font-bold text-sm">
             <span>Equiv. 42 árvores</span>
           </div>
         </motion.div>
@@ -260,11 +260,11 @@ export default function EnergyMonitoring() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-white/40">Sensores de Presença</span>
-              <span className="text-xs font-black text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-md uppercase">100% OK</span>
+              <span className="text-xs font-black text-white bg-white/10 px-2 py-1 rounded-md uppercase">100% OK</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-white/40">Inversores Solares</span>
-              <span className="text-xs font-black text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-md uppercase">Operacional</span>
+              <span className="text-xs font-black text-white bg-white/10 px-2 py-1 rounded-md uppercase">Operacional</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-white/40">Baterias de Backup</span>

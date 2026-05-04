@@ -445,7 +445,7 @@ export default function Settings() {
         {/* Company Data Section */}
         <motion.div variants={itemVariants} className="bg-zinc-50 rounded-3xl border border-zinc-200 p-8 shadow-xl">
           <h2 className="text-2xl font-bold mb-8 flex items-center gap-3 text-zinc-900">
-            <MessageSquare className="w-6 h-6 text-green-600" />
+            <MessageSquare className="w-6 h-6 text-zinc-600" />
             Integrações
           </h2>
           <div className="space-y-6">
@@ -457,7 +457,7 @@ export default function Settings() {
               <button
                 onClick={toggleWhatsApp}
                 className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none ${
-                  whatsappEnabled ? 'bg-green-500' : 'bg-zinc-300'
+                  whatsappEnabled ? 'bg-black' : 'bg-zinc-300'
                 }`}
               >
                 <span
@@ -488,8 +488,8 @@ export default function Settings() {
             </div>
             
             {whatsappEnabled && (
-              <div className="p-4 bg-green-50 border border-green-100 rounded-xl">
-                <p className="text-sm text-green-800 font-medium">
+              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
+                <p className="text-sm text-zinc-800 font-medium">
                   A integração com a Evolution API está ativa. As notificações serão enviadas automaticamente para os números cadastrados.
                 </p>
               </div>
@@ -500,7 +500,7 @@ export default function Settings() {
         {/* Company Data Section */}
         <motion.div variants={itemVariants} className="bg-zinc-50 rounded-3xl border border-zinc-200 p-8 shadow-xl">
           <h2 className="text-2xl font-bold mb-8 flex items-center gap-3 text-zinc-900">
-            <SettingsIcon className="w-6 h-6 text-emerald-600" />
+            <SettingsIcon className="w-6 h-6 text-zinc-600" />
             Dados da Empresa
           </h2>
           <form onSubmit={handleSaveData} className="space-y-8">
@@ -592,7 +592,7 @@ export default function Settings() {
               <button
                 onClick={() => setShowBalance(!showBalance)}
                 className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none ${
-                  showBalance ? 'bg-emerald-500' : 'bg-zinc-300'
+                  showBalance ? 'bg-black' : 'bg-zinc-300'
                 }`}
               >
                 <span
@@ -676,7 +676,7 @@ export default function Settings() {
 
             <button 
               onClick={syncToSupabase}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-5 rounded-2xl font-bold border border-emerald-700 transition-all flex items-center gap-3 active:scale-95 shadow-lg"
+              className="bg-black hover:bg-zinc-900 text-white px-8 py-5 rounded-2xl font-bold border border-zinc-900 transition-all flex items-center gap-3 active:scale-95 shadow-lg"
             >
               <Database className="w-6 h-6" /> SINCRONIZAR COM SERVIDOR
             </button>

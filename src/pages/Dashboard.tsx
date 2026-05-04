@@ -220,7 +220,7 @@ function WeatherTile() {
       
       <div className="relative z-10">
         <div className="flex items-center gap-2 mb-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Meteorologia</span>
         </div>
         <h3 className="text-lg font-bold text-white/90">{data.city}</h3>
@@ -269,9 +269,9 @@ function SystemHealthTile() {
           <Activity className="w-4 h-4 text-purple-400" />
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Status do Sistema</span>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[8px] font-bold text-emerald-400 uppercase">Online</span>
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+          <div className="w-1 h-1 rounded-full bg-white animate-pulse" />
+          <span className="text-[8px] font-bold text-white uppercase">Online</span>
         </div>
       </div>
 
@@ -493,7 +493,7 @@ export default function Dashboard() {
         title: t.title || (t.type === 'CORRETIVA' ? `Corretiva: ${t.reportedProblem || t.id.slice(0, 5)}` : `Tarefa #${t.osNumber || t.id.slice(0, 5)}`),
         date: t.date,
         type: t.type === 'CORRETIVA' ? 'Corretiva' : 'Tarefa',
-        icon: t.type === 'CORRETIVA' ? <AlertTriangle className="w-2 h-2 text-red-400" /> : <ClipboardList className="w-2 h-2 text-emerald-400" />
+        icon: t.type === 'CORRETIVA' ? <AlertTriangle className="w-2 h-2 text-red-400" /> : <ClipboardList className="w-2 h-2 text-white" />
       }));
 
     const movesList = moves
@@ -615,11 +615,11 @@ export default function Dashboard() {
         <Link 
           to={isEditMode ? '#' : "/execution"} 
           onClick={(e) => isEditMode && e.preventDefault()}
-          className="metro-tile-wide plastic-effect p-6 flex flex-col justify-between group border-neon-green/50 bg-neon-green/5"
+          className="metro-tile-wide plastic-effect p-6 flex flex-col justify-between group border-white/20 bg-black/40"
         >
           <div className="flex justify-between items-start">
-            <Play size={48} className="text-neon-green group-hover:scale-110 transition-transform neon-glow" fill="currentColor" />
-            <span className="text-xs font-black uppercase tracking-[0.2em] text-neon-green opacity-60 animate-pulse">Live Now</span>
+            <Play size={48} className="text-white group-hover:scale-110 transition-transform" fill="currentColor" />
+            <span className="text-xs font-black uppercase tracking-[0.2em] text-white/40 animate-pulse">Live Now</span>
           </div>
           <div>
             <span className="text-2xl font-black text-white uppercase tracking-tighter">Central de Execução</span>
@@ -685,11 +685,11 @@ export default function Dashboard() {
       id: 'whatsapp-status',
       type: 'square',
       component: (
-        <div className="w-full h-full bg-emerald-600/20 backdrop-blur-md border border-emerald-500/30 rounded-3xl p-4 flex flex-col justify-between group relative overflow-hidden active:scale-95 transition-all">
+        <div className="w-full h-full bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-4 flex flex-col justify-between group relative overflow-hidden active:scale-95 transition-all">
           <div className="flex items-center justify-between mb-2 relative z-10">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-emerald-500/20 rounded-lg">
-                <MessageSquare className="w-4 h-4 text-emerald-400" />
+              <div className="p-1.5 bg-white/10 rounded-lg">
+                <MessageSquare className="w-4 h-4 text-white" />
               </div>
               <h3 className="text-[10px] font-bold text-white uppercase tracking-wider">Status do Sistema</h3>
             </div>
@@ -702,45 +702,45 @@ export default function Dashboard() {
                 }}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-bold transition-all ${
                   biaEnabled 
-                    ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]' 
+                    ? 'bg-black text-white shadow-xl' 
                     : 'bg-zinc-700 text-zinc-400'
                 }`}
                 title={biaEnabled ? "Desativar Bia" : "Ativar Bia"}
               >
                 {biaEnabled ? 'ON' : 'OFF'}
               </button>
-              <div className={`w-2 h-2 rounded-full ${biaStatus?.status === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} title="Servidor Webhook" />
+              <div className={`w-2 h-2 rounded-full ${biaStatus?.status === 'online' ? 'bg-zinc-400 animate-pulse' : 'bg-red-400'}`} title="Servidor Webhook" />
               <div className={`w-2 h-2 rounded-full ${biaOnline ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} title="Processador Local (Navegador)" />
             </div>
           </div>
           
           <div className="flex-1 space-y-1.5 text-[9px] relative z-10">
-            <div className="flex justify-between text-emerald-100/70">
+            <div className="flex justify-between text-white/50">
               <span>Webhook URL:</span>
               <span className="text-white font-mono truncate max-w-[100px]" title={`${biaStatus?.appUrl || ''}/api/webhook/whatsapp`}>
                 {biaStatus?.appUrl ? `${biaStatus.appUrl.substring(0, 15)}...` : 'N/A'}
               </span>
             </div>
-            <div className="flex justify-between text-emerald-100/70">
+            <div className="flex justify-between text-white/50">
               <span>Processador:</span>
               <span className={`font-mono ${biaOnline ? 'text-blue-300' : 'text-gray-400'}`}>
                 {biaOnline ? 'ONLINE' : 'OFFLINE'}
               </span>
             </div>
-            <div className="flex justify-between text-emerald-100/70">
+            <div className="flex justify-between text-white/50">
               <span>Último Webhook:</span>
               <span className="text-white font-mono truncate max-w-[80px]">
                 {biaStatus?.lastWebhookReceived ? new Date(biaStatus.lastWebhookReceived).toLocaleTimeString() : 'Nunca'}
               </span>
             </div>
-            <div className="flex justify-between text-emerald-100/70">
+            <div className="flex justify-between text-white/50">
               <span>Última Msg:</span>
               <span className="text-white font-mono truncate max-w-[80px]">
                 {biaStatus?.lastMessageExtracted || 'Nenhuma'}
               </span>
             </div>
             
-            <div className="flex justify-between text-emerald-100/70">
+            <div className="flex justify-between text-white/50">
               <span>Última Sinc:</span>
               <span className="text-white font-mono truncate max-w-[80px]">
                 {lastSync ? new Date(lastSync).toLocaleTimeString() : 'Nunca'}
@@ -754,7 +754,7 @@ export default function Dashboard() {
                 onChange={(e) => setManualCommand(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualCommand()}
                 placeholder="Comando manual..."
-                className="flex-1 bg-black/20 border border-emerald-500/30 rounded px-2 py-1 text-[8px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
+                className="flex-1 bg-black/20 border border-white/20 rounded px-2 py-1 text-[8px] text-white placeholder:text-white/30 focus:outline-none focus:border-white/40"
               />
               <button
                 onClick={(e) => {
@@ -762,7 +762,7 @@ export default function Dashboard() {
                   e.stopPropagation();
                   syncToSupabase();
                 }}
-                className="p-1 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 rounded border border-emerald-500/30 transition-all"
+                className="p-1 bg-white/10 hover:bg-white/20 text-white rounded border border-white/20 transition-all"
                 title="Sincronizar agora"
               >
                 <RefreshCw className="w-3 h-3" />
@@ -777,7 +777,7 @@ export default function Dashboard() {
                 e.stopPropagation();
                 handleManualCommand();
               }}
-              className="flex-1 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[8px] font-bold transition-colors"
+              className="flex-1 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-[8px] font-bold transition-colors"
             >
               Enviar
             </button>
@@ -788,7 +788,7 @@ export default function Dashboard() {
                 handleTestWhatsapp();
               }}
               disabled={isTestingWhatsapp}
-              className="px-2 py-1 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center justify-center"
+              className="px-2 py-1 bg-white/20 hover:bg-white/30 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center justify-center"
             >
               {isTestingWhatsapp ? <Activity className="w-3 h-3 animate-spin" /> : <Wifi className="w-3 h-3" />}
             </button>
@@ -904,7 +904,7 @@ export default function Dashboard() {
               <div className="flex flex-col items-center justify-center text-center">
                 <p className="text-[10px] font-black uppercase text-white/40 mb-2 tracking-[0.3em]">Saldo Atual</p>
                 <div className="relative group/balance">
-                  <span className={`text-5xl font-black text-white group-hover/fin:text-emerald-400 transition-all duration-500 scale-100 group-hover/fin:scale-110 ${!showBalance ? 'blur-md select-none' : ''}`}>
+                  <span className={`text-5xl font-black text-white group-hover/fin:text-white transition-[color,transform,opacity] duration-300 scale-100 group-hover/fin:scale-110 ${!showBalance ? 'blur-lg select-none' : ''}`}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(saldo)}
                   </span>
                   {!showBalance && (
@@ -922,9 +922,9 @@ export default function Dashboard() {
                     {showBalance ? <Eye className="w-4 h-4 text-white/40" /> : <EyeOff className="w-4 h-4 text-white/40" />}
                   </button>
                 </div>
-                <div className="mt-6 flex items-center gap-3 bg-emerald-500/10 px-4 py-2 rounded-2xl border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
-                  <span className="text-xs font-black text-emerald-400 uppercase tracking-[0.2em]">Fluxo de Caixa Ativo</span>
+                <div className="mt-6 flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/10 shadow-xl">
+                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <span className="text-xs font-black text-white uppercase tracking-[0.2em]">Fluxo de Caixa Ativo</span>
                 </div>
               </div>
             </div>
@@ -938,7 +938,7 @@ export default function Dashboard() {
               <div className="flex flex-col min-w-0">
                 <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] drop-shadow-md truncate">Gestão Financeira</span>
                 <div className="flex items-center gap-1">
-                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-white animate-pulse shrink-0" />
                   <span className="text-[6px] md:text-[8px] font-bold text-white/50 uppercase tracking-widest truncate">Controle de Fluxo</span>
                 </div>
               </div>
@@ -981,7 +981,7 @@ export default function Dashboard() {
       component: (
         <div 
           onClick={() => !isEditMode && navigate('/budget-forecast')}
-          className={`w-full h-full bg-gradient-to-br from-blue-600/40 to-emerald-600/40 backdrop-blur-2xl p-4 flex flex-col justify-between group relative overflow-hidden border border-white/10 shadow-2xl active:scale-95 transition-all ${isEditMode ? 'cursor-grab' : 'cursor-pointer hover:brightness-110'}`}
+          className={`w-full h-full bg-gradient-to-br from-blue-600/40 to-zinc-600/40 backdrop-blur-2xl p-4 flex flex-col justify-between group relative overflow-hidden border border-white/10 shadow-2xl active:scale-95 transition-all ${isEditMode ? 'cursor-grab' : 'cursor-pointer hover:brightness-110'}`}
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none" />
           <div className="flex items-start gap-4 h-full relative z-10">
@@ -1071,11 +1071,11 @@ export default function Dashboard() {
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <div className="flex-1 h-1 md:h-1.5 bg-white/20 rounded-full overflow-hidden max-w-[60px] md:max-w-[100px]">
                     <div 
-                      className={`h-full transition-all duration-1000 ${overdueMaintenances > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                      className={`h-full transition-all duration-1000 ${overdueMaintenances > 0 ? 'bg-amber-400' : 'bg-white'}`}
                       style={{ width: overdueMaintenances > 0 ? '40%' : '100%' }}
                     />
                   </div>
-                  <p className={`text-[8px] md:text-xs font-bold ${overdueMaintenances > 0 ? 'text-amber-400' : 'text-emerald-400'} truncate`}>
+                  <p className={`text-[8px] md:text-xs font-bold ${overdueMaintenances > 0 ? 'text-amber-400' : 'text-white'} truncate`}>
                     {overdueMaintenances > 0 ? `${overdueMaintenances} pendentes` : '100% em dia'}
                   </p>
                 </div>
@@ -1085,7 +1085,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-end relative z-10">
             <span className="hidden md:block text-[11px] font-black uppercase tracking-[0.2em] text-white/70">Manutenção Preventiva</span>
             <div className="flex items-center gap-1 md:gap-2 bg-white/10 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg border border-white/10 shrink-0">
-              <ShieldCheck className="w-2.5 h-2.5 md:w-3 md:h-3 text-emerald-400" />
+              <ShieldCheck className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" />
               <span className="text-[7px] md:text-[9px] font-bold uppercase tracking-tight text-white/70">Conformidade Legal</span>
             </div>
           </div>
@@ -1172,7 +1172,7 @@ export default function Dashboard() {
             <Link 
               to={isEditMode ? '#' : "/tickets"} 
               onClick={(e) => isEditMode && e.preventDefault()}
-              className="text-[9px] font-black uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors"
+              className="text-[9px] font-black uppercase tracking-widest text-white hover:text-white/70 transition-colors"
             >
               Ver Tudo
             </Link>
@@ -1201,7 +1201,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div className={`px-2 py-0.5 rounded-md text-[6px] font-black uppercase tracking-wider shrink-0 bg-white/5 ${
-                    ticket.status === 'CONCLUIDO' ? 'text-emerald-400' : 
+                    ticket.status === 'CONCLUIDO' ? 'text-white' : 
                     ticket.status === 'REALIZANDO' || ticket.status === 'AGUARDANDO_MATERIAL' ? 'text-amber-400' : 
                     'text-orange-400'
                   }`}>
@@ -1225,7 +1225,7 @@ export default function Dashboard() {
         <Link 
           to={isEditMode ? '#' : "/kanban"} 
           onClick={(e) => isEditMode && e.preventDefault()}
-          className="w-full h-full bg-gradient-to-br from-[#60a917] to-[#4d8712] hover:brightness-110 transition-all p-4 flex flex-col justify-between group relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-95"
+          className="w-full h-full bg-gradient-to-br from-zinc-700 to-zinc-900 hover:brightness-110 transition-all p-4 flex flex-col justify-between group relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-95"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none" />
           
@@ -1246,7 +1246,7 @@ export default function Dashboard() {
               <div className="flex flex-col min-w-0">
                 <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] drop-shadow-md truncate">Kanban</span>
                 <div className="flex items-center gap-1">
-                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-white animate-pulse shrink-0" />
                   <span className="text-[6px] md:text-[8px] font-bold text-white/50 uppercase tracking-widest truncate">Mirror Live</span>
                 </div>
               </div>
@@ -1304,7 +1304,7 @@ export default function Dashboard() {
             to={isEditMode ? '#' : "/financial?action=add-income"} 
             onClick={(e) => isEditMode && e.preventDefault()}
             title="Adicionar Receita" 
-            className="bg-gradient-to-br from-[#00a300] to-[#008000] hover:brightness-110 transition-all flex items-center justify-center relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-90 group"
+            className="bg-gradient-to-br from-zinc-600 to-zinc-800 hover:brightness-110 transition-all flex items-center justify-center relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-90 group"
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none" />
             <DollarSign className="w-6 h-6 text-white drop-shadow-lg group-hover:scale-110 transition-transform" />
@@ -1328,8 +1328,8 @@ export default function Dashboard() {
             hideFooter={true}
           />
           <div className="absolute bottom-4 left-4 flex items-center gap-2 z-10">
-            <div className="p-1.5 bg-emerald-500/20 rounded-lg border border-emerald-500/20 shadow-sm">
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <div className="p-1.5 bg-white/10 rounded-lg border border-white/20 shadow-sm">
+              <TrendingUp className="w-4 h-4 text-white" />
             </div>
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Entradas de Dinheiro</span>
           </div>
@@ -1346,7 +1346,7 @@ export default function Dashboard() {
           className={`w-full h-full p-4 flex flex-col justify-between group relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-95 transition-all ${
             lowStockCount > 0 
               ? 'bg-gradient-to-br from-red-500 to-red-700 animate-pulse-subtle' 
-              : 'bg-gradient-to-br from-emerald-600 to-emerald-800'
+              : 'bg-gradient-to-br from-zinc-700 to-zinc-900'
           }`}
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none" />
@@ -1456,8 +1456,8 @@ export default function Dashboard() {
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] drop-shadow-md">Controle Remoto</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                   <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest">Mirror Live</span>
                 </div>
               </div>
@@ -1503,7 +1503,7 @@ export default function Dashboard() {
               <div className="space-y-1">
                 <p className="font-black text-xl truncate text-white leading-tight">Central de Documentos</p>
                 <div className="flex items-center gap-2 text-white/80">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <ShieldCheck className="w-4 h-4 text-white" />
                   <p className="text-sm font-bold text-white">Atas, Editais e Contratos</p>
                 </div>
               </div>
@@ -1625,7 +1625,7 @@ export default function Dashboard() {
               <div className="space-y-1">
                 <p className="font-black text-xl truncate text-white leading-tight">Contratos & Fornecedores</p>
                 <div className="flex items-center gap-2 text-white/80">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-white" />
                   <p className="text-sm font-bold text-white">{contracts.length} Contratos Ativos</p>
                 </div>
               </div>
@@ -1720,24 +1720,24 @@ export default function Dashboard() {
           <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-1000 ease-in-out -skew-x-12 pointer-events-none" />
           
           {/* Glowing orbs */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/30 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-400/50 transition-all duration-700" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/20 transition-all duration-700" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/30 blur-[50px] rounded-full translate-y-1/2 -translate-x-1/2 group-hover:bg-indigo-400/50 transition-all duration-700" />
           
           <div className="absolute top-4 right-4 z-10">
-            <ExternalLink className="w-4 h-4 text-emerald-300 opacity-50 group-hover:opacity-100 transition-opacity" />
+            <ExternalLink className="w-4 h-4 text-white opacity-50 group-hover:opacity-100 transition-opacity" />
           </div>
 
           <div className="flex justify-center items-center h-full relative z-10">
             <div className="relative">
-              <div className="absolute inset-0 bg-emerald-400 blur-xl opacity-40 group-hover:opacity-80 transition-opacity duration-500 rounded-full" />
+              <div className="absolute inset-0 bg-white blur-xl opacity-40 group-hover:opacity-80 transition-opacity duration-500 rounded-full" />
               <div className="p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl relative z-10 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                <Maximize2 className="w-10 h-10 text-emerald-300 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+                <Maximize2 className="w-10 h-10 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
               </div>
             </div>
           </div>
           
           <div className="relative z-10 flex flex-col items-center">
-            <span className="text-[12px] font-black uppercase tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-indigo-300 drop-shadow-md">CONDFY.IA Web</span>
+            <span className="text-[12px] font-black uppercase tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-300 drop-shadow-md">CONDFY.IA Web</span>
             <span className="text-[8px] font-bold text-white/50 tracking-widest mt-1">SISTEMA EXTERNO</span>
           </div>
         </a>
@@ -1908,11 +1908,11 @@ export default function Dashboard() {
             {/* Bia Status Indicator */}
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border backdrop-blur-md transition-all mt-2 md:mt-4 ${
               biaStatus?.status === 'online' 
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                ? 'bg-white/10 border-white/20 text-white' 
                 : 'bg-red-500/10 border-red-500/20 text-red-400'
             }`}>
               <div className={`w-2 h-2 rounded-full animate-pulse ${
-                biaStatus?.status === 'online' ? 'bg-emerald-400' : 'bg-red-400'
+                biaStatus?.status === 'online' ? 'bg-white' : 'bg-red-400'
               }`} />
               <span className="text-[10px] font-black uppercase tracking-widest">
                 Conexão com Banco de Dados: {biaStatus?.status === 'online' ? 'Online' : 'Offline'}
@@ -1926,12 +1926,12 @@ export default function Dashboard() {
             </div>
           </div>
           
-          {biaStatus?.lastMessageExtracted && (
-            <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 mb-2 w-fit animate-pulse">
-              <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-1">Último comando recebido:</p>
-              <p className="text-[10px] italic text-emerald-400">"{biaStatus.lastMessageExtracted}"</p>
-            </div>
-          )}
+            {biaStatus?.lastMessageExtracted && (
+              <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 mb-2 w-fit animate-pulse">
+                <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-1">Último comando recebido:</p>
+                <p className="text-[10px] italic text-white">"{biaStatus.lastMessageExtracted}"</p>
+              </div>
+            )}
 
           <div className="flex flex-wrap gap-2 items-center">
             <div className="bg-black/40 border border-white/5 rounded-lg px-2 py-1 flex items-center gap-2">
@@ -1956,7 +1956,7 @@ export default function Dashboard() {
               onClick={() => setIsEditMode(!isEditMode)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all w-fit ${
               isEditMode 
-                ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
+                ? 'bg-white text-[#004a7c] shadow-[0_0_15px_rgba(255,255,255,0.4)]' 
                 : 'bg-white/10 text-white/60 hover:bg-white/20'
             }`}
           >
@@ -2144,7 +2144,7 @@ export default function Dashboard() {
             </button>
             <button 
               type="submit"
-              className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-10 py-3 rounded-xl font-bold border border-emerald-500/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
+              className="bg-white/20 hover:bg-white/30 text-white px-10 py-3 rounded-xl font-bold border border-white/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
             >
               ADICIONAR
             </button>

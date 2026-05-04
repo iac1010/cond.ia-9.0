@@ -125,7 +125,7 @@ export default function VisitorControl() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${
-                      status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'
+                      status === 'ACTIVE' ? 'bg-white/10 text-white' : 'bg-white/10 text-white/40'
                     }`}>
                       {status === 'ACTIVE' ? 'Ativo' : status === 'EXPIRED' ? 'Expirado' : 'Usado'}
                     </span>

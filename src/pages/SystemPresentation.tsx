@@ -66,7 +66,7 @@ const SLIDES = [
     title: 'Transparência Financeira',
     subtitle: 'Gestão de Fluxo e Inadimplência',
     content: 'Prestação de contas clara e objetiva. O síndico tem controle total sobre receitas e despesas, com gráficos que facilitam a apresentação em assembleias.',
-    icon: <TrendingUp className="w-12 h-12 text-emerald-500" />,
+    icon: <TrendingUp className="w-12 h-12 text-zinc-400" />,
     image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=2070',
     benefits: [
       'Pasta digital sempre atualizada',
@@ -105,7 +105,7 @@ const SLIDES = [
     title: 'Controle e Convivência',
     subtitle: 'QR Codes e Mural Digital',
     content: 'Modernize a portaria com convites via QR Code e mantenha a comunidade informada com avisos segmentados por torre ou bloco.',
-    icon: <Users className="w-12 h-12 text-emerald-500" />,
+    icon: <Users className="w-12 h-12 text-zinc-400" />,
     image: 'https://images.unsplash.com/photo-1556740734-7f96267b118a?auto=format&fit=crop&q=80&w=2070',
     benefits: [
       'Agilidade na entrada de visitantes',

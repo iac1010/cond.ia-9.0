@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../store';
-import { Download, Printer, Edit, CheckCircle2, XCircle, DollarSign, Camera, MapPin, User, MessageSquare, Plus, QrCode, Share2, Sparkles, Wrench, ClipboardList } from 'lucide-react';
+import { Download, Printer, Edit, CheckCircle2, XCircle, DollarSign, Camera, MapPin, User, MessageSquare, Plus, QrCode, Share2, Sparkles, Wrench, ClipboardList, AlertCircle, Package } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -192,7 +192,7 @@ export default function TicketView() {
             <button 
               onClick={handleSharePdf}
               disabled={isGenerating}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg"
+              className="bg-black hover:bg-zinc-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg"
             >
               <Share2 className="w-4 h-4" /> Compartilhar
             </button>
@@ -225,7 +225,7 @@ export default function TicketView() {
                 </div>
                 <button 
                   onClick={handleApproveBudget}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20"
+                  className="bg-black hover:bg-zinc-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-black/20"
                 >
                   <CheckCircle2 className="w-5 h-5" /> Aprovar
                 </button>
@@ -244,308 +244,248 @@ export default function TicketView() {
           <div 
             ref={printRef} 
             ref-name="printRef"
-            className="bg-white text-zinc-900 p-6 md:p-12 print:p-0 print:w-full print:max-w-[210mm] print:mx-auto pdf-content"
+            className="bg-white text-zinc-900 p-10 md:p-12 print:p-0 print:w-full print:mx-auto pdf-content font-sans"
+            style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', backgroundColor: '#ffffff', color: '#18181b', position: 'relative' }}
           >
-        {/* Cabeçalho do Relatório */}
-        <div className="border-b-4 border-emerald-600 flex justify-between items-end pb-8 mb-8 break-inside-avoid page-break-inside-avoid">
-          <div className="flex items-start gap-6">
-            <div className="flex flex-col items-center gap-2">
-              {companyLogo ? (
-                <img src={companyLogo} alt="Logo" className="h-20 w-auto object-contain rounded-xl shadow-sm" />
-              ) : (
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Wrench className="w-8 h-8 text-white" />
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col">
-              <h2 className="text-3xl font-black text-zinc-900 uppercase tracking-tight leading-none mb-1">
-                {companyData?.name || 'IA COMPANY'}
-              </h2>
-              <p className="text-sm font-medium text-zinc-500 mt-1">CNPJ: {companyData?.document || '---'}</p>
-              <p className="text-sm font-medium text-zinc-500">{companyData?.email || 'contato@empresa.com'}</p>
-              <p className="text-sm font-medium text-zinc-500">{companyData?.phone || '(00) 0000-0000'}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <h2 className="text-3xl font-black tracking-tighter text-emerald-700 uppercase mb-4">
-              {ticket.type === 'CORRETIVA' ? 'OS Corretiva' : 'OS Preventiva'}
-            </h2>
-            <div className="flex flex-col gap-1 text-right">
-              <p className="text-sm font-bold text-zinc-800">
-                <span className="text-zinc-400 uppercase tracking-widest text-xs mr-2">Nº</span>
-                {ticket.id.substring(0, 8).toUpperCase()}
-              </p>
-              <p className="text-sm font-bold text-zinc-800">
-                <span className="text-zinc-400 uppercase tracking-widest text-xs mr-2">Data</span>
-                {safeFormatDate(ticket.date)}
-              </p>
-              <p className="text-sm font-bold text-zinc-800">
-                <span className="text-zinc-400 uppercase tracking-widest text-xs mr-2">Técnico</span>
-                {ticket.technician}
-              </p>
-            </div>
-          </div>
-        </div>
+            {/* Top Accent Line */}
+            <div className="h-2 w-full bg-black mb-6"></div>
 
-        {/* Informações do Cliente */}
-        {client && (
-          <div className="mb-10 bg-zinc-50 p-8 rounded-3xl border border-zinc-200 relative overflow-hidden break-inside-avoid page-break-inside-avoid">
-            <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500"></div>
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-emerald-600">Dados do Cliente</h3>
-              {ticket.location && (
-                <div className="flex items-center gap-1.5 bg-white text-zinc-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-zinc-200 shadow-sm">
-                  <MapPin className="w-3 h-3" /> {ticket.location}
-                </div>
-              )}
-            </div>
-            <p className="text-3xl font-black text-zinc-900 mb-4">{client.name}</p>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-sm text-zinc-600">
-              <p><span className="font-semibold text-zinc-400 w-16 inline-block">DOC:</span> {client.document || '-'}</p>
-              <p><span className="font-semibold text-zinc-400 w-16 inline-block">TEL:</span> {client.phone}</p>
-              <p><span className="font-semibold text-zinc-400 w-16 inline-block">RESP:</span> {client.contactPerson || '-'}</p>
-              <p><span className="font-semibold text-zinc-400 w-16 inline-block">EMAIL:</span> {client.email || '-'}</p>
-              <p className="col-span-2 mt-2"><span className="font-semibold text-zinc-400 w-16 inline-block">END:</span> {client.address}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Informações do Relatante (QR Code) */}
-        {(ticket.reportedBy || ticket.budgetAmount) && (
-          <div className="mb-10 flex gap-6 break-inside-avoid page-break-inside-avoid">
-            {ticket.reportedBy && (
-              <div className="flex-1 bg-blue-50/50 p-6 rounded-3xl border border-blue-100 flex items-center gap-4">
-                <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                  <User className="w-7 h-7 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Relatado por (Unidade/Nome)</p>
-                  <p className="font-bold text-zinc-900 text-xl">{ticket.reportedBy}</p>
-                </div>
-              </div>
-            )}
-            {ticket.budgetAmount && (
-              <div className="flex-1 bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 flex items-center gap-4">
-                <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
-                  <DollarSign className="w-7 h-7 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Orçamento Aprovado</p>
-                  <p className="font-black text-zinc-900 text-2xl">R$ {ticket.budgetAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
-              </div>
-            )}
-            <div className="bg-white p-3 rounded-2xl border border-zinc-200 shadow-sm shrink-0 flex items-center justify-center">
-              <QRCodeSVG 
-                value={`${window.location.origin}/tickets/${ticket.id}`} 
-                size={72}
-                level="H"
-                includeMargin={false}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Conteúdo Específico */}
-        <div className="space-y-10">
-          {/* Problema Relatado (Corretiva) */}
-          {ticket.reportedProblem && (
-            <div className="break-inside-avoid page-break-inside-avoid bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
-              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500"></div> Problema Relatado
-              </h3>
-              <p className="text-zinc-800 whitespace-pre-wrap text-lg leading-relaxed">{ticket.reportedProblem}</p>
-            </div>
-          )}
-
-          {/* Relato da Manutenção (Corretiva) */}
-          {ticket.serviceReport && (
-            <div className="break-inside-avoid page-break-inside-avoid bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
-              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Relato da Manutenção
-              </h3>
-              <p className="text-zinc-800 whitespace-pre-wrap text-lg leading-relaxed">{ticket.serviceReport}</p>
-            </div>
-          )}
-
-          {/* Resultados do Checklist */}
-          {ticket.checklistResults && ticket.checklistResults.length > 0 && (
-            <div className="break-inside-avoid page-break-inside-avoid">
-              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2 flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-emerald-500" /> Resultados do Checklist
-              </h3>
-              <div className="overflow-hidden border border-zinc-200 rounded-3xl shadow-sm">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-zinc-50 text-zinc-500">
-                      <th className="p-5 font-black uppercase tracking-widest border-b border-zinc-200">Tarefa Verificada</th>
-                      <th className="p-5 font-black uppercase tracking-widest border-b border-zinc-200 w-32 text-center">Status</th>
-                      <th className="p-5 font-black uppercase tracking-widest border-b border-zinc-200">Observações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 bg-white">
-                    {ticket.checklistResults.map(result => {
-                      const item = checklistItems.find(i => i.id === result.taskId);
-                      return (
-                        <tr key={result.taskId} className="break-inside-avoid">
-                          <td className="p-5 text-zinc-900 font-bold text-base">{item?.task || 'Tarefa removida'}</td>
-                          <td className="p-5 text-center">
-                            <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block w-full ${
-                              result.status === 'OK' ? 'bg-emerald-100 text-emerald-700' :
-                              result.status === 'NOK' ? 'bg-red-100 text-red-700' :
-                              'bg-zinc-100 text-zinc-600'
-                            }`}>
-                              {result.status}
-                            </span>
-                          </td>
-                          <td className="p-5 text-zinc-600 text-base">{result.notes || '-'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Materiais Usados */}
-          {ticket.usedMaterials && ticket.usedMaterials.length > 0 && (
-            <div className="break-inside-avoid page-break-inside-avoid">
-              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2 flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-orange-500" /> Materiais Utilizados
-              </h3>
-              <div className="overflow-hidden border border-zinc-200 rounded-3xl shadow-sm">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-zinc-50 text-zinc-500">
-                      <th className="p-5 font-black uppercase tracking-widest border-b border-zinc-200">Material</th>
-                      <th className="p-5 font-black uppercase tracking-widest border-b border-zinc-200 w-32 text-center">Quantidade</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 bg-white">
-                    {ticket.usedMaterials.map((material, index) => (
-                      <tr key={index} className="break-inside-avoid">
-                        <td className="p-5 text-zinc-900 font-bold text-base">{material.name}</td>
-                        <td className="p-5 text-center text-zinc-600 font-bold">{material.quantity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Observações Gerais */}
-          {ticket.observations && (
-            <div className="break-inside-avoid page-break-inside-avoid bg-zinc-50 border border-zinc-200 rounded-3xl p-8">
-              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-3">Observações Gerais</h3>
-              <p className="text-zinc-700 whitespace-pre-wrap text-base leading-relaxed">{ticket.observations}</p>
-            </div>
-          )}
-
-          {/* Histórico de Atendimento */}
-          <div className="break-inside-avoid page-break-inside-avoid">
-            <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 border-b border-zinc-100 pb-2 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" /> Histórico de Atendimento
-            </h3>
-            <div className="space-y-4 mb-6">
-              {ticket.history && ticket.history.length > 0 ? (
-                ticket.history.map((entry) => (
-                  <div key={entry.id} className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
-                    <div className="flex justify-between items-start mb-1">
-                      <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">
-                        {entry.userName || 'Sistema'} • {safeFormatDate(entry.date, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    <p className="text-zinc-800">{entry.note}</p>
+            {/* Header Section */}
+            <div className="flex justify-between items-start mb-8 pb-6 border-b border-zinc-200 break-inside-avoid" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div className="flex gap-6 items-center flex-1" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                {companyLogo ? (
+                  <div className="bg-white p-1 rounded-xl border border-zinc-100 flex items-center justify-center shrink-0" style={{ width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={companyLogo} alt="Logo" style={{ height: '70px', width: 'auto', objectFit: 'contain' }} />
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-zinc-400 italic">Nenhum histórico registrado.</p>
-              )}
-            </div>
-            
-            <div className="flex gap-3 print:hidden">
-              <input 
-                type="text" 
-                placeholder="Adicionar nota ao histórico..."
-                value={historyNote}
-                onChange={(e) => setHistoryNote(e.target.value)}
-                className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all text-zinc-900"
-              />
-              <button 
-                onClick={handleAddHistory}
-                className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-primary/20"
-              >
-                <Plus className="w-5 h-5" /> Adicionar
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Assinaturas */}
-        <div className="mt-20 grid grid-cols-2 gap-20 break-inside-avoid page-break-inside-avoid no-break">
-          <div className="text-center">
-            <div className="flex flex-col items-center mb-2">
-              <div className="h-24 flex items-end justify-center w-full">
-                {companySignature && (
-                  <img src={companySignature} alt="Assinatura" className="max-h-full max-w-full object-contain" />
+                ) : (
+                  <div className="w-[80px] h-[80px] bg-black rounded-xl flex items-center justify-center shadow-lg shrink-0" style={{ width: '80px', height: '80px', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Wrench className="w-10 h-10 text-white" />
+                  </div>
                 )}
-              </div>
-              <div className="border-t-2 border-zinc-300 w-full pt-2">
-                <p className="font-black text-zinc-900 text-xl leading-tight">{ticket.technician}</p>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Técnico Responsável</p>
-              </div>
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="h-24 mb-2"></div>
-            <div className="border-t-2 border-zinc-300 w-full pt-2">
-              <p className="font-black text-zinc-900 text-xl leading-tight">{client.name}</p>
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Cliente / Síndico(a)</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-16 pt-8 border-t border-zinc-100 text-center break-inside-avoid">
-          <p className="text-xs font-medium text-zinc-400">
-            Documento gerado por {companyData?.name || 'IA COMPANY'} • {new Date().getFullYear()}
-          </p>
-        </div>
-
-        {/* Fotos do Serviço (Anexos) */}
-        {(ticket.images?.length || 0) > 0 || ticket.photoBefore ? (
-          <div className="mt-20 page-break-before-always pt-12">
-            <div className="flex items-center gap-4 mb-8 border-b border-zinc-200 pb-4">
-              <Camera className="w-6 h-6 text-zinc-400" />
-              <h3 className="text-lg font-black text-zinc-800 uppercase tracking-widest">Anexo Fotográfico</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              {ticket.photoBefore && (
-                <div className="rounded-3xl overflow-hidden border border-zinc-200 break-inside-avoid relative bg-zinc-50 p-2 shadow-sm">
-                  <img src={ticket.photoBefore} alt="Foto Inicial" className="w-full h-64 object-cover rounded-2xl" />
-                  <div className="absolute top-6 left-6 bg-red-600/90 backdrop-blur-sm text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-lg">
-                    <Camera className="w-3.5 h-3.5" /> Antes
+                <div className="flex flex-col">
+                  <h2 className="text-2xl font-black text-black leading-none mb-3" style={{ fontWeight: 900, margin: 0, marginBottom: '8px' }}>
+                    {companyData?.name || 'IA COMPANY SOFTWARE E AUTOMAÇÃO LTDA'}
+                  </h2>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2" style={{ fontWeight: 700, fontSize: '10px' }}>
+                      CNPJ: {companyData?.document || '---'}
+                    </p>
+                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2" style={{ fontWeight: 700, fontSize: '10px' }}>
+                      {companyData?.email || 'contato@empresa.com'}
+                    </p>
+                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2" style={{ fontWeight: 700, fontSize: '10px' }}>
+                      {companyData?.phone || '(00) 0000-0000'}
+                    </p>
                   </div>
                 </div>
-              )}
-              {ticket.images?.map((img, index) => (
-                <div key={index} className="rounded-3xl overflow-hidden border border-zinc-200 break-inside-avoid bg-zinc-50 p-2 shadow-sm relative">
-                  <img src={img} alt={`Foto ${index + 1}`} className="w-full h-64 object-cover rounded-2xl" />
-                  <div className="absolute top-6 left-6 bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-lg">
-                    <Camera className="w-3.5 h-3.5" /> Depois
+              </div>
+
+              <div className="text-right flex flex-col justify-between" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <div className="flex flex-col items-end">
+                  <div className="w-24 h-4 bg-black mb-3" style={{ width: '96px', height: '16px', backgroundColor: '#000' }}></div>
+                  <h1 className="text-4xl font-black tracking-tighter text-black uppercase leading-none mb-3" style={{ fontWeight: 900, fontSize: '36px', letterSpacing: '-0.05em' }}>
+                    {ticket.type === 'CORRETIVA' ? 'CORRETIVA' : ticket.type}
+                  </h1>
+                </div>
+                <div className="flex flex-col gap-1 items-end pt-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 900, fontSize: '10px' }}>Protocolo</span>
+                    <span className="text-sm font-black text-black" style={{ fontWeight: 900 }}>#{ticket.id.substring(0, 8).toUpperCase()}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 900, fontSize: '10px' }}>Emissão</span>
+                    <span className="text-sm font-black text-black" style={{ fontWeight: 900 }}>{safeFormatDate(ticket.date)}</span>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
+
+            {/* Status & Tech Boxes */}
+            <div className="flex border border-black rounded-2xl overflow-hidden mb-8 break-inside-avoid" style={{ display: 'flex', border: '1px solid #000', borderRadius: '16px', overflow: 'hidden' }}>
+              <div className="flex-1 bg-white p-5 border-r border-black" style={{ flex: 1, padding: '20px', borderRight: '1px solid #000' }}>
+                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2" style={{ fontWeight: 900, fontSize: '9px' }}>Status Final</p>
+                <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="w-2 h-2 bg-amber-500" style={{ width: '8px', height: '8px', backgroundColor: '#f59e0b' }}></div>
+                  <span className="font-black text-black text-base uppercase" style={{ fontWeight: 900 }}>— {ticket.status}</span>
+                </div>
+              </div>
+              <div className="flex-1 bg-white p-5 border-r border-black" style={{ flex: 1, padding: '20px', borderRight: '1px solid #000' }}>
+                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2" style={{ fontWeight: 900, fontSize: '9px' }}>Técnico Encarregado</p>
+                <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <User className="w-3.5 h-3.5 text-zinc-400" />
+                  <span className="font-black text-black text-sm uppercase" style={{ fontWeight: 900 }}>{ticket.technician}</span>
+                </div>
+              </div>
+              <div className="flex-1 bg-black p-5" style={{ flex: 1, backgroundColor: '#000' }}>
+                {/* Black box filler matching image */}
+              </div>
+            </div>
+
+            {/* Client & QR Row */}
+            <div className="flex gap-6 mb-8 items-stretch break-inside-avoid" style={{ display: 'flex', gap: '24px' }}>
+              <div className="flex-1 bg-white p-8 rounded-[2.5rem] border-2 border-black flex flex-col relative overflow-hidden" style={{ flex: 1, padding: '32px', borderRadius: '40px', border: '2px solid #000' }}>
+                <h3 className="text-[9px] font-black uppercase tracking-widest text-black mb-6" style={{ fontWeight: 900, fontSize: '9px' }}>NOME DO CLIENTE / SOLICITANTE</h3>
+                <div>
+                  <p className="text-3xl font-black text-black leading-tight mb-6" style={{ fontWeight: 900 }}>{client.name}</p>
+                  <div className="grid grid-cols-2 gap-y-6 gap-x-8" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <div>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '9px' }}>CNPJ / CPF</p>
+                      <p className="text-xs font-black text-black" style={{ fontWeight: 900, fontSize: '12px' }}>{client.document || '---'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '9px' }}>Contato</p>
+                      <p className="text-xs font-black text-black" style={{ fontWeight: 900, fontSize: '12px' }}>{client.contactPerson || client.phone}</p>
+                    </div>
+                    <div className="col-span-2" style={{ gridColumn: 'span 2' }}>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '9px' }}>Endereço de Atendimento</p>
+                      <div className="flex items-start gap-2" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                        <MapPin className="w-3.5 h-3.5 text-black mt-0.5" />
+                        <p className="text-xs font-black text-black leading-relaxed" style={{ fontWeight: 900, fontSize: '12px' }}>
+                          {client.address} {ticket.location ? ` - ${ticket.location}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-[200px] flex flex-col items-center justify-center p-8 border-2 border-black rounded-[2.5rem] bg-white text-center" style={{ width: '200px', padding: '32px', border: '2px solid #000', borderRadius: '40px' }}>
+                <div className="mb-4 bg-white">
+                  <QRCodeSVG 
+                    value={`${window.location.origin}/tickets/${ticket.id}`} 
+                    size={100}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
+                <p className="text-[9px] font-black text-black uppercase tracking-widest leading-relaxed" style={{ fontWeight: 900, fontSize: '9px' }}>
+                  ESCANEIE PARA VALIDAR AUTENTICIDADE DIGITAL
+                </p>
+              </div>
+            </div>
+
+            {/* Service Details */}
+            <div className="space-y-8" style={{ marginTop: '32px' }}>
+              {/* Problema Relatado */}
+              <div className="relative pl-6 break-inside-avoid" style={{ position: 'relative', paddingLeft: '24px', borderLeft: '4px solid #000' }}>
+                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-4 flex items-center gap-2" style={{ fontWeight: 900, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle className="w-4 h-4" /> Problema Relatado
+                </h3>
+                <div className="space-y-1">
+                  {ticket.reportedProblem ? (
+                    ticket.reportedProblem.split('\n').map((line, i) => (
+                      <p key={i} className="text-black text-sm leading-relaxed font-bold" style={{ fontWeight: 700, fontSize: '14px', margin: 0, marginBottom: '4px' }}>
+                        - {line}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-zinc-400 text-sm italic" style={{ fontStyle: 'italic', color: '#a1a1aa' }}>Nenhum problema detalhado.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Histórico Section */}
+              <div className="break-inside-avoid">
+                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-4 flex items-center gap-2" style={{ fontWeight: 900, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ClipboardList className="w-4 h-4" /> Histórico de Campo
+                </h3>
+                <div className="p-6 border-2 border-dashed border-zinc-300 rounded-[2rem] text-center bg-zinc-50/30" style={{ padding: '24px', border: '2px dashed #d4d4d8', borderRadius: '32px', backgroundColor: '#fafafa' }}>
+                  {ticket.history && ticket.history.length > 0 ? (
+                    <div className="text-left space-y-4" style={{ textAlign: 'left' }}>
+                      {ticket.history.map(entry => (
+                        <div key={entry.id} className="pb-3 border-b border-zinc-100 last:border-0 last:pb-0" style={{ paddingBottom: '12px', borderBottom: '1px solid #f4f4f5' }}>
+                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1" style={{ fontWeight: 900, fontSize: '10px', color: '#a1a1aa' }}>
+                            {safeFormatDate(entry.date)} • {entry.userName}
+                          </p>
+                          <p className="text-sm font-bold text-black" style={{ fontWeight: 700, fontSize: '14px' }}>{entry.note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-400 italic font-bold" style={{ fontStyle: 'italic', fontWeight: 700, color: '#a1a1aa' }}>Nenhum evento registrado no histórico</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Comentários Adicionais */}
+              <div className="bg-white p-8 rounded-[2.5rem] border-2 border-black break-inside-avoid shadow-inner" style={{ padding: '32px', borderRadius: '40px', border: '2px solid #000', backgroundColor: '#fff' }}>
+                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-4" style={{ fontWeight: 900, fontSize: '10px' }}>COMENTÁRIOS ADICIONAIS</h3>
+                <p className="text-black text-base font-black italic" style={{ fontWeight: 900, fontSize: '16px', fontStyle: 'italic' }}>
+                  "{ticket.observations || (ticket.budgetAmount ? `Valor de Mão de Obra R$ ${ticket.budgetAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Nenhuma observação adicional')}"
+                </p>
+              </div>
+            </div>
+
+            {/* Signature Area */}
+            <div className="mt-20 pt-12 border-t-2 border-black flex justify-between gap-20 break-inside-avoid" style={{ marginTop: '80px', paddingTop: '48px', borderTop: '2px solid #000', display: 'flex', justifyContent: 'space-between', gap: '80px' }}>
+              <div className="text-center flex flex-col items-center flex-1" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                <div className="h-24 flex items-end justify-center mb-4 w-full" style={{ height: '96px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                  {companySignature ? (
+                    <img src={companySignature} alt="Assinatura" style={{ maxHeight: '90px', width: 'auto', opacity: 0.9 }} />
+                  ) : (
+                    <div className="h-0.5 w-[200px] bg-zinc-200" style={{ height: '2px', width: '200px', backgroundColor: '#e4e4e7' }}></div>
+                  )}
+                </div>
+                <div className="w-full">
+                  <p className="text-lg font-black text-black leading-none mb-1" style={{ fontWeight: 900, fontSize: '18px' }}>{ticket.technician}</p>
+                  <p className="text-[10px] font-black text-black uppercase tracking-[0.2em]" style={{ fontWeight: 900, fontSize: '10px' }}>Assinatura do Técnico</p>
+                </div>
+              </div>
+              <div className="text-center flex flex-col items-center flex-1" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                <div className="h-24 mb-4 w-full" style={{ height: '96px' }}></div>
+                <div className="w-full">
+                  <p className="text-lg font-black text-black leading-none mb-1" style={{ fontWeight: 900, fontSize: '18px' }}>{client.name.substring(0, 30)}</p>
+                  <p className="text-[10px] font-black text-black uppercase tracking-[0.2em]" style={{ fontWeight: 900, fontSize: '10px' }}>APROVAÇÃO / RECEBIMENTO</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Footer Details */}
+            <div className="mt-16 pt-6 border-t border-zinc-200 flex justify-between items-center break-inside-avoid" style={{ marginTop: '64px', paddingTop: '24px', borderTop: '1px solid #e4e4e7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest" style={{ fontWeight: 700, fontSize: '9px', color: '#d4d4d8' }}>
+                GERADO ELETRONICAMENTE EM {new Date().toLocaleDateString('pt-BR')} ÀS {new Date().toLocaleTimeString('pt-BR')}
+              </p>
+              <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest text-right" style={{ fontWeight: 900, fontSize: '9px', color: '#a1a1aa', textAlign: 'right' }}>
+                {companyData?.name || 'IA COMPANY SOFTWARE E AUTOMAÇÃO LTDA'} • PLATAFORMA INTEGRADA
+              </p>
+            </div>
+            {/* Hidden spacer */}
+            <div className="h-4 bg-transparent overflow-hidden">.</div>
+            
+            {/* Photo Gallery - Forces New Page if needed or stays close */}
+            {(ticket.images?.length || 0) > 0 || ticket.photoBefore ? (
+              <div className="mt-12 page-break-before-auto pt-10" style={{ marginTop: '48px', paddingTop: '40px' }}>
+                <div className="flex items-center gap-4 mb-8" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+                  <div className="h-px flex-1 bg-zinc-200" style={{ height: '1px', flex: 1, backgroundColor: '#e4e4e7' }}></div>
+                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-3" style={{ fontSize: '12px', fontWeight: 900, color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Camera className="w-4 h-4" /> Evidências Fotográficas
+                  </h3>
+                  <div className="h-px flex-1 bg-zinc-200" style={{ height: '1px', flex: 1, backgroundColor: '#e4e4e7' }}></div>
+                </div>
+                <div className="flex flex-wrap gap-6 pb-12" style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+                  {ticket.photoBefore && (
+                    <div className="rounded-3xl overflow-hidden border border-zinc-200 break-inside-avoid relative bg-zinc-50 p-2 shadow-sm" style={{ width: 'calc(50% - 12px)', borderRadius: '24px', border: '1px solid #e4e4e7', overflow: 'hidden', position: 'relative', backgroundColor: '#fafafa', padding: '8px' }}>
+                      <img src={ticket.photoBefore} alt="Antes" className="w-full h-64 object-cover rounded-2xl" style={{ width: '100%', height: '256px', objectFit: 'cover', borderRadius: '16px' }} />
+                      <div className="absolute top-6 left-6 bg-red-600 px-3 py-1.5 rounded-lg text-white text-[9px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2" style={{ position: 'absolute', top: '24px', left: '24px', backgroundColor: '#dc2626', padding: '6px 12px', borderRadius: '8px', color: '#fff', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div> Antes do Atendimento
+                      </div>
+                    </div>
+                  )}
+                  {ticket.images?.map((img, index) => (
+                    <div key={index} className="rounded-3xl overflow-hidden border border-zinc-200 break-inside-avoid bg-zinc-50 p-2 shadow-sm relative" style={{ width: 'calc(50% - 12px)', borderRadius: '24px', border: '1px solid #e4e4e7', overflow: 'hidden', position: 'relative', backgroundColor: '#fafafa', padding: '8px' }}>
+                      <img src={img} alt={`Depois ${index + 1}`} className="w-full h-64 object-cover rounded-2xl" style={{ width: '100%', height: '256px', objectFit: 'cover', borderRadius: '16px' }} />
+                      <div className="absolute top-6 left-6 bg-black px-3 py-1.5 rounded-lg text-white text-[9px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2" style={{ position: 'absolute', top: '24px', left: '24px', backgroundColor: '#000', padding: '6px 12px', borderRadius: '8px', color: '#fff', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> {index === 0 ? 'Serviço Concluído' : `Registro ${index + 1}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <div style={{ height: '40px', color: 'transparent', overflow: 'hidden' }} className="print:hidden">.</div>
           </div>
-        ) : null}
-          <div style={{ height: '40px', color: 'transparent', overflow: 'hidden' }}>.</div> {/* Bottom Padding for Page Breaks */}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 }

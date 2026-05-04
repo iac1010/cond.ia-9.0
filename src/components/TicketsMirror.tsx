@@ -45,7 +45,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
   const percentConcluded = total > 0 ? Math.round((concluded / total) * 100) : 0;
 
   const pieData = [
-    { name: 'Concluídas', value: concluded, color: '#22c55e' },
+    { name: 'Concluídas', value: concluded, color: '#ffffff' },
     { name: 'Em Andamento', value: inProgress, color: '#3b82f6' },
     { name: 'Pendentes', value: pending, color: '#f59e0b' },
   ];
@@ -78,7 +78,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
       day: safeFormatDate(t.date, { weekday: 'short' }).toUpperCase().replace('.', ''),
       task: t.title || 'Sem título',
       status: t.status === 'CONCLUIDO' ? 'Conc.' : t.status === 'REALIZANDO' || t.status === 'AGUARDANDO_MATERIAL' ? 'Em And.' : 'Pend.',
-      color: t.status === 'CONCLUIDO' ? 'text-emerald-400' : t.status === 'REALIZANDO' || t.status === 'AGUARDANDO_MATERIAL' ? 'text-amber-400' : 'text-orange-400'
+      color: t.status === 'CONCLUIDO' ? 'text-white' : t.status === 'REALIZANDO' || t.status === 'AGUARDANDO_MATERIAL' ? 'text-amber-400' : 'text-orange-400'
     }));
 
   // Line Chart Data (Mocked)
@@ -112,8 +112,8 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
             </div>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 bg-white/5 px-2 md:px-3 py-1 md:py-1.5 rounded-full border border-white/10 backdrop-blur-md shrink-0">
-            <div className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-            <span className="text-[8px] md:text-[10px] font-black text-emerald-400 uppercase tracking-wider">Live</span>
+            <div className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+            <span className="text-[8px] md:text-[10px] font-black text-white uppercase tracking-wider">Live</span>
           </div>
         </div>
       )}
@@ -191,7 +191,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
           <div className="bg-white/5 rounded-3xl p-4 border border-white/5 backdrop-blur-sm">
             <div className="flex justify-between items-start mb-4">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Visão Detalhada</h4>
-              <TrendingUp className="w-3 h-3 text-emerald-400" />
+              <TrendingUp className="w-3 h-3 text-white" />
             </div>
             <div className="flex flex-col items-center text-center gap-3">
               <div className="relative w-20 h-20 shrink-0">
@@ -214,7 +214,7 @@ export function TicketsMirror({ tickets: allTickets, className = '', showLabel =
                     fill="transparent"
                     strokeDasharray={213.6}
                     strokeDashoffset={213.6 - (213.6 * currentMonthPercent) / 100}
-                    className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                    className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">

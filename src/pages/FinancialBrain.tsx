@@ -37,7 +37,7 @@ const INITIAL_INSIGHTS = [
     impact: "Médio",
     category: "Crescimento",
     icon: TrendingUp,
-    color: "text-emerald-400"
+    color: "text-zinc-400"
   },
   {
     id: 3,
@@ -200,9 +200,9 @@ export default function FinancialBrain() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-emerald-400 uppercase">Tempo Real</span>
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                  <div className="w-1.5 h-1.5 rounded-full bg-zinc-300 animate-pulse" />
+                  <span className="text-[10px] font-bold text-white uppercase">Tempo Real</span>
                 </div>
               </div>
             </div>
@@ -289,7 +289,7 @@ export default function FinancialBrain() {
             <div className="grid grid-cols-2 gap-4 w-full">
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="text-[10px] font-bold text-white/40 uppercase mb-1">Liquidez</div>
-                <div className="text-lg font-bold text-emerald-400">1.8x</div>
+                <div className="text-lg font-bold text-white">1.8x</div>
               </div>
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="text-[10px] font-bold text-white/40 uppercase mb-1">Margem</div>
@@ -350,7 +350,7 @@ export default function FinancialBrain() {
                   >
                     <Cell fill="#8b5cf6" />
                     <Cell fill="#3b82f6" />
-                    <Cell fill="#10b981" />
+                    <Cell fill="#ffffff" />
                     <Cell fill="#f59e0b" />
                   </Pie>
                   <Tooltip 
@@ -411,13 +411,13 @@ export default function FinancialBrain() {
               <div>
                 <div className="flex justify-between text-xs font-bold mb-2">
                   <span className="text-white/50 uppercase">Automação de Pagamentos</span>
-                  <span className="text-emerald-400">85%</span>
+                  <span className="text-zinc-400">85%</span>
                 </div>
                 <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: '85%' }}
-                    className="h-full bg-emerald-500"
+                    className="h-full bg-black"
                   />
                 </div>
               </div>

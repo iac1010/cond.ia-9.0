@@ -51,6 +51,7 @@ export type Quote = {
   installments?: QuoteInstallment[];
   totalValue: number;
   status: 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED';
+  observations?: string;
 };
 
 export type Receipt = {

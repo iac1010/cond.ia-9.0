@@ -22,7 +22,7 @@ export async function generatePdf(element: HTMLElement, fileName: string, format
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const opt: any = {
-      margin: [15, 15, 15, 15],
+      margin: [0, 0, 0, 0],
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -34,7 +34,7 @@ export async function generatePdf(element: HTMLElement, fileName: string, format
         allowTaint: false,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: 1000,
+        windowWidth: 794,
         onclone: (clonedDoc: Document) => {
           // Remove or replace modern color functions that html2canvas cannot parse
           const styles = clonedDoc.getElementsByTagName('style');
@@ -76,8 +76,8 @@ export async function generatePdf(element: HTMLElement, fileName: string, format
               if (el.style.borderColor?.includes('okl') || el.style.borderColor?.includes('color-mix')) el.style.borderColor = '#e4e4e7';
             }
             
-            // Force page break inside avoid for text blocks
-            if (el.tagName === 'P' || el.tagName === 'LI' || el.tagName.match(/^H[1-6]$/)) {
+            // Force page break inside avoid for text blocks and explicit avoid classes
+            if (el.tagName === 'P' || el.tagName === 'LI' || el.tagName.match(/^H[1-6]$/) || el.classList.contains('break-inside-avoid')) {
               el.style.pageBreakInside = 'avoid';
               el.style.breakInside = 'avoid';
             }
@@ -302,7 +302,7 @@ export async function sharePdf(element: HTMLElement, fileName: string, format: s
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const opt: any = {
-      margin: [15, 15, 15, 15],
+      margin: [0, 0, 0, 0],
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -314,7 +314,7 @@ export async function sharePdf(element: HTMLElement, fileName: string, format: s
         allowTaint: false,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: 1000,
+        windowWidth: 794,
         onclone: (clonedDoc: Document) => {
           // Remove or replace modern CSS that html2canvas cannot parse
           const styles = clonedDoc.getElementsByTagName('style');
@@ -356,8 +356,8 @@ export async function sharePdf(element: HTMLElement, fileName: string, format: s
               if (el.style.borderColor?.includes('okl') || el.style.borderColor?.includes('color-mix')) el.style.borderColor = '#e4e4e7';
             }
             
-            // Force page break inside avoid for text blocks
-            if (el.tagName === 'P' || el.tagName === 'LI' || el.tagName.match(/^H[1-6]$/)) {
+            // Force page break inside avoid for text blocks and explicit avoid classes
+            if (el.tagName === 'P' || el.tagName === 'LI' || el.tagName.match(/^H[1-6]$/) || el.classList.contains('break-inside-avoid')) {
               el.style.pageBreakInside = 'avoid';
               el.style.breakInside = 'avoid';
             }

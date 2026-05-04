@@ -310,7 +310,8 @@ export const useStore = create<AppState>()(
               totalValue: Number(q.total_value),
               status: q.status as any,
               items: q.items,
-              installments: q.installments
+              installments: q.installments,
+              observations: q.observations
             }));
           }
 
@@ -819,7 +820,8 @@ export const useStore = create<AppState>()(
               total_value: q.totalValue,
               status: q.status,
               items: q.items,
-              installments: q.installments
+              installments: q.installments,
+              observations: q.observations
             })) },
             { name: 'receipts', data: state.receipts.map(r => ({
               id: r.id,
@@ -1599,7 +1601,8 @@ export const useStore = create<AppState>()(
             total_value: quote.totalValue,
             status: quote.status,
             items: quote.items,
-            installments: quote.installments
+            installments: quote.installments,
+            observations: quote.observations
           }]);
           if (error) {
             console.error('Erro Supabase addQuote:', error);
@@ -1626,7 +1629,8 @@ export const useStore = create<AppState>()(
             total_value: updatedQuote.totalValue,
             status: updatedQuote.status,
             items: updatedQuote.items,
-            installments: updatedQuote.installments
+            installments: updatedQuote.installments,
+            observations: updatedQuote.observations
           }).eq('id', id);
           if (error) {
             console.error('Erro Supabase updateQuote:', error);

@@ -12,7 +12,7 @@ const COLUMNS: { id: TicketStatus; title: string; icon: any; color: string; glow
   { id: 'APROVADO', title: 'Aprovado', icon: CheckCircle, color: 'text-blue-400', glowColor: 'shadow-blue-500/20' },
   { id: 'AGUARDANDO_MATERIAL', title: 'Aguardando Material', icon: AlertCircle, color: 'text-amber-400', glowColor: 'shadow-amber-500/20' },
   { id: 'REALIZANDO', title: 'Realizando', icon: Wrench, color: 'text-purple-400', glowColor: 'shadow-purple-500/20' },
-  { id: 'CONCLUIDO', title: 'Concluído', icon: CheckCircle, color: 'text-emerald-400', glowColor: 'shadow-emerald-500/20' },
+  { id: 'CONCLUIDO', title: 'Concluído', icon: CheckCircle, color: 'text-white', glowColor: 'shadow-white/20' },
 ];
 
 export default function KanbanBoard() {
@@ -189,7 +189,7 @@ export default function KanbanBoard() {
                               {ticket.type}
                             </span>
                             {ticket.maintenanceCategory && (
-                              <span className="bg-emerald-500/30 text-emerald-100 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-500/30 truncate max-w-[150px]" title={ticket.maintenanceCategory}>
+                              <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-white/20 truncate max-w-[150px]" title={ticket.maintenanceCategory}>
                                 {ticket.maintenanceCategory}
                               </span>
                             )}

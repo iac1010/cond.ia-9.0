@@ -31,7 +31,7 @@ const lineData = [
 const barData = [
   { name: 'CONTRATOS', value: 98, color: '#3b82f6' },
   { name: 'AVISOS', value: 92, color: '#f59e0b' },
-  { name: 'ORDENS DE SERVIÇO', value: 94, color: '#10b981' },
+  { name: 'ORDENS DE SERVIÇO', value: 94, color: '#ffffff' },
 ];
 
 export default function DocumentManagement() {
@@ -86,7 +86,7 @@ export default function DocumentManagement() {
           referrerPolicy="no-referrer"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05),transparent_50%)]" />
       </div>
 
       <div className="relative z-10 p-6 md:p-8 max-w-[1600px] mx-auto">
@@ -99,12 +99,12 @@ export default function DocumentManagement() {
             >
               <ArrowLeft className="w-6 h-6 text-white/70 group-hover:text-white" />
             </button>
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-              <FileSignature className="w-8 h-8 text-emerald-400" />
+            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
+              <FileSignature className="w-8 h-8 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400/60">Home IOT - Automação Residencial</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Home IOT - Automação Residencial</span>
               </div>
               <h1 className="text-3xl font-black tracking-tighter">Olá, Maria! Tudo sob controle.</h1>
               <p className="text-xs text-white/40 font-medium">Sábado, 26 de Março, 2026</p>
@@ -113,7 +113,7 @@ export default function DocumentManagement() {
 
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-2xl border border-white/10">
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-500/30">
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20">
                 <img src="https://i.pravatar.cc/150?u=carlos" alt="Carlos" className="w-full h-full object-cover" />
               </div>
               <span className="text-sm font-bold">Olá, Carlos!</span>
@@ -130,7 +130,7 @@ export default function DocumentManagement() {
                 <button 
                   key={idx}
                   onClick={() => item.path && navigate(item.path)}
-                  className={`flex flex-col items-center gap-1 p-2 transition-all ${item.active ? 'text-emerald-400' : 'text-white/40 hover:text-white'}`}
+                  className={`flex flex-col items-center gap-1 p-2 transition-all ${item.active ? 'text-white' : 'text-white/40 hover:text-white'}`}
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="text-[8px] font-bold uppercase tracking-widest">{item.label}</span>
@@ -152,7 +152,7 @@ export default function DocumentManagement() {
                     value={75} 
                     size={160} 
                     strokeWidth={12} 
-                    color="text-emerald-500"
+                    color="text-white"
                   />
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-3xl font-black">75%</span>
@@ -163,7 +163,7 @@ export default function DocumentManagement() {
                 <div className="mt-8 w-full space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                       <div className="w-2 h-2 rounded-full bg-white" />
                       <span className="text-[10px] font-bold text-white/60 uppercase">Processados</span>
                     </div>
                     <span className="text-xs font-bold">75%</span>
@@ -248,9 +248,9 @@ export default function DocumentManagement() {
                       <Line 
                         type="monotone" 
                         dataKey="value" 
-                        stroke="#10b981" 
+                        stroke="#ffffff" 
                         strokeWidth={3}
-                        dot={{ fill: '#10b981', strokeWidth: 2, r: 4, stroke: '#fff' }}
+                        dot={{ fill: '#ffffff', strokeWidth: 2, r: 4, stroke: '#000' }}
                         activeDot={{ r: 6, strokeWidth: 0 }}
                       />
                     </LineChart>
@@ -259,12 +259,10 @@ export default function DocumentManagement() {
 
                 <div className="flex flex-col items-center">
                   <div className="relative">
-                    <CircularProgress 
-                      value={98} 
-                      size={180} 
-                      strokeWidth={14} 
-                      color="text-emerald-500"
-                    />
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                      <span className="text-[10px] font-bold text-white/60 uppercase">Processados</span>
+                    </div>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-4xl font-black">98%</span>
                       <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest text-center max-w-[80px]">Assinaturas Rápidas & Validações</span>
@@ -272,8 +270,8 @@ export default function DocumentManagement() {
                   </div>
                   <div className="mt-6 flex items-center gap-6">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] font-bold text-emerald-400 uppercase">TMD Total: 98%</span>
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                      <span className="text-[10px] font-bold text-white uppercase">TMD Total: 98%</span>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                       <AlertTriangle className="w-3 h-3 text-amber-500" />
@@ -288,15 +286,10 @@ export default function DocumentManagement() {
               <GlassCard title="PRÓXIMOS CICLOS DE ASSINATURA">
                 <div className="flex flex-col items-center justify-center py-4">
                   <span className="text-6xl font-black tracking-tighter text-white mb-4">16h00</span>
-                  <button 
-                    onClick={() => setIsAutoMode(!isAutoMode)}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all"
-                  >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isAutoMode ? 'bg-emerald-500 border-emerald-500' : 'border-white/20'}`}>
-                      {isAutoMode && <CheckCircle className="w-3 h-3 text-white" />}
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                      <span className="text-[10px] font-bold text-white uppercase">TMD Total: 98%</span>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Automatizado</span>
-                  </button>
                 </div>
               </GlassCard>
 
@@ -309,13 +302,13 @@ export default function DocumentManagement() {
                     </div>
                     <button 
                       onClick={() => setIsSinalActive(!isSinalActive)}
-                      className={`w-12 h-6 rounded-full relative transition-all ${isSinalActive ? 'bg-emerald-500' : 'bg-white/10'}`}
+                      className={`w-12 h-6 rounded-full relative transition-all ${isSinalActive ? 'bg-white' : 'bg-white/10'}`}
                     >
                       <motion.div 
                         animate={{ x: isSinalActive ? 24 : 4 }}
-                        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-lg"
+                        className="absolute top-1 w-4 h-4 bg-black rounded-full shadow-lg"
                       />
-                      <span className={`absolute ${isSinalActive ? 'left-2' : 'right-2'} top-1.5 text-[6px] font-black text-white`}>
+                      <span className={`absolute ${isSinalActive ? 'left-2' : 'right-2'} top-1.5 text-[6px] font-black text-black`}>
                         {isSinalActive ? 'ON' : 'OFF'}
                       </span>
                     </button>
@@ -328,13 +321,13 @@ export default function DocumentManagement() {
                     </div>
                     <button 
                       onClick={() => setIsValidationActive(!isValidationActive)}
-                      className={`w-12 h-6 rounded-full relative transition-all ${isValidationActive ? 'bg-emerald-500' : 'bg-white/10'}`}
+                      className={`w-12 h-6 rounded-full relative transition-all ${isValidationActive ? 'bg-white' : 'bg-white/10'}`}
                     >
                       <motion.div 
                         animate={{ x: isValidationActive ? 24 : 4 }}
-                        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-lg"
+                        className="absolute top-1 w-4 h-4 bg-black rounded-full shadow-lg"
                       />
-                      <span className={`absolute ${isValidationActive ? 'left-2' : 'right-2'} top-1.5 text-[6px] font-black text-white`}>
+                      <span className={`absolute ${isValidationActive ? 'left-2' : 'right-2'} top-1.5 text-[6px] font-black text-black`}>
                         {isValidationActive ? 'ON' : 'OFF'}
                       </span>
                     </button>
@@ -366,7 +359,7 @@ export default function DocumentManagement() {
                       <span className="col-span-1 text-[10px] font-bold text-white/40">{new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
                       <span className="col-span-3 text-[10px] font-bold text-white/80 truncate">{item.title}</span>
                       <div className="col-span-1 flex justify-end">
-                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-md ${item.status === 'VALIDATED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-md ${item.status === 'VALIDATED' ? 'bg-white/10 text-white' : 'bg-amber-500/10 text-amber-400'}`}>
                           {item.status === 'VALIDATED' ? 'Conc.' : 'Pend.'}
                         </span>
                       </div>
@@ -381,7 +374,7 @@ export default function DocumentManagement() {
                 {[
                   { icon: AlertTriangle, title: 'Alerta: Vencimento de Assinatura (Filtro A)', color: 'text-amber-500', bg: 'bg-amber-500/10' },
                   { icon: AlertTriangle, title: 'Alerta: Temperatura Elevada Bomba 2', color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                  { icon: FileText, title: 'Notificação: Entrega de Material de Limpeza (23/03)', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                  { icon: FileText, title: 'Notificação: Entrega de Material de Limpeza (23/03)', color: 'text-white', bg: 'bg-white/10' },
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-start gap-3 group cursor-pointer">
                     <div className={`p-2 rounded-lg ${item.bg} ${item.color} group-hover:scale-110 transition-transform`}>
@@ -400,9 +393,9 @@ export default function DocumentManagement() {
               
               <button 
                 onClick={() => handleAction('Iniciar Assinatura Principal')}
-                className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10 hover:bg-emerald-500/20 hover:border-emerald-500/30 transition-all group"
+                className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all group"
               >
-                <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
+                <div className="p-2 bg-white/10 text-white rounded-xl group-hover:scale-110 transition-transform">
                   <Play className="w-4 h-4" />
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-white/70 group-hover:text-white">Iniciar Assinatura Principal</span>
@@ -422,12 +415,12 @@ export default function DocumentManagement() {
                 onClick={() => setIsStatusActive(!isStatusActive)}
                 className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all group"
               >
-                <div className={`p-2 rounded-xl group-hover:scale-110 transition-transform ${isStatusActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                <div className={`p-2 rounded-xl group-hover:scale-110 transition-transform ${isStatusActive ? 'bg-white/10 text-white' : 'bg-rose-500/10 text-rose-400'}`}>
                   <Power className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-[10px] font-black uppercase tracking-widest text-white/70 group-hover:text-white">Status Assinatura</span>
-                  <span className={`text-[8px] font-bold uppercase ${isStatusActive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  <span className={`text-[8px] font-bold uppercase ${isStatusActive ? 'text-white' : 'text-rose-400'}`}>
                     {isStatusActive ? 'Ativado' : 'Desativado'}
                   </span>
                 </div>

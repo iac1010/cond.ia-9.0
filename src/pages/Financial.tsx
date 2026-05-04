@@ -252,7 +252,7 @@ export default function Financial() {
       .slice(0, 8);
   }, [receipts]);
 
-  const COLORS = ['#00f2ff', '#00ff88', '#7000ff', '#ff00d4', '#ff8800', '#ffff00'];
+  const COLORS = ['#00f2ff', '#ffffff', '#7000ff', '#ff00d4', '#ff8800', '#ffff00'];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -565,7 +565,7 @@ export default function Financial() {
               className="w-full p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 flex items-center justify-between transition-all group"
             >
               <div className="flex items-center gap-4">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                <FileSpreadsheet className="w-5 h-5 text-white" />
                 <span className="text-sm font-bold text-white">Exportar CSV</span>
               </div>
               <ArrowUpRight className="w-4 h-4 text-white/20" />
@@ -648,7 +648,7 @@ export default function Financial() {
                   <td className="py-4 text-sm font-bold text-right text-orange-400/60">
                     {t.type === 'income' ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value * 0.08) : '-'}
                   </td>
-                  <td className={`py-4 text-sm font-black text-right ${t.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  <td className={`py-4 text-sm font-black text-right ${t.type === 'income' ? 'text-white' : 'text-rose-400'}`}>
                     {t.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}
                   </td>
                   <td className="py-4 text-right">
@@ -837,7 +837,7 @@ export default function Financial() {
                 resetForm();
                 setIsAddingGoal(true);
               }}
-              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-6 py-3 flex items-center gap-2 border border-emerald-500/30 transition-all rounded-2xl backdrop-blur-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(16,185,129,0.1)]"
+              className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 flex items-center gap-2 border border-white/30 transition-all rounded-2xl backdrop-blur-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(255,255,255,0.1)]"
             >
               <Target className="w-4 h-4" /> 
               <span>Meta</span>
@@ -888,7 +888,7 @@ export default function Financial() {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-all duration-700 ${!showBalance && 'blur-xl select-none'}`}>
+          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalIncome)}
           </p>
           <div className="flex items-center gap-2 text-cyan-400/60 text-[8px] font-bold uppercase tracking-widest">
@@ -910,7 +910,7 @@ export default function Financial() {
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-all duration-700 ${!showBalance && 'blur-xl select-none'}`}>
+          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCosts)}
           </p>
           <div className="flex items-center gap-2 text-rose-400/60 text-[8px] font-bold uppercase tracking-widest">
@@ -932,7 +932,7 @@ export default function Financial() {
               <Wallet className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-2xl font-black tracking-tighter mb-2 transition-all duration-700 ${!showBalance && 'blur-xl select-none'} ${balance >= 0 ? 'text-white' : 'text-orange-400'}`}>
+          <p className={`text-2xl font-black tracking-tighter mb-2 transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'} ${balance >= 0 ? 'text-white' : 'text-orange-400'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
           </p>
           <div className="flex items-center gap-2 text-white/20 text-[8px] font-bold uppercase tracking-widest">
@@ -954,7 +954,7 @@ export default function Financial() {
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-all duration-700 ${!showBalance && 'blur-xl select-none'}`}>
+          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estimatedTax)}
           </p>
           <div className="flex items-center gap-2 text-orange-400/60 text-[8px] font-bold uppercase tracking-widest">
@@ -969,10 +969,10 @@ export default function Financial() {
           transition={{ delay: 0.3 }}
           className="bg-white/5 rounded-[2.5rem] p-6 border border-white/10 shadow-2xl backdrop-blur-3xl relative overflow-hidden group"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-500/20 transition-all duration-700" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/20 transition-all duration-700" />
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Margem Operacional</h3>
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+            <div className="p-2 bg-white/10 text-white rounded-xl border border-white/20">
               <BarChart3 className="w-4 h-4" />
             </div>
           </div>
@@ -993,7 +993,7 @@ export default function Financial() {
                   cy="50"
                   r="40"
                   fill="transparent"
-                  stroke="url(#emeraldGradient)"
+                  stroke="#ffffff"
                   strokeWidth="8"
                   strokeDasharray="251.2"
                   initial={{ strokeDashoffset: 251.2 }}
@@ -1008,7 +1008,7 @@ export default function Financial() {
             </div>
             <div>
               <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-0.5">Status</p>
-              <p className="text-xs font-bold text-emerald-400 uppercase tracking-tighter">Excelente</p>
+              <p className="text-xs font-bold text-white uppercase tracking-tighter">Excelente</p>
             </div>
           </div>
         </motion.div>
@@ -1026,7 +1026,7 @@ export default function Financial() {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-2xl font-black tracking-tighter mb-2 text-white transition-all duration-700 ${!showBalance && 'blur-xl select-none'}`}>
+          <p className={`text-2xl font-black tracking-tighter mb-2 text-white transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(accountsReceivable)}
           </p>
           <div className="flex items-center gap-2 text-cyan-400/60 text-[8px] font-bold uppercase tracking-widest">
@@ -1113,37 +1113,53 @@ export default function Financial() {
           className="bg-white/5 rounded-[2.5rem] p-8 border border-white/10 shadow-2xl backdrop-blur-3xl relative overflow-hidden group"
         >
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Key Performance</h3>
-            <div className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black uppercase tracking-widest text-white/40 border border-white/10">Monitoring</div>
+            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Gastos por Categoria</h3>
+            <div className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black uppercase tracking-widest text-white/40 border border-white/10">Analysis</div>
           </div>
           
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between items-end mb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Meta de Receita</span>
-                <span className="text-xs font-black text-white">85%</span>
+          <div className="space-y-5 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+            {categoryData
+              .sort((a, b) => b.value - a.value)
+              .slice(0, 8)
+              .map((item, index) => {
+                const percentage = totalCosts > 0 ? (item.value / totalCosts) * 100 : 0;
+                return (
+                  <div key={item.name}>
+                    <div className="flex justify-between items-end mb-2">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-0.5">Categoria</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/70 truncate max-w-[140px]">
+                          {item.name}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-end text-right">
+                        <span className="text-xs font-black text-white">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.value)}
+                        </span>
+                        <span className="text-[8px] font-bold text-white/30">
+                          {percentage.toFixed(1)}% do total
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        className="h-full shadow-lg"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            {categoryData.length === 0 && (
+              <div className="py-12 flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10">
+                  <TrendingDown className="w-6 h-6 text-white/20" />
+                </div>
+                <p className="text-xs text-white/20 italic font-medium uppercase tracking-widest">Nenhum custo registrado</p>
               </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: '85%' }}
-                  className="h-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]"
-                />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-end mb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Limite de Despesas</span>
-                <span className="text-xs font-black text-white">42%</span>
-              </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: '42%' }}
-                  className="h-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"
-                />
-              </div>
-            </div>
+            )}
           </div>
         </motion.div>
 
@@ -1466,7 +1482,7 @@ export default function Financial() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsAddingGoal(true)}
-            className="p-3 bg-white/5 border border-white/10 rounded-2xl text-white/40 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+            className="p-3 bg-white/5 border border-white/10 rounded-2xl text-white/40 hover:text-white hover:bg-white/10 transition-all"
           >
             <Plus className="w-5 h-5" />
           </motion.button>
@@ -1485,7 +1501,7 @@ export default function Financial() {
                 </div>
 
                 <div className="flex justify-between items-start mb-8 relative z-10">
-                  <div className="p-4 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <div className="p-4 rounded-2xl bg-white/10 text-white border border-white/20">
                     <Target className="w-6 h-6" />
                   </div>
                   <div className="flex gap-2">
@@ -1494,7 +1510,7 @@ export default function Financial() {
                         setSelectedGoalId(goal.id);
                         setIsAddingMoneyToGoal(true);
                       }}
-                      className="p-3 text-emerald-400 hover:bg-emerald-500/20 rounded-xl transition-all border border-emerald-500/20"
+                      className="p-3 text-white hover:bg-white/20 rounded-xl transition-all border border-white/20"
                       title="Adicionar Dinheiro"
                     >
                       <Plus className="w-5 h-5" />
@@ -1538,7 +1554,7 @@ export default function Financial() {
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
                       transition={{ duration: 1, ease: "easeOut" }}
-                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                      className="h-full bg-gradient-to-r from-white to-zinc-400 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.4)]"
                     />
                   </div>
 
@@ -1547,7 +1563,7 @@ export default function Financial() {
                       <Calendar className="w-3 h-3" />
                       <span>{safeFormatDate(goal.deadline) || 'Sem prazo'}</span>
                     </div>
-                    <span className={`px-3 py-1 rounded-full border ${goal.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                    <span className={`px-3 py-1 rounded-full border ${goal.status === 'COMPLETED' ? 'bg-white/10 text-white border-white/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                       {goal.status === 'COMPLETED' ? 'Concluído' : 'Em Andamento'}
                     </span>
                   </div>
@@ -1823,7 +1839,7 @@ export default function Financial() {
                         <button 
                           type="button"
                           onClick={handleCreateNewCategory}
-                          className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all"
+                          className="bg-white/20 text-white p-3 rounded-xl border border-white/30 hover:bg-white/30 transition-all"
                         >
                           <Check className="w-5 h-5" />
                         </button>
@@ -1941,7 +1957,7 @@ export default function Financial() {
             </button>
             <button 
               type="submit"
-              className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-10 py-3 rounded-xl font-bold border border-emerald-500/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
+              className="bg-white/20 hover:bg-white/30 text-white px-10 py-3 rounded-xl font-bold border border-white/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
             >
               CRIAR META
             </button>
@@ -2030,7 +2046,7 @@ export default function Financial() {
                 <button 
                   type="button"
                   onClick={handleCreateNewCategory}
-                  className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all"
+                  className="bg-white/20 text-white p-3 rounded-xl border border-white/30 hover:bg-white/30 transition-all"
                 >
                   <Check className="w-5 h-5" />
                 </button>
@@ -2129,7 +2145,7 @@ export default function Financial() {
             </button>
             <button 
               type="submit"
-              className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-10 py-3 rounded-xl font-bold border border-emerald-500/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
+              className="bg-white/20 hover:bg-white/30 text-white px-10 py-3 rounded-xl font-bold border border-white/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
             >
               SALVAR RECEITA
             </button>
@@ -2184,7 +2200,7 @@ export default function Financial() {
             </button>
             <button 
               type="submit"
-              className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-10 py-3 rounded-xl font-bold border border-emerald-500/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
+              className="bg-white/20 hover:bg-white/30 text-white px-10 py-3 rounded-xl font-bold border border-white/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
             >
               ADICIONAR
             </button>

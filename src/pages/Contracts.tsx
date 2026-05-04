@@ -116,7 +116,7 @@ export default function Contracts() {
           className="w-full h-full object-cover opacity-20 scale-110 blur-sm"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/80 to-emerald-950/20" />
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950/80 to-zinc-900/50" />
       </div>
 
       <div className="relative z-10 max-w-[1600px] mx-auto space-y-8">
@@ -127,13 +127,13 @@ export default function Contracts() {
           className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl"
         >
           <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-              <FolderOpen className="w-8 h-8 text-emerald-400" />
+            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
+              <FolderOpen className="w-8 h-8 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-black text-white tracking-tight">Heash Gestão de Contratos</h1>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-emerald-400/80 text-sm font-medium">Gestão de contratos centralizada</span>
+                <span className="text-white/60 text-sm font-medium">Gestão de contratos centralizada</span>
                 <span className="w-1 h-1 bg-white/20 rounded-full" />
                 <span className="text-white/40 text-sm">{format(new Date(), "EEEE, dd 'de' MMMM, yyyy", { locale: ptBR })}</span>
               </div>
@@ -156,7 +156,7 @@ export default function Contracts() {
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
                   item.label === 'Todos os Contratos'
-                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                    ? 'bg-white text-black shadow-lg shadow-white/10' 
                     : 'text-white/40 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -171,7 +171,7 @@ export default function Contracts() {
               <div className="text-sm font-bold text-white">Olá, Carlos!</div>
               <div className="text-[10px] text-white/40 uppercase tracking-widest font-black">Administrador</div>
             </div>
-            <div className="w-12 h-12 rounded-full border-2 border-emerald-500/50 p-0.5">
+            <div className="w-12 h-12 rounded-full border-2 border-white/20 p-0.5">
               <img 
                 src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
                 alt="User" 
@@ -192,13 +192,13 @@ export default function Contracts() {
                   value={contracts.length > 0 ? Math.round((activeContracts.length / contracts.length) * 100) : 0} 
                   label="Total de Contratos" 
                   sublabel="Conformidade de Assinatura"
-                  color="emerald"
+                  color="blue"
                 />
                 <CircularProgress 
                   value={98} 
                   label="Armazenamento" 
                   sublabel="Espaço de Documentação"
-                  color="emerald"
+                  color="blue"
                 />
               </div>
             </GlassCard>
@@ -212,14 +212,14 @@ export default function Contracts() {
                 {contracts.slice(0, 3).map((c, i) => (
                   <div key={i} className="group flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                        <FileText className="w-5 h-5 text-emerald-400" />
+                      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
+                        <FileText className="w-5 h-5 text-white/60" />
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">{c.title}</div>
+                        <div className="text-sm font-bold text-white group-hover:text-white transition-colors">{c.title}</div>
                         <div className="text-[10px] text-white/40 uppercase font-black tracking-wider">
                           {c.status === 'ACTIVE' ? (
-                            <span className="text-emerald-400/60">Em Andamento</span>
+                            <span className="text-white/60">Em Andamento</span>
                           ) : (
                             <span className="text-amber-400/60">Pendente</span>
                           )}
@@ -243,13 +243,13 @@ export default function Contracts() {
                   placeholder="Busca contrato"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm text-white placeholder:text-white/20 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm text-white placeholder:text-white/20 focus:ring-2 focus:ring-white/20 outline-none transition-all"
                 />
               </div>
               <div className="mt-4 flex gap-2">
                 <button 
                   onClick={() => setIsAdding(true)}
-                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                  className="flex-1 bg-white hover:bg-zinc-200 text-black font-bold py-3 rounded-2xl transition-all shadow-lg shadow-white/10 flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   Novo Contrato
@@ -302,8 +302,8 @@ export default function Contracts() {
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs">98%</div>
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/60 font-bold text-xs">98%</div>
                     <div className="text-[10px] font-bold text-white/70 uppercase">TMD TOTAL (Tempo Médio de Renovação): 98%</div>
                   </div>
                 </div>
@@ -318,7 +318,7 @@ export default function Contracts() {
                           <span className="text-xs font-bold text-white/80">Fornecedor {String.fromCharCode(65 + i)}</span>
                         </div>
                         <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${
-                          i % 3 === 0 ? 'bg-emerald-500/20 text-emerald-400' : 
+                          i % 3 === 0 ? 'bg-white/20 text-white' : 
                           i % 3 === 1 ? 'bg-amber-500/20 text-amber-400' : 'bg-white/10 text-white/40'
                         }`}>
                           {i % 3 === 0 ? 'Concl.' : i % 3 === 1 ? 'Em And.' : 'Pend.'}
@@ -348,9 +348,9 @@ export default function Contracts() {
                       </div>
                     </div>
                   )) : (
-                    <div className="flex gap-4 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    <div className="flex gap-4 p-3 rounded-2xl bg-white/5 border border-white/10">
+                      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-white/60" />
                       </div>
                       <div>
                         <div className="text-sm font-bold text-white">Tudo em ordem!</div>
@@ -382,12 +382,12 @@ export default function Contracts() {
                       onClick={item.onClick}
                       className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer group"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                        <item.icon className="w-5 h-5 text-white/40 group-hover:text-emerald-400" />
+                      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                        <item.icon className="w-5 h-5 text-white/40 group-hover:text-white" />
                       </div>
                       <div>
                         <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{item.label}</div>
-                        <div className="text-sm font-bold text-white group-hover:text-emerald-400">{item.sub}</div>
+                        <div className="text-sm font-bold text-white group-hover:text-white">{item.sub}</div>
                       </div>
                     </div>
                   ))}
@@ -421,11 +421,11 @@ export default function Contracts() {
                     <tr key={contract.id} className="group hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                            <FileText className="w-5 h-5 text-emerald-400" />
+                          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
+                            <FileText className="w-5 h-5 text-white/60" />
                           </div>
                           <div>
-                            <div className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">{contract.title}</div>
+                            <div className="text-sm font-bold text-white group-hover:text-white transition-colors">{contract.title}</div>
                             <div className="text-[10px] text-white/40 uppercase font-black tracking-wider">{contract.category}</div>
                           </div>
                         </div>
@@ -436,13 +436,13 @@ export default function Contracts() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-xs text-white/60">
-                          <Calendar className="w-3 h-3 text-emerald-400" />
+                          <Calendar className="w-3 h-3 text-white/40" />
                           {format(new Date(contract.startDate), 'dd/MM/yy')} - {format(new Date(contract.endDate), 'dd/MM/yy')}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1 text-sm font-bold text-white">
-                          <DollarSign className="w-3 h-3 text-emerald-400" />
+                          <DollarSign className="w-3 h-3 text-white/40" />
                           {contract.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           <span className="text-[10px] text-white/30 ml-1">/{contract.paymentFrequency}</span>
                         </div>
@@ -450,7 +450,7 @@ export default function Contracts() {
                       <td className="px-6 py-4">
                         <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${
                           isExpired ? 'bg-red-500/20 text-red-400' : 
-                          contract.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'
+                          contract.status === 'ACTIVE' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/40'
                         }`}>
                           {isExpired ? 'Expirado' : contract.status === 'ACTIVE' ? 'Ativo' : 'Cancelado'}
                         </span>
@@ -473,7 +473,7 @@ export default function Contracts() {
                               setEditingContract(contract.id);
                               setIsAdding(true);
                             }}
-                            className="p-2 text-white/20 hover:text-emerald-400 transition-colors" 
+                            className="p-2 text-white/20 hover:text-white transition-colors" 
                             title="Editar"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -527,7 +527,7 @@ export default function Contracts() {
                 <button 
                   type="button"
                   onClick={() => setIsAddingSupplier(true)}
-                  className="text-[10px] text-emerald-600 hover:text-emerald-700 flex items-center gap-1 font-bold uppercase tracking-wider"
+                  className="text-[10px] text-zinc-600 hover:text-zinc-700 flex items-center gap-1 font-bold uppercase tracking-wider"
                 >
                   <UserPlus className="w-3 h-3" />
                   Novo
@@ -582,7 +582,7 @@ export default function Contracts() {
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <button onClick={() => setIsAdding(false)} className="px-6 py-2 text-zinc-500 hover:text-zinc-900 transition-colors font-bold uppercase text-xs tracking-widest">Cancelar</button>
-            <button onClick={handleAddContract} className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all font-bold uppercase text-xs tracking-widest shadow-lg shadow-emerald-500/20">Salvar Contrato</button>
+            <button onClick={handleAddContract} className="px-6 py-2 bg-black hover:bg-zinc-900 text-white rounded-xl transition-all font-bold uppercase text-xs tracking-widest shadow-lg shadow-white/5">Salvar Contrato</button>
           </div>
         </div>
       </Modal>
