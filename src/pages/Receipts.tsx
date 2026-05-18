@@ -420,8 +420,8 @@ export default function Receipts() {
                       <div className="w-full border-t-2 border-gray-900"></div>
                     </div>
                     <div className="w-full text-center">
-                      <p className="font-bold text-lg">IA COMPANY</p>
-                      <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Assinatura do Emitente</p>
+                      <p className="font-black text-xl uppercase tracking-tighter">IA COMPANY</p>
+                      <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-widest font-bold">Assinatura do Emitente</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center w-full">
@@ -633,8 +633,8 @@ export default function Receipts() {
                     <div className="w-full border-t-2 border-gray-900"></div>
                   </div>
                   <div className="w-full text-center">
-                    <p className="font-bold text-lg">IA COMPANY</p>
-                    <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Assinatura do Emitente</p>
+                    <p className="font-black text-xl uppercase tracking-tighter">IA COMPANY</p>
+                    <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-widest font-bold">Assinatura do Emitente</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-center w-full">

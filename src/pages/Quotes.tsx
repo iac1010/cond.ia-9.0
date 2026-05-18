@@ -163,44 +163,73 @@ export default function Quotes() {
   const totalInstallmentsValue = installments.reduce((sum, inst) => sum + inst.value, 0);
 
   const handleSave = () => {
-    if (!clientId) {
-      toast.error('Selecione um cliente');
-      return;
-    }
-    if (items.length === 0) {
-      toast.error('Adicione pelo menos um item');
-      return;
-    }
+    try {
+      if (!clientId) {
+        toast.error('Selecione um cliente');
+        return;
+      }
+      if (items.length === 0) {
+        toast.error('Adicione pelo menos um item');
+        return;
+      }
 
-    if (editingQuote) {
-      updateQuote(editingQuote.id, {
-        ...editingQuote,
-        clientId,
-        items,
-        installments,
-        totalValue,
-        observations,
+      // Validar itens e converter valores para números para evitar NaN
+      const validatedItems = items.map(item => {
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.unitPrice) || 0;
+        return {
+          ...item,
+          quantity: qty,
+          unitPrice: price,
+          total: qty * price
+        };
       });
-      toast.success('Orçamento atualizado com sucesso!');
-    } else {
-      addQuote({
-        clientId,
-        date: new Date().toISOString(),
-        items,
-        installments,
-        totalValue,
-        status: 'DRAFT',
-        observations,
-      });
-      toast.success('Orçamento salvo com sucesso!');
-    }
 
-    setClientId('');
-    setItems([]);
-    setInstallments([]);
-    setObservations('');
-    setIsCreating(false);
-    setEditingQuote(null);
+      const validatedTotalValue = validatedItems.reduce((sum, item) => sum + item.total, 0);
+
+      // Validar parcelas
+      const validatedInstallments = installments.map(inst => ({
+        ...inst,
+        value: Number(inst.value) || 0
+      }));
+
+      if (editingQuote) {
+        updateQuote(editingQuote.id, {
+          ...editingQuote,
+          clientId,
+          items: validatedItems,
+          installments: validatedInstallments,
+          totalValue: validatedTotalValue,
+          observations,
+        });
+        toast.success('Orçamento atualizado com sucesso!');
+      } else {
+        addQuote({
+          clientId,
+          date: new Date().toISOString(),
+          items: validatedItems,
+          installments: validatedInstallments,
+          totalValue: validatedTotalValue,
+          status: 'DRAFT',
+          observations,
+        });
+        toast.success('Orçamento salvo com sucesso!');
+      }
+
+      // Fechar formulário e resetar estados com um pequeno delay para AnimatePresence
+      setIsCreating(false);
+      
+      setTimeout(() => {
+        setEditingQuote(null);
+        setClientId('');
+        setItems([]);
+        setInstallments([]);
+        setObservations('');
+      }, 300);
+    } catch (err) {
+      console.error('Erro ao salvar orçamento:', err);
+      toast.error('Ocorreu um erro inesperado ao salvar o orçamento.');
+    }
   };
 
   const handleStatusChange = (quote: Quote, newStatus: Quote['status']) => {
@@ -1204,38 +1233,38 @@ export default function Quotes() {
             {/* Top Accent Line */}
             <div className="h-2 w-full bg-blue-600 mb-0"></div>
 
-            <div className="p-12">
-              {/* Header Section */}
-              <div className="grid grid-cols-12 gap-8 mb-10 pb-8 border-b border-zinc-200 items-start break-inside-avoid">
-                <div className="col-span-7 flex gap-6 items-center">
+            <div className="p-10">
+              {/* Header Section Section */}
+              <div className="grid grid-cols-12 gap-6 mb-6 pb-6 border-b border-zinc-200 items-start break-inside-avoid">
+                <div className="col-span-7 flex gap-5 items-center">
                   {companyLogo ? (
-                    <div className="bg-zinc-50 p-3 rounded-2xl border border-zinc-100 flex items-center justify-center">
-                      <img src={companyLogo} alt="Logo" className="h-16 w-auto object-contain" />
+                    <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 flex items-center justify-center shrink-0">
+                      <img src={companyLogo} alt="Logo" className="h-14 w-auto object-contain" />
                     </div>
                   ) : (
-                    <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
-                      <FileText className="w-8 h-8 text-white" />
+                    <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shrink-0">
+                      <FileText className="w-7 h-7 text-white" />
                     </div>
                   )}
                   <div className="flex flex-col">
-                    <h2 className="text-2xl font-black text-black uppercase tracking-tight leading-none mb-2">
+                    <h2 className="text-xl font-black text-black uppercase tracking-tight leading-none mb-1.5">
                       {companyData?.name || 'IA COMPANY'}
                     </h2>
                     <div className="space-y-0.5">
-                      <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
-                        <div className="w-1 h-1 rounded-full bg-zinc-300"></div> CNPJ: {companyData?.document || '---'}
+                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-zinc-300"></span> CNPJ: {companyData?.document || '---'}
                       </p>
-                      <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
-                        <div className="w-1 h-1 rounded-full bg-zinc-300"></div> {companyData?.email || 'contato@empresa.com'}
+                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-zinc-300"></span> {companyData?.email || 'contato@empresa.com'}
                       </p>
-                      <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
-                        <div className="w-1 h-1 rounded-full bg-zinc-300"></div> {companyData?.phone || '(00) 0000-0000'}
+                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-zinc-300"></span> {companyData?.phone || '(00) 0000-0000'}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="col-span-5 text-right flex flex-col justify-between h-full">
+                <div className="col-span-5 text-right flex flex-col justify-between items-end h-full">
                   <div>
                     <div className="inline-block px-3 py-1 bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-3 rounded">
                       PROPOSTA COMERCIAL
@@ -1262,59 +1291,59 @@ export default function Quotes() {
               </div>
 
               {/* Client Card */}
-              <div className="mb-10 bg-zinc-50 p-8 rounded-3xl border border-zinc-100 flex flex-col relative overflow-hidden break-inside-avoid">
+              <div className="mb-6 bg-zinc-50 p-6 rounded-2xl border border-zinc-100 flex flex-col relative overflow-hidden break-inside-avoid">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-5 ml-2">Destinatário da Proposta</h3>
-                <div className="ml-2">
-                  <p className="text-3xl font-black text-black leading-tight mb-6">
+                <h3 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-4 ml-1">Destinatário da Proposta</h3>
+                <div className="ml-1">
+                  <p className="text-2xl font-black text-black leading-tight mb-4">
                     {clients.find(c => c.id === quoteToPrint.clientId)?.name}
                   </p>
-                  <div className="grid grid-cols-3 gap-8">
+                  <div className="grid grid-cols-3 gap-6">
                     <div>
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Documento / CPF</p>
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Documento / CPF</p>
                       <p className="text-xs font-bold text-black">{clients.find(c => c.id === quoteToPrint.clientId)?.document || '---'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Telefone Origen</p>
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Telefone Origen</p>
                       <p className="text-xs font-bold text-black">{clients.find(c => c.id === quoteToPrint.clientId)?.phone || '---'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">E-mail Contato</p>
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">E-mail Contato</p>
                       <p className="text-xs font-bold text-black truncate">{clients.find(c => c.id === quoteToPrint.clientId)?.email || '---'}</p>
                     </div>
-                    <div className="col-span-3 pt-4 border-t border-zinc-200/50">
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Endereço de Atendimento / Instalação</p>
+                    <div className="col-span-3 pt-3 border-t border-zinc-200/50">
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Endereço de Atendimento / Instalação</p>
                       <div className="flex items-start gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-zinc-300 mt-0.5" />
-                        <p className="text-xs font-bold text-black leading-relaxed">{clients.find(c => c.id === quoteToPrint.clientId)?.address || '---'}</p>
+                        <MapPin className="w-3 h-3 text-zinc-300 mt-0.5" />
+                        <p className="text-[11px] font-bold text-black leading-relaxed">{clients.find(c => c.id === quoteToPrint.clientId)?.address || '---'}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Items Table */}
-              <div className="mb-10 rounded-3xl overflow-hidden border border-zinc-200 shadow-sm">
+              {/* Items Table Section */}
+              <div className="mb-6 rounded-2xl overflow-hidden border border-zinc-200 shadow-sm break-inside-auto">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-zinc-50 border-b border-zinc-200">
-                    <tr className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                      <th className="p-5">Descrição do Item / Serviço</th>
-                      <th className="p-5 text-center w-24">Quant.</th>
-                      <th className="p-5 text-right w-36">Unitário</th>
-                      <th className="p-5 text-right w-40">Total</th>
+                    <tr className="text-[8px] font-black uppercase tracking-widest text-zinc-400">
+                      <th className="p-4">Descrição do Item / Serviço</th>
+                      <th className="p-4 text-center w-20">Quant.</th>
+                      <th className="p-4 text-right w-32">Unitário</th>
+                      <th className="p-4 text-right w-36">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 bg-white">
                     {quoteToPrint.items.map((item) => (
-                      <tr key={item.id} className="break-inside-avoid">
-                        <td className="p-5">
-                          <p className="text-sm font-bold text-zinc-900 leading-relaxed capitalize">{item.description.toLowerCase()}</p>
+                      <tr key={item.id} className="break-inside-avoid border-b border-zinc-50 last:border-b-0">
+                        <td className="p-4">
+                          <p className="text-xs font-bold text-zinc-900 leading-relaxed capitalize">{item.description.toLowerCase()}</p>
                         </td>
-                        <td className="p-5 text-center text-sm font-black text-zinc-600">{item.quantity}</td>
-                        <td className="p-5 text-right text-xs font-bold text-zinc-400 font-mono">
+                        <td className="p-4 text-center text-xs font-black text-zinc-600">{item.quantity}</td>
+                        <td className="p-4 text-right text-[10px] font-bold text-zinc-400 font-mono">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.unitPrice)}
                         </td>
-                        <td className="p-5 text-right text-base font-black text-zinc-900 font-mono">
+                        <td className="p-4 text-right text-sm font-black text-zinc-900 font-mono">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total)}
                         </td>
                       </tr>
@@ -1323,23 +1352,23 @@ export default function Quotes() {
                 </table>
               </div>
 
-              {/* Financial & Terms Layout */}
-              <div className="grid grid-cols-12 gap-10 items-start mb-10 break-inside-avoid pt-4">
-                <div className="col-span-7 space-y-8">
+              {/* Financial & Terms Layout Section */}
+              <div className="grid grid-cols-12 gap-8 items-start mb-6 break-inside-avoid pt-2">
+                <div className="col-span-7 space-y-6">
                   {quoteToPrint.observations && (
-                    <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3 flex items-center gap-2">
-                        <FileText className="w-3.5 h-3.5" /> Observações Gerais
+                    <div className="bg-zinc-100/50 p-5 rounded-2xl border border-zinc-100">
+                      <h4 className="text-[9px] font-black uppercase tracking-widest text-blue-600 mb-2 flex items-center gap-1.5">
+                        <FileText className="w-3 h-3" /> Observações Gerais
                       </h4>
-                      <p className="text-[11px] text-zinc-600 leading-relaxed font-medium whitespace-pre-wrap italic">
+                      <p className="text-[10px] text-zinc-600 leading-relaxed font-medium whitespace-pre-wrap italic">
                         "{quoteToPrint.observations}"
                       </p>
                     </div>
                   )}
 
-                  <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">Informações de Condição</h4>
-                    <p className="text-[10px] text-zinc-400 leading-relaxed font-bold">
+                  <div className="bg-zinc-50 p-5 rounded-2xl border border-zinc-100">
+                    <h4 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2">Informações de Condição</h4>
+                    <p className="text-[9px] text-zinc-400 leading-relaxed font-bold">
                       1. Proposta irrevogável pelo período de validade supracitado.<br />
                       2. Impostos inclusos no valor total da proposta.<br />
                       3. Prazo de execução à combinar após aprovação.
@@ -1347,17 +1376,17 @@ export default function Quotes() {
                   </div>
 
                   {quoteToPrint.installments && quoteToPrint.installments.length > 0 && (
-                    <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
-                         <Clock className="w-3.5 h-3.5" /> Cronograma de Pagamento
+                    <div className="bg-zinc-50 p-5 rounded-2xl border border-zinc-100">
+                      <h4 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-1.5">
+                         <Clock className="w-3 h-3" /> Cronograma de Pagamento
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {quoteToPrint.installments.map((inst, i) => (
-                          <div key={inst.id} className="flex justify-between items-center text-[10px] py-1 border-b border-zinc-200/50 last:border-0 last:pb-0">
+                          <div key={inst.id} className="flex justify-between items-center text-[9px] py-1 border-b border-zinc-200/50 last:border-0 last:pb-0">
                             <span className="font-bold text-zinc-900 uppercase tracking-tight">{inst.description}</span>
-                            <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-5">
                               {inst.dueDate && <span className="text-zinc-400 font-mono">{safeFormatDate(inst.dueDate)}</span>}
-                              <span className="font-black text-black font-mono w-28 text-right underline underline-offset-2">
+                              <span className="font-black text-black font-mono w-24 text-right underline underline-offset-2">
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(inst.value)}
                               </span>
                             </div>
@@ -1369,23 +1398,23 @@ export default function Quotes() {
                 </div>
 
                 <div className="col-span-5">
-                   <div className="bg-black p-8 rounded-[40px] text-white shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                    <div className="space-y-6 relative z-10">
-                      <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Subtotal</span>
-                        <span className="text-base font-bold font-mono">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quoteToPrint.totalValue)}</span>
+                   <div className="bg-black p-6 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="space-y-4 relative z-10">
+                      <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Subtotal</span>
+                        <span className="text-sm font-bold font-mono">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quoteToPrint.totalValue)}</span>
                       </div>
-                      <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Impostos / Desc</span>
-                        <span className="text-base font-bold font-mono text-emerald-400">R$ 0,00</span>
+                      <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Impostos / Desc</span>
+                        <span className="text-sm font-bold font-mono text-emerald-400">R$ 0,00</span>
                       </div>
-                      <div className="pt-2">
-                        <span className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-400 mb-4 block">INVESTIMENTO TOTAL</span>
-                        <p className="text-5xl font-black tracking-tighter leading-none mb-1">
+                      <div className="pt-1">
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-3 block">INVESTIMENTO TOTAL</span>
+                        <p className="text-4xl font-black tracking-tighter leading-none mb-1">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quoteToPrint.totalValue)}
                         </p>
-                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mt-4">
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-3">
                           * Valor sujeito a alteração após 15 dias
                         </p>
                       </div>
@@ -1394,42 +1423,42 @@ export default function Quotes() {
                 </div>
               </div>
 
-              {/* Signatures Area */}
-              <div className="mt-24 grid grid-cols-2 gap-20 break-inside-avoid pt-12">
+              {/* Signatures Area Section */}
+              <div className="mt-16 grid grid-cols-2 gap-16 break-inside-avoid pt-8">
                 <div className="text-center flex flex-col items-center">
-                  <div className="h-24 flex items-end justify-center mb-1 w-full relative">
+                  <div className="h-20 flex items-end justify-center mb-1 w-full relative">
                     {companySignature && (
                       <img 
                         src={companySignature} 
                         alt="Assinatura" 
-                        className="max-h-32 w-auto object-contain absolute bottom-0 -translate-y-2 opacity-90" 
+                        className="max-h-24 w-auto object-contain absolute bottom-1 -translate-y-1 opacity-90" 
                       />
                     )}
-                    <div className="w-full border-t-2 border-zinc-900"></div>
+                    <div className="w-full border-t border-zinc-900"></div>
                   </div>
                   <div className="w-full text-center">
-                    <p className="text-lg font-black text-black leading-none mb-1">{companyData?.name || 'IA COMPANY'}</p>
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Responsável Comercial</p>
+                    <p className="text-base font-black text-black leading-none mb-1">{companyData?.name || 'IA COMPANY'}</p>
+                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em]">Responsável Comercial</p>
                   </div>
                 </div>
                 <div className="text-center flex flex-col items-center">
-                  <div className="h-24 flex items-end justify-center mb-1 w-full relative">
-                    <div className="w-full border-t-2 border-zinc-900"></div>
+                  <div className="h-20 flex items-end justify-center mb-1 w-full relative">
+                    <div className="w-full border-t border-zinc-900"></div>
                   </div>
                   <div className="w-full text-center">
-                    <p className="text-lg font-black text-black leading-none mb-1">{clients.find(c => c.id === quoteToPrint.clientId)?.name.substring(0, 30)}</p>
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Aceite do Cliente</p>
+                    <p className="text-base font-black text-black leading-none mb-1">{clients.find(c => c.id === quoteToPrint.clientId)?.name.substring(0, 30)}</p>
+                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em]">Aceite do Cliente</p>
                   </div>
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="mt-20 pt-10 border-t border-zinc-100 flex justify-between items-center break-inside-avoid">
-                <p className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest">
+              {/* Footer Section */}
+              <div className="mt-16 pt-8 border-t border-zinc-100 flex justify-between items-center break-inside-avoid">
+                <p className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest">
                   Geração Eletrônica via Plataforma Condomínio v4.0
                 </p>
-                <div className="flex items-center gap-4">
-                  <p className="text-[9px] font-black text-zinc-900 uppercase tracking-widest">
+                <div className="flex items-center gap-3">
+                  <p className="text-[8px] font-black text-zinc-900 uppercase tracking-widest">
                      Página 1 de 1
                   </p>
                 </div>

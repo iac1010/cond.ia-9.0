@@ -73,7 +73,7 @@ export default function TicketView() {
     } catch (error: any) {
       console.error('Erro ao gerar PDF:', error);
       const errorMsg = error?.message || 'Erro desconhecido';
-      alert(`Erro ao gerar PDF: ${errorMsg}. Tente usar o botão "Imprimir" no topo da página como alternativa.`);
+      toast.error(`Erro ao gerar PDF: ${errorMsg}. Tente usar o botão "Imprimir" no topo da página como alternativa.`);
     } finally {
       setIsGenerating(false);
     }
@@ -546,104 +546,102 @@ export default function TicketView() {
           <div 
             ref={printRef} 
             ref-name="printRef"
-            className="bg-white text-zinc-900 p-10 md:p-12 print:p-0 print:w-full print:mx-auto pdf-content font-sans"
-            style={{ width: '794px', minHeight: '1123px', margin: '0 auto', backgroundColor: '#ffffff', color: '#18181b', position: 'relative' }}
+            className="bg-white text-zinc-900 p-8 md:p-10 print:p-0 print:w-full print:mx-auto pdf-content font-sans"
+            style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', backgroundColor: '#ffffff', color: '#18181b', position: 'relative', display: 'flex', flexDirection: 'column' }}
           >
             {/* Top Accent Line */}
-            <div className="h-2 w-full bg-black mb-6" style={{ height: '8px', backgroundColor: '#000', marginBottom: '24px' }}></div>
+            <div className="h-1.5 w-full bg-black mb-4 shrink-0" style={{ height: '6px', backgroundColor: '#000', marginBottom: '16px' }}></div>
 
             {/* Header Section */}
-            <div className="flex justify-between items-start mb-8 pb-6 border-b border-zinc-200 break-inside-avoid" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div className="flex gap-6 items-center flex-1" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div className="flex justify-between items-start mb-6 pb-4 border-b border-zinc-200 break-inside-avoid shrink-0" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div className="flex gap-4 items-center flex-1" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 {companyLogo ? (
-                  <div className="bg-white p-1 rounded-xl border border-zinc-100 flex items-center justify-center shrink-0 overflow-hidden" style={{ width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <img src={companyLogo} alt="Logo" style={{ height: 'auto', width: '110px', maxWidth: '110px', maxHeight: '110px', objectFit: 'contain' }} />
+                  <div className="bg-white p-1 rounded-lg border border-zinc-100 flex items-center justify-center shrink-0 overflow-hidden" style={{ width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={companyLogo} alt="Logo" style={{ height: 'auto', width: '80px', maxWidth: '80px', maxHeight: '80px', objectFit: 'contain' }} />
                   </div>
                 ) : (
-                  <div className="w-[120px] h-[120px] bg-black rounded-xl flex items-center justify-center shadow-lg shrink-0" style={{ width: '120px', height: '120px', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Wrench className="w-12 h-12 text-white" />
+                  <div className="w-[90px] h-[90px] bg-black rounded-lg flex items-center justify-center shadow-lg shrink-0" style={{ width: '90px', height: '90px', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Wrench className="w-9 h-9 text-white" />
                   </div>
                 )}
                 <div className="flex flex-col">
-                  <h2 className="text-2xl font-black text-black leading-none mb-3" style={{ fontWeight: 900, margin: 0, marginBottom: '8px' }}>
-                    {companyData?.name || 'IA COMPANY SOFTWARE E AUTOMAÇÃO LTDA'}
+                  <h2 className="text-xl font-black text-black leading-tight mb-2 uppercase tracking-tighter" style={{ fontWeight: 900, margin: 0, marginBottom: '4px' }}>
+                    {companyData?.name || 'IA COMPANY'}
                   </h2>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2" style={{ fontWeight: 700, fontSize: '10px' }}>
+                  <div className="space-y-0.5">
+                    <p className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider" style={{ fontWeight: 700, fontSize: '8px' }}>
                       CNPJ: {companyData?.document || '---'}
                     </p>
-                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2" style={{ fontWeight: 700, fontSize: '10px' }}>
-                      {companyData?.email || 'contato@empresa.com'}
+                    <p className="text-[8px] font-bold text-zinc-400" style={{ fontWeight: 700, fontSize: '8px' }}>
+                      {companyData?.email || 'contato@iacompany.com'}
                     </p>
-                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2" style={{ fontWeight: 700, fontSize: '10px' }}>
+                    <p className="text-[8px] font-bold text-zinc-400" style={{ fontWeight: 700, fontSize: '8px' }}>
                       {companyData?.phone || '(00) 0000-0000'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="text-right flex flex-col justify-between" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <div className="text-right flex flex-col justify-between items-end" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                 <div className="flex flex-col items-end">
-                  <div className="w-24 h-4 bg-black mb-3" style={{ width: '96px', height: '16px', backgroundColor: '#000' }}></div>
-                  <h1 className="text-4xl font-black tracking-tighter text-black uppercase leading-none mb-3" style={{ fontWeight: 900, fontSize: '36px', letterSpacing: '-0.05em' }}>
+                  <div className="w-16 h-2 bg-black mb-2" style={{ width: '64px', height: '8px', backgroundColor: '#000' }}></div>
+                  <h1 className="text-2xl font-black tracking-tighter text-black uppercase leading-none mb-2" style={{ fontWeight: 900, fontSize: '24px', letterSpacing: '-0.05em' }}>
                     {ticket.type === 'CORRETIVA' ? 'CORRETIVA' : ticket.type}
                   </h1>
                 </div>
-                <div className="flex flex-col gap-1 items-end pt-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 900, fontSize: '10px' }}>Protocolo</span>
-                    <span className="text-sm font-black text-black" style={{ fontWeight: 900 }}>#{ticket.id.substring(0, 8).toUpperCase()}</span>
+                <div className="flex flex-col gap-0.5 items-end pt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 900, fontSize: '8px' }}>Protocolo</span>
+                    <span className="text-[11px] font-black text-black" style={{ fontWeight: 900 }}>#{ticket.id.substring(0, 8).toUpperCase()}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 900, fontSize: '10px' }}>Emissão</span>
-                    <span className="text-sm font-black text-black" style={{ fontWeight: 900 }}>{safeFormatDate(ticket.date)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontWeight: 900, fontSize: '8px' }}>Emissão</span>
+                    <span className="text-[11px] font-black text-black" style={{ fontWeight: 900 }}>{safeFormatDate(ticket.date)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Status & Tech Boxes */}
-            <div className="flex border border-black rounded-2xl overflow-hidden mb-8 break-inside-avoid" style={{ display: 'flex', border: '1px solid #000', borderRadius: '16px', overflow: 'hidden' }}>
-              <div className="flex-1 bg-white p-5 border-r border-black" style={{ flex: 1, padding: '20px', borderRight: '1px solid #000' }}>
-                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2" style={{ fontWeight: 900, fontSize: '9px' }}>Status Final</p>
-                <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div className="w-2 h-2 bg-amber-500" style={{ width: '8px', height: '8px', backgroundColor: '#f59e0b' }}></div>
-                  <span className="font-black text-black text-base uppercase" style={{ fontWeight: 900 }}>— {ticket.status}</span>
+            <div className="flex border border-black rounded-xl overflow-hidden mb-4 break-inside-avoid shrink-0" style={{ display: 'flex', border: '1px solid #000', borderRadius: '12px', overflow: 'hidden' }}>
+              <div className="flex-1 bg-white p-3 border-r border-black" style={{ flex: 1, padding: '12px', borderRight: '1px solid #000' }}>
+                <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '7px' }}>Status Final</p>
+                <div className="flex items-center gap-1.5" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div className={`w-1.5 h-1.5 ${ticket.status === 'CONCLUIDO' ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: '6px', height: '6px' }}></div>
+                  <span className="font-black text-black text-xs uppercase" style={{ fontWeight: 900 }}>— {ticket.status.replace('_', ' ')}</span>
                 </div>
               </div>
-              <div className="flex-1 bg-white p-5 border-r border-black" style={{ flex: 1, padding: '20px', borderRight: '1px solid #000' }}>
-                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2" style={{ fontWeight: 900, fontSize: '9px' }}>Técnico Encarregado</p>
-                <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <User className="w-3.5 h-3.5 text-zinc-400" />
-                  <span className="font-black text-black text-sm uppercase" style={{ fontWeight: 900 }}>{ticket.technician}</span>
+              <div className="flex-1 bg-white p-3 border-r border-black" style={{ flex: 1, padding: '12px', borderRight: '1px solid #000' }}>
+                <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '7px' }}>Técnico Encarregado</p>
+                <div className="flex items-center gap-1.5" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <User className="w-2.5 h-2.5 text-zinc-400" />
+                  <span className="font-black text-black text-[10px] uppercase" style={{ fontWeight: 900 }}>{ticket.technician}</span>
                 </div>
               </div>
-              <div className="flex-1 bg-black p-5" style={{ flex: 1, backgroundColor: '#000' }}>
-                {/* Black box filler matching image */}
-              </div>
+              <div className="flex-1 bg-black p-3" style={{ flex: 1, backgroundColor: '#000' }}></div>
             </div>
 
             {/* Client & QR Row */}
-            <div className="flex gap-6 mb-8 items-stretch break-inside-avoid" style={{ display: 'flex', gap: '24px' }}>
-              <div className="flex-1 bg-white p-8 rounded-[2.5rem] border-2 border-black flex flex-col relative overflow-hidden" style={{ flex: 1, padding: '32px', borderRadius: '40px', border: '2px solid #000' }}>
-                <h3 className="text-[9px] font-black uppercase tracking-widest text-black mb-6" style={{ fontWeight: 900, fontSize: '9px' }}>NOME DO CLIENTE / SOLICITANTE</h3>
+            <div className="flex gap-4 mb-4 items-stretch break-inside-avoid shrink-0" style={{ display: 'flex', gap: '16px' }}>
+              <div className="flex-1 bg-white p-5 rounded-[1.5rem] border-2 border-black flex flex-col relative overflow-hidden" style={{ flex: 1, padding: '20px', borderRadius: '24px', border: '2px solid #000' }}>
+                <h3 className="text-[7px] font-black uppercase tracking-widest text-black mb-3" style={{ fontWeight: 900, fontSize: '7px' }}>DADOS DO CLIENTE / SOLICITANTE</h3>
                 <div>
-                  <p className="text-3xl font-black text-black leading-tight mb-6" style={{ fontWeight: 900 }}>{client.name}</p>
-                  <div className="grid grid-cols-2 gap-y-6 gap-x-8" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                  <p className="text-xl font-black text-black leading-tight mb-3 uppercase" style={{ fontWeight: 900 }}>{client?.name || '---'}</p>
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-6" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '9px' }}>CNPJ / CPF</p>
-                      <p className="text-xs font-black text-black" style={{ fontWeight: 900, fontSize: '12px' }}>{client.document || '---'}</p>
+                      <p className="text-[7px] font-black text-black uppercase tracking-widest mb-0.5" style={{ fontWeight: 900, fontSize: '7px' }}>CNPJ / CPF</p>
+                      <p className="text-[10px] font-black text-black" style={{ fontWeight: 900, fontSize: '10px' }}>{client?.document || '---'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '9px' }}>Contato</p>
-                      <p className="text-xs font-black text-black" style={{ fontWeight: 900, fontSize: '12px' }}>{client.contactPerson || client.phone}</p>
+                      <p className="text-[7px] font-black text-black uppercase tracking-widest mb-0.5" style={{ fontWeight: 900, fontSize: '7px' }}>Contato</p>
+                      <p className="text-[10px] font-black text-black" style={{ fontWeight: 900, fontSize: '10px' }}>{client?.contactPerson || client?.phone || '---'}</p>
                     </div>
                     <div className="col-span-2" style={{ gridColumn: 'span 2' }}>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '9px' }}>Endereço de Atendimento</p>
-                      <div className="flex items-start gap-2" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <MapPin className="w-3.5 h-3.5 text-black mt-0.5" />
-                        <p className="text-xs font-black text-black leading-relaxed" style={{ fontWeight: 900, fontSize: '12px' }}>
-                          {client.address} {ticket.location ? ` - ${ticket.location}` : ''}
+                      <p className="text-[7px] font-black text-black uppercase tracking-widest mb-0.5" style={{ fontWeight: 900, fontSize: '7px' }}>Localização do Serviço</p>
+                      <div className="flex items-start gap-1.5" style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                        <MapPin className="w-2.5 h-2.5 text-black mt-0.5" />
+                        <p className="text-[10px] font-black text-black leading-tight" style={{ fontWeight: 900, fontSize: '10px' }}>
+                          {client?.address || '---'} {ticket.location ? ` - ${ticket.location}` : ''}
                         </p>
                       </div>
                     </div>
@@ -651,146 +649,120 @@ export default function TicketView() {
                 </div>
               </div>
 
-              <div className="w-[200px] flex flex-col items-center justify-center p-8 border-2 border-black rounded-[2.5rem] bg-white text-center" style={{ width: '200px', padding: '32px', border: '2px solid #000', borderRadius: '40px' }}>
-                <div className="mb-4 bg-white">
+              <div className="w-[140px] flex flex-col items-center justify-center p-4 border-2 border-black rounded-[1.5rem] bg-white text-center" style={{ width: '140px', padding: '16px', border: '2px solid #000', borderRadius: '24px' }}>
+                <div className="mb-2 bg-white">
                   <QRCodeSVG 
                     value={`${window.location.origin}/tickets/${ticket.id}`} 
-                    size={100}
+                    size={70}
                     level="H"
                     includeMargin={false}
                   />
                 </div>
-                <p className="text-[9px] font-black text-black uppercase tracking-widest leading-relaxed" style={{ fontWeight: 900, fontSize: '9px' }}>
-                  ESCANEIE PARA VALIDAR AUTENTICIDADE DIGITAL
+                <p className="text-[7px] font-black text-black uppercase tracking-widest leading-none" style={{ fontWeight: 900, fontSize: '7px' }}>
+                  VALIDAÇÃO DIGITAL
                 </p>
               </div>
             </div>
 
-            {/* Service Details */}
-            <div className="space-y-6" style={{ marginTop: '24px' }}>
-              {/* Problema Relatado */}
-              <div className="relative pl-6 break-inside-avoid" style={{ position: 'relative', paddingLeft: '24px', borderLeft: '4px solid #000' }}>
-                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ fontWeight: 900, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <AlertCircle className="w-4 h-4" /> Problema Relatado
+            {/* Service Content */}
+            <div className="flex-1 space-y-4 overflow-hidden" style={{ marginTop: '12px' }}>
+              {/* Problem Section */}
+              <div className="relative pl-4 break-inside-avoid" style={{ position: 'relative', paddingLeft: '16px', borderLeft: '3px solid #000' }}>
+                <h3 className="text-[8px] font-black text-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5" style={{ fontWeight: 900, fontSize: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertCircle className="w-3 h-3" /> Descrição do Chamado
                 </h3>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {ticket.reportedProblem ? (
                     ticket.reportedProblem.split('\n').map((line, i) => (
-                      <p key={i} className="text-black text-sm leading-relaxed font-bold" style={{ fontWeight: 700, fontSize: '14px', margin: 0, marginBottom: '2px' }}>
-                        - {line}
+                      <p key={i} className="text-black text-xs leading-tight font-bold" style={{ fontWeight: 700, fontSize: '12px', margin: 0 }}>
+                        — {line}
                       </p>
                     ))
                   ) : (
-                    <p className="text-zinc-400 text-sm italic" style={{ fontStyle: 'italic', color: '#a1a1aa' }}>Nenhum problema detalhado.</p>
+                    <p className="text-zinc-400 text-[10px] italic" style={{ fontStyle: 'italic', fontSize: '10px' }}>Sem descrição detalhada.</p>
                   )}
                 </div>
               </div>
 
-              {/* Histórico Section */}
-              <div className="break-inside-avoid">
-                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ fontWeight: 900, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ClipboardList className="w-4 h-4" /> Histórico de Campo
-                </h3>
-                <div className="p-5 border-2 border-dashed border-zinc-300 rounded-[1.5rem] text-center bg-zinc-50/30" style={{ padding: '20px', border: '2px dashed #d4d4d8', borderRadius: '24px', backgroundColor: '#fafafa' }}>
-                  {ticket.history && ticket.history.length > 0 ? (
-                    <div className="text-left space-y-3" style={{ textAlign: 'left' }}>
-                      {ticket.history.map(entry => (
-                        <div key={entry.id} className="pb-2 border-b border-zinc-100 last:border-0 last:pb-0" style={{ paddingBottom: '8px', borderBottom: '1px solid #f4f4f5' }}>
-                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5" style={{ fontWeight: 900, fontSize: '9px', color: '#a1a1aa' }}>
-                            {safeFormatDate(entry.date)} • {entry.userName}
-                          </p>
-                          <p className="text-xs font-bold text-black" style={{ fontWeight: 700, fontSize: '12px' }}>{entry.note}</p>
+              {/* Service Report */}
+              {ticket.serviceReport && (
+                <div className="break-inside-avoid">
+                  <h3 className="text-[8px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '8px' }}>RELATÓRIO TÉCNICO DE EXECUÇÃO</h3>
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl" style={{ padding: '12px', backgroundColor: '#fcfcfc', border: '1px solid #e4e4e7', borderRadius: '12px' }}>
+                    <p className="text-black text-xs font-bold leading-relaxed" style={{ fontWeight: 700, fontSize: '12px' }}>
+                      {ticket.serviceReport}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Checklist */}
+              {ticket.checklistResults && ticket.checklistResults.length > 0 && (
+                <div className="break-inside-avoid">
+                  <h3 className="text-[8px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '8px' }}>ITENS VERIFICADOS</h3>
+                  <div className="grid grid-cols-2 gap-1.5" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    {ticket.checklistResults.map((result, i) => {
+                      const item = checklistItems.find(it => it.id === result.taskId);
+                      return (
+                        <div key={i} className="flex items-center justify-between p-1.5 bg-zinc-50 rounded-lg border border-zinc-100" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px', backgroundColor: '#fcfcfc', border: '1px solid #f4f4f5', borderRadius: '6px' }}>
+                          <span className="text-[9px] font-bold text-zinc-600 truncate mr-2" style={{ fontWeight: 700, fontSize: '9px' }}>{item?.task || 'Tarefa'}</span>
+                          <span className={`text-[8px] font-black px-1 py-0.5 rounded ${result.status === 'OK' ? 'bg-emerald-500 text-white' : result.status === 'NOK' ? 'bg-red-500 text-white' : 'bg-zinc-300 text-zinc-600'}`} style={{ fontSize: '8px', fontWeight: 900 }}>
+                            {result.status}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-zinc-400 italic font-bold" style={{ fontStyle: 'italic', fontWeight: 700, color: '#a1a1aa' }}>Nenhum evento registrado no histórico</p>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Comentários Adicionais */}
-              <div className="bg-white p-6 rounded-[2rem] border-2 border-black break-inside-avoid shadow-inner" style={{ padding: '24px', borderRadius: '32px', border: '2px solid #000', backgroundColor: '#fff' }}>
-                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-3" style={{ fontWeight: 900, fontSize: '10px' }}>COMENTÁRIOS ADICIONAIS</h3>
-                <p className="text-black text-sm font-black italic" style={{ fontWeight: 900, fontSize: '14px', fontStyle: 'italic' }}>
-                  "{ticket.observations || (ticket.budgetAmount ? `Valor de Mão de Obra R$ ${ticket.budgetAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Nenhuma observação adicional')}"
+              {/* Observations */}
+              <div className="bg-white p-4 rounded-[1rem] border-2 border-black break-inside-avoid" style={{ padding: '16px', borderRadius: '16px', border: '2px solid #000', backgroundColor: '#fff' }}>
+                <h3 className="text-[8px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '8px' }}>OBSERVAÇÕES E NOTAS</h3>
+                <p className="text-black text-xs font-black italic" style={{ fontWeight: 900, fontSize: '12px', fontStyle: 'italic' }}>
+                  "{ticket.observations || (ticket.budgetAmount ? `Mão de Obra: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ticket.budgetAmount)}` : 'Nenhuma observação adicional registrada pelo técnico.')}"
                 </p>
               </div>
             </div>
 
-            {/* Signature Area */}
-            <div className="mt-12 pt-8 border-t-2 border-black flex justify-between gap-20 break-inside-avoid shadow-[0_-20px_20px_-20px_rgba(0,0,0,0.05)]" style={{ marginTop: '48px', paddingTop: '32px', borderTop: '2px solid #000', display: 'flex', justifyContent: 'space-between', gap: '80px', breakInside: 'avoid' }}>
+            {/* Signatures */}
+            <div className="mt-8 pt-4 border-t-2 border-black flex justify-between gap-12 break-inside-avoid shrink-0" style={{ marginTop: '32px', paddingTop: '16px', borderTop: '2px solid #000', display: 'flex', justifyContent: 'space-between', gap: '48px' }}>
               <div className="text-center flex flex-col items-center flex-1 relative" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
-                <div className="h-24 flex items-end justify-center mb-1 w-full relative" style={{ height: '96px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '4px', position: 'relative' }}>
+                <div className="h-16 flex items-end justify-center w-full relative mb-1" style={{ height: '64px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', position: 'relative', marginBottom: '4px' }}>
                   {companySignature && (
                     <img 
                       src={companySignature} 
-                      alt="Assinatura" 
-                      className="max-h-32 w-auto object-contain absolute bottom-0 -translate-y-2 opacity-95"
-                      style={{ maxHeight: '128px', width: 'auto', opacity: 0.95, position: 'absolute', bottom: 0, transform: 'translateY(-8px)' }} 
+                      alt="Signature" 
+                      className="max-h-20 w-auto object-contain absolute bottom-0 -translate-y-1 opacity-95" 
+                      style={{ maxHeight: '80px', width: 'auto', position: 'absolute', bottom: 0, transform: 'translateY(-4px)', opacity: 0.95 }}
                     />
                   )}
-                  <div className="w-full border-t-2 border-black/20" style={{ width: '100%', borderTop: '2px solid rgba(0,0,0,0.1)' }}></div>
+                  <div className="w-full border-t border-black" style={{ width: '100%', borderTop: '1px solid #000' }}></div>
                 </div>
-                <div className="w-full pt-4">
-                  <p className="text-lg font-black text-black leading-none mb-1" style={{ fontWeight: 900, fontSize: '18px' }}>{ticket.technician}</p>
-                  <p className="text-[10px] font-black text-black uppercase tracking-[0.2em]" style={{ fontWeight: 900, fontSize: '10px' }}>Assinatura do Técnico</p>
-                </div>
+                <p className="text-sm font-black text-black leading-none uppercase tracking-tighter" style={{ fontWeight: 900, fontSize: '14px' }}>IA COMPANY</p>
+                <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mt-1" style={{ fontWeight: 900, fontSize: '7px' }}>ASSINATURA DO TÉCNICO</p>
               </div>
+              
               <div className="text-center flex flex-col items-center flex-1" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                <div className="h-24 flex items-end justify-center mb-1 w-full" style={{ height: '96px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '4px' }}>
-                  <div className="w-full border-t-2 border-black/20" style={{ width: '100%', borderTop: '2px solid rgba(0,0,0,0.1)' }}></div>
+                <div className="h-16 flex items-end justify-center w-full mb-1" style={{ height: '64px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', marginBottom: '4px' }}>
+                  <div className="w-full border-t border-black" style={{ width: '100%', borderTop: '1px solid #000' }}></div>
                 </div>
-                <div className="w-full pt-4">
-                  <p className="text-lg font-black text-black leading-none mb-1" style={{ fontWeight: 900, fontSize: '18px' }}>{client.name.substring(0, 30)}</p>
-                  <p className="text-[10px] font-black text-black uppercase tracking-[0.2em]" style={{ fontWeight: 900, fontSize: '10px' }}>APROVAÇÃO / RECEBIMENTO</p>
-                </div>
+                <p className="text-sm font-black text-black leading-none uppercase tracking-tighter truncate max-w-full" style={{ fontWeight: 900, fontSize: '14px' }}>
+                  {client?.name?.substring(0, 30) || 'CLIENTE / RESPONSÁVEL'}
+                </p>
+                <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mt-1" style={{ fontWeight: 900, fontSize: '7px' }}>APROVAÇÃO / RECEBIMENTO</p>
               </div>
             </div>
 
-            {/* Bottom Footer Details */}
-            <div className="mt-10 pt-4 border-t border-zinc-200 flex justify-between items-center break-inside-avoid" style={{ marginTop: '40px', paddingTop: '16px', borderTop: '1px solid #e4e4e7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest" style={{ fontWeight: 700, fontSize: '9px', color: '#d4d4d8' }}>
-                GERADO ELETRONICAMENTE EM {new Date().toLocaleDateString('pt-BR')} ÀS {new Date().toLocaleTimeString('pt-BR')}
+            {/* Footer */}
+            <div className="mt-8 pt-4 border-t border-zinc-100 flex justify-between items-center break-inside-avoid shrink-0" style={{ marginTop: '32px', paddingTop: '16px', borderTop: '1px solid #f4f4f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p className="text-[7px] font-bold text-zinc-300 uppercase tracking-widest">
+                VERIFICAÇÃO DIGITAL - SISTEMA CONDOMÍNIO v4.0
               </p>
-              <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest text-right" style={{ fontWeight: 900, fontSize: '9px', color: '#a1a1aa', textAlign: 'right' }}>
-                {companyData?.name || 'IA COMPANY SOFTWARE E AUTOMAÇÃO LTDA'} • PLATAFORMA INTEGRADA
+              <p className="text-[7px] font-black text-zinc-900 uppercase tracking-widest">
+                 DOCUMENTO ELETRÔNICO PÁGINA 1 DE 1
               </p>
             </div>
-            {/* Hidden spacer */}
-            <div className="h-4 bg-transparent overflow-hidden">.</div>
-            
-            {/* Photo Gallery - Forces New Page if needed or stays close */}
-            {(ticket.images?.length || 0) > 0 || ticket.photoBefore ? (
-              <div className="mt-12 pt-10" style={{ marginTop: '48px', paddingTop: '40px', pageBreakBefore: 'always', breakBefore: 'page' }}>
-                <div className="flex items-center gap-4 mb-8" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-                  <div className="h-px flex-1 bg-zinc-200" style={{ height: '1px', flex: 1, backgroundColor: '#e4e4e7' }}></div>
-                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-3" style={{ fontSize: '12px', fontWeight: 900, color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Camera className="w-4 h-4" /> Evidências Fotográficas
-                  </h3>
-                  <div className="h-px flex-1 bg-zinc-200" style={{ height: '1px', flex: 1, backgroundColor: '#e4e4e7' }}></div>
-                </div>
-                <div className="flex flex-wrap gap-6 pb-12" style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
-                  {ticket.photoBefore && (
-                    <div className="rounded-3xl overflow-hidden border border-zinc-200 break-inside-avoid relative bg-zinc-50 p-2 shadow-sm" style={{ width: 'calc(50% - 12px)', borderRadius: '24px', border: '1px solid #e4e4e7', overflow: 'hidden', position: 'relative', backgroundColor: '#fafafa', padding: '8px' }}>
-                      <img src={ticket.photoBefore} alt="Antes" className="w-full h-64 object-cover rounded-2xl" style={{ width: '100%', height: '256px', objectFit: 'cover', borderRadius: '16px' }} />
-                      <div className="absolute top-6 left-6 bg-red-600 px-3 py-1.5 rounded-lg text-white text-[9px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2" style={{ position: 'absolute', top: '24px', left: '24px', backgroundColor: '#dc2626', padding: '6px 12px', borderRadius: '8px', color: '#fff', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div> Antes do Atendimento
-                      </div>
-                    </div>
-                  )}
-                  {ticket.images?.map((img, index) => (
-                    <div key={index} className="rounded-3xl overflow-hidden border border-zinc-200 break-inside-avoid bg-zinc-50 p-2 shadow-sm relative" style={{ width: 'calc(50% - 12px)', borderRadius: '24px', border: '1px solid #e4e4e7', overflow: 'hidden', position: 'relative', backgroundColor: '#fafafa', padding: '8px' }}>
-                      <img src={img} alt={`Depois ${index + 1}`} className="w-full h-64 object-cover rounded-2xl" style={{ width: '100%', height: '256px', objectFit: 'cover', borderRadius: '16px' }} />
-                      <div className="absolute top-6 left-6 bg-black px-3 py-1.5 rounded-lg text-white text-[9px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2" style={{ position: 'absolute', top: '24px', left: '24px', backgroundColor: '#000', padding: '6px 12px', borderRadius: '8px', color: '#fff', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> {index === 0 ? 'Serviço Concluído' : `Registro ${index + 1}`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            <div style={{ height: '40px', color: 'transparent', overflow: 'hidden' }} className="print:hidden">.</div>
           </div>
         </div>
       </div>
