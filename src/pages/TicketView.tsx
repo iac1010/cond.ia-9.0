@@ -1,12 +1,14 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../store';
-import { Download, Printer, Edit, CheckCircle2, XCircle, DollarSign, Camera, MapPin, User, MessageSquare, Plus, QrCode, Share2, Sparkles, Wrench, ClipboardList, AlertCircle, Package } from 'lucide-react';
+import { Download, Printer, Edit, CheckCircle2, XCircle, DollarSign, Camera, MapPin, User, MessageSquare, Plus, QrCode, Share2, Sparkles, Wrench, ClipboardList, AlertCircle, Package, FileText } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { generatePdf, sharePdf } from '../utils/pdfGenerator';
 import { safeFormatDate } from '../utils/dateUtils';
 import { toast } from 'react-hot-toast';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, VerticalAlign, ImageRun } from 'docx';
+import { saveAs } from 'file-saver';
 
 export default function TicketView() {
   const { id } = useParams();
@@ -72,6 +74,299 @@ export default function TicketView() {
       console.error('Erro ao gerar PDF:', error);
       const errorMsg = error?.message || 'Erro desconhecido';
       alert(`Erro ao gerar PDF: ${errorMsg}. Tente usar o botão "Imprimir" no topo da página como alternativa.`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadWord = async () => {
+    setIsGenerating(true);
+    try {
+      const logoImage = companyLogo ? await fetch(companyLogo).then(r => r.arrayBuffer()).then(ab => new Uint8Array(ab)).catch(() => null) : null;
+      const signatureImage = companySignature ? await fetch(companySignature).then(r => r.arrayBuffer()).then(ab => new Uint8Array(ab)).catch(() => null) : null;
+
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              margin: { top: 720, right: 720, bottom: 720, left: 720 },
+            },
+          },
+          children: [
+            // Top Accent Line
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [new TableRow({ children: [new TableCell({ children: [], shading: { fill: "000000" }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] })],
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 100 } }),
+
+            // Header Section
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } ,
+              rows: [
+                new TableRow({
+                  cantSplit: true,
+                  children: [
+                    new TableCell({
+                      width: { size: 60, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Table({
+                          width: { size: 100, type: WidthType.PERCENTAGE },
+                          rows: [
+                            new TableRow({
+                              children: [
+                                ...(logoImage ? [new TableCell({
+                                  children: [new Paragraph({ children: [new ImageRun({ data: logoImage, transformation: { width: 80, height: 80 } } as any)] })],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                  width: { size: 100, type: WidthType.DXA },
+                                })] : []),
+                                new TableCell({
+                                  children: [
+                                    new Paragraph({ children: [new TextRun({ text: companyData?.name || 'IA COMPANY SOFTWARE E AUTOMAÇÃO LTDA', bold: true, size: 28 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `CNPJ: ${companyData?.document || '---'}`, size: 16, color: "666666", allCaps: true, bold: true })] }),
+                                    new Paragraph({ children: [new TextRun({ text: companyData?.email || '---', size: 16, color: "666666" })] }),
+                                    new Paragraph({ children: [new TextRun({ text: companyData?.phone || '---', size: 16, color: "666666" })] }),
+                                  ],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                  verticalAlign: VerticalAlign.CENTER,
+                                }),
+                              ]
+                            })
+                          ]
+                        })
+                      ],
+                    }),
+                    new TableCell({
+                      width: { size: 40, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "        ", shading: { fill: "000000" } })], alignment: AlignmentType.RIGHT }),
+                        new Paragraph({ children: [new TextRun({ text: ticket.type === 'CORRETIVA' ? 'CORRETIVA' : ticket.type, bold: true, size: 48 })], alignment: AlignmentType.RIGHT }),
+                        new Paragraph({ children: [new TextRun({ text: "Protocolo ", size: 16, color: "999999", bold: true, allCaps: true }), new TextRun({ text: `#${ticket.id.substring(0, 8).toUpperCase()}`, bold: true, size: 20 })], alignment: AlignmentType.RIGHT }),
+                        new Paragraph({ children: [new TextRun({ text: "Emissão ", size: 16, color: "999999", bold: true, allCaps: true }), new TextRun({ text: safeFormatDate(ticket.date), bold: true, size: 20 })], alignment: AlignmentType.RIGHT }),
+                      ],
+                      verticalAlign: VerticalAlign.TOP,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+
+            // Status & Tech Row
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.SINGLE, size: 2 }, bottom: { style: BorderStyle.SINGLE, size: 2 }, left: { style: BorderStyle.SINGLE, size: 2 }, right: { style: BorderStyle.SINGLE, size: 2 } },
+              rows: [
+                new TableRow({
+                  cantSplit: true,
+                  children: [
+                    new TableCell({
+                      width: { size: 30, type: WidthType.PERCENTAGE },
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "STATUS FINAL", size: 16, bold: true, color: "999999" })] }),
+                        new Paragraph({ children: [new TextRun({ text: `— ${ticket.status}`, bold: true, size: 24 })] }),
+                      ],
+                      shading: { fill: "FFFFFF" },
+                      margins: { top: 200, bottom: 200, left: 200 },
+                    }),
+                    new TableCell({
+                      width: { size: 30, type: WidthType.PERCENTAGE },
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "TÉCNICO ENCARREGADO", size: 16, bold: true, color: "999999" })] }),
+                        new Paragraph({ children: [new TextRun({ text: ticket.technician, bold: true, size: 24 })] }),
+                      ],
+                      shading: { fill: "FFFFFF" },
+                      margins: { top: 200, bottom: 200, left: 200 },
+                    }),
+                    new TableCell({
+                      width: { size: 40, type: WidthType.PERCENTAGE },
+                      children: [],
+                      shading: { fill: "000000" },
+                    }),
+                  ],
+                }),
+              ],
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+
+            // Client Box
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { 
+                top: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, 
+                bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, 
+                left: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, 
+                right: { style: BorderStyle.SINGLE, size: 12, color: "000000" } 
+              },
+              rows: [
+                new TableRow({
+                  cantSplit: true,
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "NOME DO CLIENTE / SOLICITANTE", size: 16, bold: true, color: "000000" })], spacing: { after: 100 } }),
+                        new Paragraph({ children: [new TextRun({ text: client?.name || '---', bold: true, size: 36 })], spacing: { after: 200 } }),
+                        new Table({
+                          width: { size: 100, type: WidthType.PERCENTAGE },
+                          rows: [
+                            new TableRow({
+                              children: [
+                                new TableCell({
+                                  children: [new Paragraph({ children: [new TextRun({ text: "CNPJ / CPF", size: 16, bold: true })] }), new Paragraph({ children: [new TextRun({ text: client?.document || '---', bold: true, size: 18 })] })],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                }),
+                                new TableCell({
+                                  children: [new Paragraph({ children: [new TextRun({ text: "CONTATO", size: 16, bold: true })] }), new Paragraph({ children: [new TextRun({ text: client?.contactPerson || client?.phone || '---', bold: true, size: 18 })] })],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                }),
+                              ]
+                            }),
+                            new TableRow({
+                              children: [
+                                new TableCell({
+                                  columnSpan: 2,
+                                  children: [new Paragraph({ children: [new TextRun({ text: "ENDEREÇO DE ATENDIMENTO", size: 16, bold: true })] }), new Paragraph({ children: [new TextRun({ text: `${client?.address || '---'} ${ticket.location ? ` - ${ticket.location}` : ''}`, bold: true, size: 18 })] })],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                }),
+                              ]
+                            })
+                          ]
+                        })
+                      ],
+                      margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                    })
+                  ]
+                })
+              ]
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+
+            // Problem Reported
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { left: { style: BorderStyle.SINGLE, size: 40, color: "000000" }, top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              rows: [
+                new TableRow({
+                  cantSplit: true,
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "PROBLEMA RELATADO", size: 20, bold: true, color: "000000" })], spacing: { after: 100 } }),
+                        ...(ticket.reportedProblem ? ticket.reportedProblem.split('\n').map(line => new Paragraph({ children: [new TextRun({ text: `- ${line}`, bold: true, size: 22 })] })) : [new Paragraph({ text: "Nenhum problema detalhado." })]),
+                      ],
+                      margins: { left: 400 },
+                    })
+                  ]
+                })
+              ]
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+
+            // Service Report
+            new Paragraph({ children: [new TextRun({ text: "RELATO DO SERVIÇO", size: 20, bold: true, color: "000000" })], spacing: { after: 100 } }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.DASHED, size: 12, color: "CCCCCC" }, bottom: { style: BorderStyle.DASHED, size: 12, color: "CCCCCC" }, left: { style: BorderStyle.DASHED, size: 12, color: "CCCCCC" }, right: { style: BorderStyle.DASHED, size: 12, color: "CCCCCC" } },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [new Paragraph({ children: [new TextRun({ text: ticket.serviceReport || "Nenhum relato registrado.", bold: true, size: 22 })] })],
+                      shading: { fill: "F9FAFB" },
+                      margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                    })
+                  ]
+                })
+              ]
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+
+            // Observations Box
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, left: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, right: { style: BorderStyle.SINGLE, size: 12, color: "000000" } },
+              rows: [
+                new TableRow({
+                  cantSplit: true,
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "COMENTÁRIOS ADICIONAIS", size: 18, bold: true, color: "000000" })], spacing: { after: 100 } }),
+                        new Paragraph({ children: [new TextRun({ text: `"${ticket.observations || (ticket.budgetAmount ? `Valor de Mão de Obra R$ ${ticket.budgetAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Nenhuma observação adicional')}"`, italics: true, bold: true, size: 22 })] }),
+                      ],
+                      margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                    })
+                  ]
+                })
+              ]
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 600 } }),
+
+            // Signatures
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  cantSplit: true,
+                  children: [
+                    new TableCell({
+                      children: [
+                        ...(signatureImage ? [new Paragraph({ children: [new ImageRun({ data: signatureImage, transformation: { width: 120, height: 60 } } as any)], alignment: AlignmentType.CENTER })] : [new Paragraph({ text: "", spacing: { before: 400 } })]),
+                        new Table({ width: { size: 80, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.SINGLE, size: 1 }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } }, rows: [new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: ticket.technician, bold: true, size: 24 })], alignment: AlignmentType.CENTER }), new Paragraph({ children: [new TextRun({ text: "Assinatura do Técnico", size: 16, bold: true, allCaps: true })], alignment: AlignmentType.CENTER })], borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] })], alignment: AlignmentType.CENTER }),
+                      ],
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                    }),
+                    new TableCell({
+                      children: [
+                        new Paragraph({ text: "", spacing: { before: 400 } }),
+                        new Table({ width: { size: 80, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.SINGLE, size: 1 }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } }, rows: [new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: client?.name.substring(0, 30) || '---', bold: true, size: 24 })], alignment: AlignmentType.CENTER }), new Paragraph({ children: [new TextRun({ text: "APROVAÇÃO / RECEBIMENTO", size: 16, bold: true, allCaps: true })], alignment: AlignmentType.CENTER })], borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] })], alignment: AlignmentType.CENTER }),
+                      ],
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                    }),
+                  ]
+                })
+              ]
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 400 } }),
+
+            // Footer
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `GERADO ELETRONICAMENTE EM ${new Date().toLocaleDateString('pt-BR')} ÀS ${new Date().toLocaleTimeString('pt-BR')}`, size: 12, color: "CCCCCC", bold: true })] })], borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${companyData?.name || 'IA COMPANY'} • PLATAFORMA INTEGRADA`, size: 12, color: "999999", bold: true, allCaps: true })], alignment: AlignmentType.RIGHT })], borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                  ]
+                })
+              ]
+            })
+          ],
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const dateStr = safeFormatDate(ticket.date).replace(/\//g, '-');
+      const safeName = client?.name ? client.name.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_') : 'Tarefa';
+      const fileName = ticket.type === 'TAREFA' ? `Tarefa_${safeName}_${dateStr}.docx` : `OS_${ticket.type}_${safeName}_${dateStr}.docx`;
+      
+      saveAs(blob, fileName);
+      toast.success('Arquivo Word gerado com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao gerar Word:', error);
+      toast.error('Erro ao gerar arquivo Word.');
     } finally {
       setIsGenerating(false);
     }
@@ -190,6 +485,13 @@ export default function TicketView() {
               <Download className="w-4 h-4" /> {isGenerating ? 'Gerando...' : 'Baixar PDF'}
             </button>
             <button 
+              onClick={handleDownloadWord}
+              disabled={isGenerating}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg"
+            >
+              <FileText className="w-4 h-4" /> {isGenerating ? 'Gerando...' : 'Baixar Word'}
+            </button>
+            <button 
               onClick={handleSharePdf}
               disabled={isGenerating}
               className="bg-black hover:bg-zinc-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg"
@@ -245,21 +547,21 @@ export default function TicketView() {
             ref={printRef} 
             ref-name="printRef"
             className="bg-white text-zinc-900 p-10 md:p-12 print:p-0 print:w-full print:mx-auto pdf-content font-sans"
-            style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', backgroundColor: '#ffffff', color: '#18181b', position: 'relative' }}
+            style={{ width: '794px', minHeight: '1123px', margin: '0 auto', backgroundColor: '#ffffff', color: '#18181b', position: 'relative' }}
           >
             {/* Top Accent Line */}
-            <div className="h-2 w-full bg-black mb-6"></div>
+            <div className="h-2 w-full bg-black mb-6" style={{ height: '8px', backgroundColor: '#000', marginBottom: '24px' }}></div>
 
             {/* Header Section */}
             <div className="flex justify-between items-start mb-8 pb-6 border-b border-zinc-200 break-inside-avoid" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div className="flex gap-6 items-center flex-1" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                 {companyLogo ? (
-                  <div className="bg-white p-1 rounded-xl border border-zinc-100 flex items-center justify-center shrink-0" style={{ width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <img src={companyLogo} alt="Logo" style={{ height: '70px', width: 'auto', objectFit: 'contain' }} />
+                  <div className="bg-white p-1 rounded-xl border border-zinc-100 flex items-center justify-center shrink-0 overflow-hidden" style={{ width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={companyLogo} alt="Logo" style={{ height: 'auto', width: '110px', maxWidth: '110px', maxHeight: '110px', objectFit: 'contain' }} />
                   </div>
                 ) : (
-                  <div className="w-[80px] h-[80px] bg-black rounded-xl flex items-center justify-center shadow-lg shrink-0" style={{ width: '80px', height: '80px', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Wrench className="w-10 h-10 text-white" />
+                  <div className="w-[120px] h-[120px] bg-black rounded-xl flex items-center justify-center shadow-lg shrink-0" style={{ width: '120px', height: '120px', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Wrench className="w-12 h-12 text-white" />
                   </div>
                 )}
                 <div className="flex flex-col">
@@ -365,16 +667,16 @@ export default function TicketView() {
             </div>
 
             {/* Service Details */}
-            <div className="space-y-8" style={{ marginTop: '32px' }}>
+            <div className="space-y-6" style={{ marginTop: '24px' }}>
               {/* Problema Relatado */}
               <div className="relative pl-6 break-inside-avoid" style={{ position: 'relative', paddingLeft: '24px', borderLeft: '4px solid #000' }}>
-                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-4 flex items-center gap-2" style={{ fontWeight: 900, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ fontWeight: 900, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <AlertCircle className="w-4 h-4" /> Problema Relatado
                 </h3>
                 <div className="space-y-1">
                   {ticket.reportedProblem ? (
                     ticket.reportedProblem.split('\n').map((line, i) => (
-                      <p key={i} className="text-black text-sm leading-relaxed font-bold" style={{ fontWeight: 700, fontSize: '14px', margin: 0, marginBottom: '4px' }}>
+                      <p key={i} className="text-black text-sm leading-relaxed font-bold" style={{ fontWeight: 700, fontSize: '14px', margin: 0, marginBottom: '2px' }}>
                         - {line}
                       </p>
                     ))
@@ -386,54 +688,60 @@ export default function TicketView() {
 
               {/* Histórico Section */}
               <div className="break-inside-avoid">
-                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-4 flex items-center gap-2" style={{ fontWeight: 900, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ fontWeight: 900, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ClipboardList className="w-4 h-4" /> Histórico de Campo
                 </h3>
-                <div className="p-6 border-2 border-dashed border-zinc-300 rounded-[2rem] text-center bg-zinc-50/30" style={{ padding: '24px', border: '2px dashed #d4d4d8', borderRadius: '32px', backgroundColor: '#fafafa' }}>
+                <div className="p-5 border-2 border-dashed border-zinc-300 rounded-[1.5rem] text-center bg-zinc-50/30" style={{ padding: '20px', border: '2px dashed #d4d4d8', borderRadius: '24px', backgroundColor: '#fafafa' }}>
                   {ticket.history && ticket.history.length > 0 ? (
-                    <div className="text-left space-y-4" style={{ textAlign: 'left' }}>
+                    <div className="text-left space-y-3" style={{ textAlign: 'left' }}>
                       {ticket.history.map(entry => (
-                        <div key={entry.id} className="pb-3 border-b border-zinc-100 last:border-0 last:pb-0" style={{ paddingBottom: '12px', borderBottom: '1px solid #f4f4f5' }}>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1" style={{ fontWeight: 900, fontSize: '10px', color: '#a1a1aa' }}>
+                        <div key={entry.id} className="pb-2 border-b border-zinc-100 last:border-0 last:pb-0" style={{ paddingBottom: '8px', borderBottom: '1px solid #f4f4f5' }}>
+                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5" style={{ fontWeight: 900, fontSize: '9px', color: '#a1a1aa' }}>
                             {safeFormatDate(entry.date)} • {entry.userName}
                           </p>
-                          <p className="text-sm font-bold text-black" style={{ fontWeight: 700, fontSize: '14px' }}>{entry.note}</p>
+                          <p className="text-xs font-bold text-black" style={{ fontWeight: 700, fontSize: '12px' }}>{entry.note}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-zinc-400 italic font-bold" style={{ fontStyle: 'italic', fontWeight: 700, color: '#a1a1aa' }}>Nenhum evento registrado no histórico</p>
+                    <p className="text-xs text-zinc-400 italic font-bold" style={{ fontStyle: 'italic', fontWeight: 700, color: '#a1a1aa' }}>Nenhum evento registrado no histórico</p>
                   )}
                 </div>
               </div>
 
               {/* Comentários Adicionais */}
-              <div className="bg-white p-8 rounded-[2.5rem] border-2 border-black break-inside-avoid shadow-inner" style={{ padding: '32px', borderRadius: '40px', border: '2px solid #000', backgroundColor: '#fff' }}>
-                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-4" style={{ fontWeight: 900, fontSize: '10px' }}>COMENTÁRIOS ADICIONAIS</h3>
-                <p className="text-black text-base font-black italic" style={{ fontWeight: 900, fontSize: '16px', fontStyle: 'italic' }}>
+              <div className="bg-white p-6 rounded-[2rem] border-2 border-black break-inside-avoid shadow-inner" style={{ padding: '24px', borderRadius: '32px', border: '2px solid #000', backgroundColor: '#fff' }}>
+                <h3 className="text-[10px] font-black text-black uppercase tracking-widest mb-3" style={{ fontWeight: 900, fontSize: '10px' }}>COMENTÁRIOS ADICIONAIS</h3>
+                <p className="text-black text-sm font-black italic" style={{ fontWeight: 900, fontSize: '14px', fontStyle: 'italic' }}>
                   "{ticket.observations || (ticket.budgetAmount ? `Valor de Mão de Obra R$ ${ticket.budgetAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Nenhuma observação adicional')}"
                 </p>
               </div>
             </div>
 
             {/* Signature Area */}
-            <div className="mt-20 pt-12 border-t-2 border-black flex justify-between gap-20 break-inside-avoid" style={{ marginTop: '80px', paddingTop: '48px', borderTop: '2px solid #000', display: 'flex', justifyContent: 'space-between', gap: '80px' }}>
-              <div className="text-center flex flex-col items-center flex-1" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                <div className="h-24 flex items-end justify-center mb-4 w-full" style={{ height: '96px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                  {companySignature ? (
-                    <img src={companySignature} alt="Assinatura" style={{ maxHeight: '90px', width: 'auto', opacity: 0.9 }} />
-                  ) : (
-                    <div className="h-0.5 w-[200px] bg-zinc-200" style={{ height: '2px', width: '200px', backgroundColor: '#e4e4e7' }}></div>
+            <div className="mt-12 pt-8 border-t-2 border-black flex justify-between gap-20 break-inside-avoid shadow-[0_-20px_20px_-20px_rgba(0,0,0,0.05)]" style={{ marginTop: '48px', paddingTop: '32px', borderTop: '2px solid #000', display: 'flex', justifyContent: 'space-between', gap: '80px', breakInside: 'avoid' }}>
+              <div className="text-center flex flex-col items-center flex-1 relative" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
+                <div className="h-24 flex items-end justify-center mb-1 w-full relative" style={{ height: '96px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '4px', position: 'relative' }}>
+                  {companySignature && (
+                    <img 
+                      src={companySignature} 
+                      alt="Assinatura" 
+                      className="max-h-32 w-auto object-contain absolute bottom-0 -translate-y-2 opacity-95"
+                      style={{ maxHeight: '128px', width: 'auto', opacity: 0.95, position: 'absolute', bottom: 0, transform: 'translateY(-8px)' }} 
+                    />
                   )}
+                  <div className="w-full border-t-2 border-black/20" style={{ width: '100%', borderTop: '2px solid rgba(0,0,0,0.1)' }}></div>
                 </div>
-                <div className="w-full">
+                <div className="w-full pt-4">
                   <p className="text-lg font-black text-black leading-none mb-1" style={{ fontWeight: 900, fontSize: '18px' }}>{ticket.technician}</p>
                   <p className="text-[10px] font-black text-black uppercase tracking-[0.2em]" style={{ fontWeight: 900, fontSize: '10px' }}>Assinatura do Técnico</p>
                 </div>
               </div>
               <div className="text-center flex flex-col items-center flex-1" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                <div className="h-24 mb-4 w-full" style={{ height: '96px' }}></div>
-                <div className="w-full">
+                <div className="h-24 flex items-end justify-center mb-1 w-full" style={{ height: '96px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '4px' }}>
+                  <div className="w-full border-t-2 border-black/20" style={{ width: '100%', borderTop: '2px solid rgba(0,0,0,0.1)' }}></div>
+                </div>
+                <div className="w-full pt-4">
                   <p className="text-lg font-black text-black leading-none mb-1" style={{ fontWeight: 900, fontSize: '18px' }}>{client.name.substring(0, 30)}</p>
                   <p className="text-[10px] font-black text-black uppercase tracking-[0.2em]" style={{ fontWeight: 900, fontSize: '10px' }}>APROVAÇÃO / RECEBIMENTO</p>
                 </div>
@@ -441,7 +749,7 @@ export default function TicketView() {
             </div>
 
             {/* Bottom Footer Details */}
-            <div className="mt-16 pt-6 border-t border-zinc-200 flex justify-between items-center break-inside-avoid" style={{ marginTop: '64px', paddingTop: '24px', borderTop: '1px solid #e4e4e7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="mt-10 pt-4 border-t border-zinc-200 flex justify-between items-center break-inside-avoid" style={{ marginTop: '40px', paddingTop: '16px', borderTop: '1px solid #e4e4e7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <p className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest" style={{ fontWeight: 700, fontSize: '9px', color: '#d4d4d8' }}>
                 GERADO ELETRONICAMENTE EM {new Date().toLocaleDateString('pt-BR')} ÀS {new Date().toLocaleTimeString('pt-BR')}
               </p>
@@ -454,7 +762,7 @@ export default function TicketView() {
             
             {/* Photo Gallery - Forces New Page if needed or stays close */}
             {(ticket.images?.length || 0) > 0 || ticket.photoBefore ? (
-              <div className="mt-12 page-break-before-auto pt-10" style={{ marginTop: '48px', paddingTop: '40px' }}>
+              <div className="mt-12 pt-10" style={{ marginTop: '48px', paddingTop: '40px', pageBreakBefore: 'always', breakBefore: 'page' }}>
                 <div className="flex items-center gap-4 mb-8" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
                   <div className="h-px flex-1 bg-zinc-200" style={{ height: '1px', flex: 1, backgroundColor: '#e4e4e7' }}></div>
                   <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-3" style={{ fontSize: '12px', fontWeight: 900, color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '12px' }}>

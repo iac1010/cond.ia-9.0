@@ -388,13 +388,13 @@ export default function Receipts() {
               {/* Body */}
               <div className="space-y-10 text-xl leading-relaxed break-inside-avoid">
                 <p>
-                  Recebi(emos) de <strong className="uppercase border-b border-gray-300 pb-1">{selectedClient?.name || '__________________________________________________'}</strong>, 
+                  Recebi(emos) de <strong className="uppercase font-bold">{selectedClient?.name || '__________________________________________________'}</strong>, 
                   {selectedClient?.document ? ` inscrito(a) no CNPJ/CPF sob o nº ${selectedClient.document}, ` : ' '}
                   a importância de <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}</strong>.
                 </p>
 
                 <p>
-                  Referente a: <span className="italic border-b border-gray-200 pb-1 inline-block w-full">{description || '________________________________________________________________________________________________________________________________________________________________'}</span>
+                  Referente a: <span className="italic inline-block w-full">{description || '________________________________________________________________________________________________________________________________________________________________'}</span>
                 </p>
 
                 <p className="text-gray-700">
@@ -403,27 +403,34 @@ export default function Receipts() {
               </div>
 
               {/* Footer */}
-              <div className="mt-32 pt-8 text-center break-inside-avoid no-break">
-                <p className="mb-20 text-lg">
+              <div className="mt-48 pt-8 text-center break-inside-avoid no-break">
+                <p className="mb-16 text-lg">
                   _________________, {safeFormatDate(date, { day: '2-digit', month: 'long', year: 'numeric' })}
                 </p>
                 <div className="grid grid-cols-2 gap-16 max-w-3xl mx-auto">
                   <div className="flex flex-col items-center w-full">
-                    <div className="h-20 flex items-end justify-center w-full">
+                    <div className="h-24 flex items-end justify-center w-full relative mb-1">
                       {companySignature && (
-                        <img src={companySignature} alt="Assinatura" className="max-h-full max-w-full object-contain" />
+                        <img 
+                          src={companySignature} 
+                          alt="Assinatura" 
+                          className="max-h-32 w-auto object-contain absolute bottom-0 -translate-y-2 opacity-95" 
+                        />
                       )}
+                      <div className="w-full border-t-2 border-gray-900"></div>
                     </div>
-                    <div className="border-t-2 border-gray-800 pt-3 w-full">
-                      <p className="font-bold text-lg">Síndico</p>
-                      <p className="text-sm text-gray-500 mt-1">Assinatura</p>
+                    <div className="w-full text-center">
+                      <p className="font-bold text-lg">IA COMPANY</p>
+                      <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Assinatura do Emitente</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center w-full">
-                    <div className="h-20 w-full"></div>
-                    <div className="border-t-2 border-gray-800 pt-3 w-full">
-                      <p className="font-bold text-lg">Cliente</p>
-                      <p className="text-sm text-gray-500 mt-1">Assinatura</p>
+                    <div className="h-24 flex items-end justify-center w-full mb-1">
+                      <div className="w-full border-t-2 border-gray-900"></div>
+                    </div>
+                    <div className="w-full text-center">
+                      <p className="font-bold text-lg">CLiente</p>
+                      <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Assinatura do Recebedor</p>
                     </div>
                   </div>
                 </div>
@@ -592,7 +599,7 @@ export default function Receipts() {
             {/* Body */}
             <div className="space-y-10 text-xl leading-relaxed">
               <p>
-                Recebi(emos) de <strong className="uppercase border-b border-gray-300 pb-1">
+                Recebi(emos) de <strong className="uppercase font-bold">
                   {clients.find(c => c.id === downloadingReceipt.clientId)?.name || 'Cliente'}
                 </strong>, 
                 {clients.find(c => c.id === downloadingReceipt.clientId)?.document ? ` inscrito(a) no CNPJ/CPF sob o nº ${clients.find(c => c.id === downloadingReceipt.clientId)?.document}, ` : ' '}
@@ -600,7 +607,7 @@ export default function Receipts() {
               </p>
 
               <p>
-                Referente a: <span className="italic border-b border-gray-200 pb-1 inline-block w-full">{downloadingReceipt.description}</span>
+                Referente a: <span className="italic inline-block w-full">{downloadingReceipt.description}</span>
               </p>
 
               <p className="text-gray-700">
@@ -609,27 +616,34 @@ export default function Receipts() {
             </div>
 
             {/* Footer */}
-            <div className="mt-32 pt-8 text-center break-inside-avoid no-break">
-              <p className="mb-20 text-lg">
+            <div className="mt-48 pt-8 text-center break-inside-avoid no-break">
+              <p className="mb-16 text-lg">
                 _________________, {safeFormatDate(downloadingReceipt.date, { day: '2-digit', month: 'long', year: 'numeric' })}
               </p>
               <div className="grid grid-cols-2 gap-16 max-w-3xl mx-auto">
-                <div className="flex flex-col items-center w-full">
-                  <div className="h-20 flex items-end justify-center w-full">
+                <div className="flex flex-col items-center w-full relative">
+                  <div className="h-24 flex items-end justify-center w-full relative mb-1">
                     {companySignature && (
-                      <img src={companySignature} alt="Assinatura" className="max-h-full max-w-full object-contain" />
+                      <img 
+                        src={companySignature} 
+                        alt="Assinatura" 
+                        className="max-h-32 w-auto object-contain absolute bottom-0 -translate-y-2 opacity-95" 
+                      />
                     )}
+                    <div className="w-full border-t-2 border-gray-900"></div>
                   </div>
-                  <div className="border-t-2 border-gray-800 pt-3 w-full">
-                    <p className="font-bold text-lg">Síndico</p>
-                    <p className="text-sm text-gray-500 mt-1">Assinatura</p>
+                  <div className="w-full text-center">
+                    <p className="font-bold text-lg">IA COMPANY</p>
+                    <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Assinatura do Emitente</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-center w-full">
-                  <div className="h-20 w-full"></div>
-                  <div className="border-t-2 border-gray-800 pt-3 w-full">
+                  <div className="h-24 flex items-end justify-center w-full mb-1">
+                    <div className="w-full border-t-2 border-gray-900"></div>
+                  </div>
+                  <div className="w-full text-center">
                     <p className="font-bold text-lg">Cliente</p>
-                    <p className="text-sm text-gray-500 mt-1">Assinatura</p>
+                    <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Assinatura do Recebedor</p>
                   </div>
                 </div>
               </div>

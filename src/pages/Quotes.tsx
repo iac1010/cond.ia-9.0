@@ -13,6 +13,8 @@ import { StatCard } from '../components/StatCard';
 import { Modal } from '../components/Modal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import toast from 'react-hot-toast';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, VerticalAlign, ImageRun } from 'docx';
+import { saveAs } from 'file-saver';
 
 function GlassPanel({ children, className = '' }: { children: React.ReactNode, className?: string }) {
   return (
@@ -287,6 +289,269 @@ export default function Quotes() {
     }, 1500);
   };
 
+  const handleDownloadWord = async (quote: Quote) => {
+    setIsGenerating(true);
+    try {
+      const client = clients.find(c => c.id === quote.clientId);
+      const logoImage = companyLogo ? await fetch(companyLogo).then(r => r.arrayBuffer()).then(ab => new Uint8Array(ab)).catch(() => null) : null;
+      const signatureImage = companySignature ? await fetch(companySignature).then(r => r.arrayBuffer()).then(ab => new Uint8Array(ab)).catch(() => null) : null;
+
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              margin: { top: 720, right: 720, bottom: 720, left: 720 },
+            },
+          },
+          children: [
+            // Top Accent Line
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [new TableRow({ children: [new TableCell({ children: [], shading: { fill: "000000" }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] })],
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+
+            // Header Section
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } ,
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 60, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Table({
+                          width: { size: 100, type: WidthType.PERCENTAGE },
+                          rows: [
+                            new TableRow({
+                              children: [
+                                ...(logoImage ? [new TableCell({
+                                  children: [new Paragraph({ children: [new ImageRun({ data: logoImage, transformation: { width: 80, height: 80 } } as any)] })],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                  width: { size: 100, type: WidthType.DXA },
+                                })] : []),
+                                new TableCell({
+                                  children: [
+                                    new Paragraph({ children: [new TextRun({ text: companyData?.name || 'IA COMPANY SOFTWARE E AUTOMAÇÃO LTDA', bold: true, size: 28 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `CNPJ: ${companyData?.document || '---'}`, size: 16, color: "666666", allCaps: true, bold: true })] }),
+                                    new Paragraph({ children: [new TextRun({ text: companyData?.email || '---', size: 16, color: "666666" })] }),
+                                    new Paragraph({ children: [new TextRun({ text: companyData?.phone || '---', size: 16, color: "666666" })] }),
+                                  ],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                  verticalAlign: VerticalAlign.CENTER,
+                                }),
+                              ]
+                            })
+                          ]
+                        })
+                      ],
+                    }),
+                    new TableCell({
+                      width: { size: 40, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "        ", shading: { fill: "000000" } })], alignment: AlignmentType.RIGHT }),
+                        new Paragraph({ children: [new TextRun({ text: "ORÇAMENTO", bold: true, size: 48 })], alignment: AlignmentType.RIGHT }),
+                        new Paragraph({ children: [new TextRun({ text: "Protocolo ", size: 16, color: "999999", bold: true, allCaps: true }), new TextRun({ text: `#${quote.id.substring(0, 8).toUpperCase()}`, bold: true, size: 20 })], alignment: AlignmentType.RIGHT }),
+                        new Paragraph({ children: [new TextRun({ text: "Emissão ", size: 16, color: "999999", bold: true, allCaps: true }), new TextRun({ text: safeFormatDate(quote.date), bold: true, size: 20 })], alignment: AlignmentType.RIGHT }),
+                      ],
+                      verticalAlign: VerticalAlign.TOP,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 400 } }),
+
+            // Client/Recipient Box
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { 
+                top: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, 
+                bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, 
+                left: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, 
+                right: { style: BorderStyle.SINGLE, size: 12, color: "000000" } 
+              },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "DESTINATÁRIO / CLIENTE", size: 16, bold: true, color: "000000" })], spacing: { after: 200 } }),
+                        new Paragraph({ children: [new TextRun({ text: client?.name || '---', bold: true, size: 40 })], spacing: { after: 400 } }),
+                        new Table({
+                          width: { size: 100, type: WidthType.PERCENTAGE },
+                          rows: [
+                            new TableRow({
+                              children: [
+                                new TableCell({
+                                  children: [new Paragraph({ children: [new TextRun({ text: "CNPJ / CPF", size: 16, bold: true })] }), new Paragraph({ children: [new TextRun({ text: client?.document || '---', bold: true, size: 18 })] })],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                }),
+                                new TableCell({
+                                  children: [new Paragraph({ children: [new TextRun({ text: "CONTATO", size: 16, bold: true })] }), new Paragraph({ children: [new TextRun({ text: client?.contactPerson || client?.phone || '---', bold: true, size: 18 })] })],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                }),
+                              ]
+                            }),
+                            new TableRow({
+                              children: [
+                                new TableCell({
+                                  columnSpan: 2,
+                                  children: [new Paragraph({ children: [new TextRun({ text: "ENDEREÇO", size: 16, bold: true })] }), new Paragraph({ children: [new TextRun({ text: client?.address || '---', bold: true, size: 18 })] })],
+                                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                                }),
+                              ]
+                            })
+                          ]
+                        })
+                      ],
+                      margins: { top: 400, bottom: 400, left: 400, right: 400 },
+                    })
+                  ]
+                })
+              ]
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 400 } }),
+
+            // Items Table
+            new Paragraph({ children: [new TextRun({ text: "ITENS DO ORÇAMENTO", size: 20, bold: true, color: "000000" })], spacing: { after: 200 } }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "DESCRIÇÃO", bold: true, size: 18 })] })], shading: { fill: "F3F4F6" }, margins: { left: 100 } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "QTD", bold: true, size: 18 })], alignment: AlignmentType.CENTER })], shading: { fill: "F3F4F6" }, width: { size: 10, type: WidthType.PERCENTAGE } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "UNITÁRIO", bold: true, size: 18 })], alignment: AlignmentType.RIGHT })], shading: { fill: "F3F4F6" }, width: { size: 20, type: WidthType.PERCENTAGE }, margins: { right: 100 } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "TOTAL", bold: true, size: 18 })], alignment: AlignmentType.RIGHT })], shading: { fill: "F3F4F6" }, width: { size: 20, type: WidthType.PERCENTAGE }, margins: { right: 100 } }),
+                  ],
+                }),
+                ...quote.items.map(item => new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.description, size: 18 })] })], margins: { left: 100, top: 100, bottom: 100 } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.quantity.toString(), size: 18 })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.unitPrice), size: 18 })], alignment: AlignmentType.RIGHT })], margins: { right: 100 } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total), size: 18, bold: true })], alignment: AlignmentType.RIGHT })], margins: { right: 100 } }),
+                  ],
+                })),
+              ],
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 400 } }),
+
+            // Total Value
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000" }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({ 
+                          children: [
+                            new TextRun({ text: "INVESTIMENTO TOTAL: ", bold: true, size: 24 }),
+                            new TextRun({ text: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quote.totalValue), bold: true, size: 36, color: "000000" }),
+                          ],
+                          alignment: AlignmentType.RIGHT,
+                        }),
+                      ],
+                      margins: { top: 400, bottom: 400, right: 400 },
+                    }),
+                  ],
+                }),
+              ],
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 400 } }),
+
+            // Observations Box
+            quote.observations ? new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" }, bottom: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" }, left: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" }, right: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" } },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({ children: [new TextRun({ text: "OBSERVAÇÕES:", bold: true, size: 16 })], spacing: { after: 100 } }),
+                        new Paragraph({ children: [new TextRun({ text: quote.observations, italics: true, size: 18 })] }),
+                      ],
+                      shading: { fill: "F9FAFB" },
+                      margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                    })
+                  ]
+                })
+              ]
+            }) : new Paragraph({ text: "" }),
+
+            new Paragraph({ text: "", spacing: { after: 1200 } }),
+
+            // Signatures
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        ...(signatureImage ? [new Paragraph({ children: [new ImageRun({ data: signatureImage, transformation: { width: 120, height: 60 } } as any)], alignment: AlignmentType.CENTER })] : [new Paragraph({ text: "", spacing: { before: 800 } })]),
+                        new Table({ width: { size: 80, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.SINGLE, size: 1 }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } }, rows: [new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Responsável Comercial", bold: true, size: 24 })], alignment: AlignmentType.CENTER }), new Paragraph({ children: [new TextRun({ text: companyData?.name || 'IA COMPANY', size: 16, bold: true, allCaps: true })], alignment: AlignmentType.CENTER })], borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] })], alignment: AlignmentType.CENTER }),
+                      ],
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                    }),
+                    new TableCell({
+                      children: [
+                        new Paragraph({ text: "", spacing: { before: 800 } }),
+                        new Table({ width: { size: 80, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.SINGLE, size: 1 }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } }, rows: [new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: client?.name.substring(0, 30) || '---', bold: true, size: 24 })], alignment: AlignmentType.CENTER }), new Paragraph({ children: [new TextRun({ text: "ACEITE DO CLIENTE", size: 16, bold: true, allCaps: true })], alignment: AlignmentType.CENTER })], borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } })] })], alignment: AlignmentType.CENTER }),
+                      ],
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                    }),
+                  ]
+                })
+              ]
+            }),
+
+            new Paragraph({ text: "", spacing: { after: 800 } }),
+
+            // Footer
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.SINGLE, size: 1, color: "E4E4E7" }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `GERADO EM ${new Date().toLocaleDateString('pt-BR')} ÀS ${new Date().toLocaleTimeString('pt-BR')}`, size: 12, color: "CCCCCC", bold: true })] })], borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${companyData?.name || 'IA COMPANY'} • SOLUÇÕES INTELIGENTES`, size: 12, color: "999999", bold: true, allCaps: true })], alignment: AlignmentType.RIGHT })], borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } } }),
+                  ]
+                })
+              ]
+            })
+          ],
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const safeName = client?.name ? client.name.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_') : 'Cliente';
+      const dateStr = safeFormatDate(quote.date).replace(/\//g, '-');
+      const fileName = `Orcamento_${safeName}_${dateStr}.docx`;
+      
+      saveAs(blob, fileName);
+      toast.success('Arquivo Word gerado com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao gerar Word:', error);
+      toast.error('Erro ao gerar arquivo Word.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handlePrintQuote = (quote: Quote) => {
     setQuoteToPrint(quote);
     setTimeout(() => {
@@ -463,6 +728,14 @@ export default function Quotes() {
                             title="Baixar PDF"
                           >
                             <Download className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDownloadWord(quote)}
+                            disabled={isGenerating}
+                            className="p-2 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                            title="Baixar Word"
+                          >
+                            <FileText className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleSharePdf(quote)}
@@ -890,6 +1163,12 @@ export default function Quotes() {
                 <Download className="w-5 h-5" /> Baixar PDF do Orçamento
               </button>
               <button 
+                onClick={() => handleDownloadWord(viewingQuote)}
+                className="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-blue-500/30 transition-all active:scale-95 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+              >
+                <FileText className="w-5 h-5" /> Baixar Word (Editável)
+              </button>
+              <button 
                 onClick={() => {
                   const client = clients.find(c => c.id === viewingQuote.clientId);
                   const email = client?.email || '';
@@ -1116,21 +1395,28 @@ export default function Quotes() {
               </div>
 
               {/* Signatures Area */}
-              <div className="mt-16 grid grid-cols-2 gap-20 break-inside-avoid pt-12 border-t border-zinc-100">
+              <div className="mt-24 grid grid-cols-2 gap-20 break-inside-avoid pt-12">
                 <div className="text-center flex flex-col items-center">
-                  <div className="h-20 flex items-end justify-center mb-2 w-full">
+                  <div className="h-24 flex items-end justify-center mb-1 w-full relative">
                     {companySignature && (
-                      <img src={companySignature} alt="Assinatura" className="max-h-full max-w-[200px] object-contain opacity-90" />
+                      <img 
+                        src={companySignature} 
+                        alt="Assinatura" 
+                        className="max-h-32 w-auto object-contain absolute bottom-0 -translate-y-2 opacity-90" 
+                      />
                     )}
+                    <div className="w-full border-t-2 border-zinc-900"></div>
                   </div>
-                  <div className="w-full border-t border-zinc-300 pt-4">
+                  <div className="w-full text-center">
                     <p className="text-lg font-black text-black leading-none mb-1">{companyData?.name || 'IA COMPANY'}</p>
                     <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Responsável Comercial</p>
                   </div>
                 </div>
                 <div className="text-center flex flex-col items-center">
-                  <div className="h-20 mb-2 w-full"></div>
-                  <div className="w-full border-t border-zinc-300 pt-4">
+                  <div className="h-24 flex items-end justify-center mb-1 w-full relative">
+                    <div className="w-full border-t-2 border-zinc-900"></div>
+                  </div>
+                  <div className="w-full text-center">
                     <p className="text-lg font-black text-black leading-none mb-1">{clients.find(c => c.id === quoteToPrint.clientId)?.name.substring(0, 30)}</p>
                     <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Aceite do Cliente</p>
                   </div>
