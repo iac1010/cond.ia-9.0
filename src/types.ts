@@ -49,6 +49,7 @@ export type Quote = {
   date: string;
   items: QuoteItem[];
   installments?: QuoteInstallment[];
+  taxValue?: number;
   totalValue: number;
   status: 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED';
   observations?: string;
@@ -480,6 +481,17 @@ export type Sale = {
   notes?: string;
 };
 
+export type TechnicalReport = {
+  id: string;
+  clientId?: string;
+  clientName?: string;
+  title: string;
+  content: string;
+  date: string;
+  type: 'standard' | 'client';
+  osNumber?: string;
+};
+
 export interface AppState {
   clients: Client[];
   checklistItems: ChecklistItem[];
@@ -516,6 +528,7 @@ export interface AppState {
   keys: KeyControl[];
   iotState: IotState;
   sales: Sale[];
+  technicalReports: TechnicalReport[];
   companyLogo: string | null;
   companySignature: string | null;
   backgroundImage: string | null;
@@ -532,13 +545,13 @@ export interface AppState {
   documentTemplates: DocumentTemplate[];
   isLoading: boolean;
   whatsappEnabled: boolean;
-  biaEnabled: boolean;
-  biaOnline: boolean;
+  vivianEnabled: boolean;
+  vivianOnline: boolean;
   lastSync: string | null;
   
   fetchInitialData: () => Promise<void>;
   syncToSupabase: () => Promise<void>;
-  setBiaOnline: (online: boolean) => void;
+  setVivianOnline: (online: boolean) => void;
   setShowBalance: (show: boolean) => void;
   setCompanyLogo: (logo: string | null) => Promise<void>;
   setCompanySignature: (signature: string | null) => Promise<void>;
@@ -550,7 +563,7 @@ export interface AppState {
   toggleTileVisibility: (tileId: string) => void;
   toggleTheme: () => Promise<void>;
   toggleWhatsApp: () => void;
-  toggleBia: () => void;
+  toggleVivian: () => void;
   login: (user: string, pass: string) => boolean;
   logout: () => void;
   
@@ -686,6 +699,10 @@ export interface AppState {
   addSale: (sale: Omit<Sale, 'id'>) => Promise<void>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
+
+  addTechnicalReport: (report: Omit<TechnicalReport, 'id'>) => Promise<void>;
+  updateTechnicalReport: (id: string, report: Partial<TechnicalReport>) => Promise<void>;
+  deleteTechnicalReport: (id: string) => Promise<void>;
 
   updateIotState: (state: {
     pumps?: Partial<IotState['pumps']>;

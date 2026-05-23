@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, User, FileText, Download, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, FileText, Download, Loader2, Sparkles } from 'lucide-react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI, Type, FunctionDeclaration } from '@google/genai';
@@ -15,16 +15,17 @@ interface Message {
   isGenerating?: boolean;
 }
 
-const BIA_AVATAR_URL = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People/Woman%20Office%20Worker.png";
+const VIVIAN_AVATAR_URL = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People/Woman%20Office%20Worker.png";
 
-export function AssistantBia() {
+export function AssistantVivian() {
   const [isOpen, setIsOpen] = useState(false);
-  const [biaAvatarError, setBiaAvatarError] = useState(false);
+  const [vivianAvatarError, setVivianAvatarError] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Olá! Sou a Bia, sua assistente virtual. É um prazer falar com você! Como posso te ajudar hoje?' }
+    { id: '1', role: 'assistant', content: 'Olá! Sou a Vivian, sua assistente virtual. É um prazer falar com você! Como posso te ajudar hoje?' }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [initialTicketId, setInitialTicketId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const store = useStore();
@@ -37,6 +38,37 @@ export function AssistantBia() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  // Handle external triggers (like analyzing a ticket)
+  useEffect(() => {
+    const handleAnalyzeTicket = (e: any) => {
+      const ticketId = e.detail?.ticketId;
+      if (ticketId) {
+        setIsOpen(true);
+        const ticket = store.tickets.find(t => t.id === ticketId || t.osNumber === ticketId);
+        const ticketRef = ticket?.osNumber || ticket?.id || ticketId;
+        const analysisPrompt = `Vivian, por favor, analise os detalhes da OS #${ticketRef} e me dê insights sobre ela.`;
+        
+        // Only add if not already analyzing or last message is different
+        setMessages(prev => {
+          if (prev[prev.length - 1]?.content === analysisPrompt) return prev;
+          return [...prev, { id: Date.now().toString(), role: 'user', content: analysisPrompt }];
+        });
+        
+        // Trigger the assistant reply
+        setIsTyping(true);
+        handleSendDirectly(analysisPrompt);
+      }
+    };
+
+    window.addEventListener('vivian-analyze-ticket', handleAnalyzeTicket);
+    return () => window.removeEventListener('vivian-analyze-ticket', handleAnalyzeTicket);
+  }, [store.tickets]);
+
+  const handleSendDirectly = async (content: string) => {
+    setIsTyping(true);
+    await processChat(content);
+  };
 
   const generateTicketPDF = (ticketId: string) => {
     const ticket = store.tickets.find(t => t.id === ticketId || t.osNumber === ticketId || t.id.includes(ticketId));
@@ -155,7 +187,7 @@ export function AssistantBia() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = `
-        Você é a Bia, uma assistente virtual de gestão de condomínios.
+        Você é a Vivian, uma assistente virtual de gestão de condomínios.
         Preencha o seguinte modelo de documento com as informações fornecidas.
         Substitua as tags (como [NOME], [DATA], etc.) pelas informações do contexto.
         Se faltar alguma informação no contexto, invente dados plausíveis ou deixe em branco se não for possível inventar.
@@ -269,6 +301,10 @@ export function AssistantBia() {
     setInput('');
     setIsTyping(true);
 
+    await processChat(userMessage.content);
+  };
+
+  const processChat = async (userContent: string) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
@@ -755,6 +791,21 @@ export function AssistantBia() {
         },
       };
 
+      const getTicketDetailsTool: FunctionDeclaration = {
+        name: 'getTicketDetails',
+        description: 'Obtém todos os detalhes de uma Ordem de Serviço (OS) ou Chamado específico, incluindo histórico, observações e cliente.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            ticketId: {
+              type: Type.STRING,
+              description: 'O ID ou número da OS/Chamado.',
+            },
+          },
+          required: ['ticketId'],
+        },
+      };
+
       const setCondoHydraulicInfoTool: FunctionDeclaration = {
         name: 'setCondoHydraulicInfo',
         description: 'Define ou atualiza as informações hídricas de um condomínio (cisterna/reservatório).',
@@ -797,10 +848,10 @@ export function AssistantBia() {
           response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: `Histórico da conversa:
-${messages.map(m => `${m.role === 'user' ? 'Usuário' : 'Bia'}: ${m.content}`).join('\n')}
-Usuário: ${userMessage.content}`,
+${messages.map(m => `${m.role === 'user' ? 'Usuário' : 'Vivian'}: ${m.content}`).join('\n')}
+Usuário: ${userContent}`,
             config: {
-              systemInstruction: 'Você é a Bia, uma assistente virtual inteligente, prestativa, educada e direta para um sistema de gestão de condomínios. Suas respostas devem ser curtas, objetivas, mas sempre muito cordiais e amigáveis. Use palavras como "por favor", "com prazer" e "claro" quando apropriado, mantendo a eficiência. Você tem acesso total às funções do sistema através de ferramentas. Use-as sempre que o usuário solicitar uma ação que corresponda a uma ferramenta. Se o usuário pedir para criar um orçamento, prefira usar "createQuote" para orçamentos formais com itens, ou "createBudget" para orçamentos rápidos vinculados a uma OS. Após criar um orçamento ou OS, sempre pergunte se o usuário deseja baixar o PDF. Se o usuário pedir para adicionar uma tarefa ou card ao Kanban, use obrigatoriamente a ferramenta "createKanbanTask". Se não tiver certeza de qual ferramenta usar, pergunte educadamente ao usuário. Você pode: gerar documentos, navegar, resumir dados, criar chamados/OS, cadastrar moradores, registrar finanças, agendar compromissos, criar orçamentos detalhados, gerar QR Codes, cadastrar insumos, adicionar tarefas de checklist, criar avisos, registrar visitantes, fazer reservas, cadastrar funcionários, controlar chaves, atualizar status de chamados/orçamentos, registrar leituras de água/energia, gerar PDFs de orçamentos e OS para download, fazer projeções financeiras, ajustar estoque de suprimentos, informar ou atualizar a parte hídrica (cisternas/reservatórios) dos condomínios, fornecer informações financeiras específicas como o maior recebimento ou a última entrada e controlar equipamentos como bombas, luzes e alarmes.',
+              systemInstruction: 'Você é a Vivian, uma assistente virtual inteligente, prestativa, educada e direta para um sistema de gestão de condomínios. Suas respostas devem ser curtas, objetivas, mas sempre muito cordiais e amigáveis. Use palavras como "por favor", "com prazer" e "claro" quando apropriado, mantendo a eficiência. Você tem acesso total às funções do sistema através de ferramentas. Use-as sempre que o usuário solicitar uma ação que corresponda a uma ferramenta. Se o usuário pedir para analisar uma OS ou chamado, use obrigatoriamente a ferramenta "getTicketDetails" para obter os dados completos ANTES de responder. Ao analisar uma OS, seja capaz de: 1) Resumir o problema. 2) Identificar se é algo recorrente ou crítico. 3) Fornecer dicas técnicas baseadas no tipo de manutenção (preventiva/corretiva). 4) Sugerir melhorias operacionais ou de materiais. Se o usuário pedir para criar um orçamento, prefira usar "createQuote" para orçamentos formais com itens, ou "createBudget" para orçamentos rápidos vinculados a uma OS. Após criar um orçamento ou OS, sempre pergunte se o usuário deseja baixar o PDF. Se o usuário pedir para adicionar uma tarefa ou card ao Kanban, use obrigatoriamente a ferramenta "createKanbanTask". Se não tiver certeza de qual ferramenta usar, pergunte educadamente ao usuário. Você pode: analisar Ordens de Serviço (OS) individualmente, fornecer dicas técnicas, identificar padrões de problemas recorrentes, sugerir melhorias operacionais, gerar documentos, navegar, resumir dados, criar chamados/OS, cadastrar moradores, registrar finanças, agendar compromissos, criar orçamentos detalhados, gerar QR Codes, cadastrar insumos, adicionar tarefas de checklist, criar avisos, registrar visitantes, fazer reservas, cadastrar funcionários, controlar chaves, atualizar status de chamados/orçamentos, registrar leituras de água/energia, gerar PDFs de orçamentos e OS para download, fazer projeções financeiras, ajustar estoque de suprimentos, informar ou atualizar a parte hídrica (cisternas/reservatórios) dos condomínios, fornecer informações financeiras específicas como o maior recebimento ou a última entrada e controlar equipamentos como bombas, luzes e alarmes.',
               tools: [{ 
                 functionDeclarations: [
                   generateDocumentTool, getSummaryTool, navigateTool, createTicketTool, 
@@ -812,7 +863,7 @@ Usuário: ${userMessage.content}`,
                   updateTicketStatusTool, updateQuoteStatusTool, addWaterReadingTool, addEnergyReadingTool,
                   downloadQuotePDFTool, downloadTicketPDFTool, getFinancialProjectionTool,
                   adjustSupplyStockTool, getCondoHydraulicInfoTool, setCondoHydraulicInfoTool,
-                  getDetailedFinancialInfoTool, controlEquipmentTool
+                  getDetailedFinancialInfoTool, controlEquipmentTool, getTicketDetailsTool
                 ] 
               }],
             },
@@ -825,7 +876,7 @@ Usuário: ${userMessage.content}`,
                              JSON.stringify(err).includes('RESOURCE_EXHAUSTED');
           
           if (isRateLimit && retries > 1) {
-            console.warn(`AssistantBia: Gemini Rate Limit (429). Retrying in ${delay}ms... (${retries - 1} left)`);
+            console.warn(`AssistantVivian: Gemini Rate Limit (429). Retrying in ${delay}ms... (${retries - 1} left)`);
             await new Promise(resolve => setTimeout(resolve, delay));
             retries--;
             delay *= 2; // Exponential backoff
@@ -843,7 +894,42 @@ Usuário: ${userMessage.content}`,
 
       if (response.functionCalls && response.functionCalls.length > 0) {
         for (const call of response.functionCalls) {
-          if (call.name === 'generateDocument') {
+          if (call.name === 'getTicketDetails') {
+            const args = call.args as any;
+            const ticket = store.tickets.find(t => t.id === args.ticketId || t.osNumber === args.ticketId);
+            if (!ticket) {
+              assistantReply = `Sinto muito, mas não encontrei a OS com referência "${args.ticketId}".`;
+            } else {
+              const client = store.clients.find(c => c.id === ticket.clientId);
+              const details = `
+                Detalhes da OS #${ticket.osNumber || ticket.id}:
+                Título: ${ticket.title}
+                Status: ${ticket.status}
+                Tipo: ${ticket.type}
+                Data: ${safeFormatDate(ticket.date)}
+                Local: ${ticket.location || 'N/A'}
+                Relatado por: ${ticket.reportedBy || 'N/A'}
+                Técnico: ${ticket.technician || 'N/A'}
+                Categoria: ${ticket.maintenanceCategory || 'N/A'}
+                Subcategoria: ${ticket.maintenanceSubcategory || 'N/A'}
+                Observações: ${ticket.observations || 'Nenhuma'}
+                Cliente: ${client?.name || 'Não identificado'}
+                Endereço: ${client?.address || 'N/A'}
+                Materiais Usados: ${JSON.stringify(ticket.usedMaterials || [])}
+                Histórico: ${JSON.stringify(ticket.history || [])}
+              `;
+              
+              // We need to feed this back to Gemini to get the actual analysis
+              const secondResponse = await ai.models.generateContent({
+                model: 'gemini-3-flash-preview',
+                contents: `Abaixo estão os dados reais da OS que você solicitou. Por favor, analise esses dados, forneça insights, dicas técnicas e melhorias conforme suas instruções:\n\n${details}`,
+                config: {
+                  systemInstruction: 'Você é a Vivian. Analise a OS fornecida e dê insights valiosos. Seja técnica quando necessário.'
+                }
+              });
+              assistantReply = secondResponse.text || 'Ocorreu um erro na análise.';
+            }
+          } else if (call.name === 'generateDocument') {
             const args = call.args as any;
             const result = await generateDocument(args.templateName, args.context);
             assistantReply = result;
@@ -869,9 +955,9 @@ Usuário: ${userMessage.content}`,
               status: 'APROVADO',
               date: new Date().toISOString(),
               technician: args.technician || 'Administrador',
-              observations: args.observations || 'Tarefa criada via assistente Bia',
+              observations: args.observations || 'Tarefa criada via assistente Vivian',
               location: '',
-              reportedBy: 'Bia Assistant',
+              reportedBy: 'Vivian Assistant',
             });
             assistantReply = `Com prazer! A tarefa "${args.title}" foi adicionada ao seu Kanban na coluna "Aprovado".`;
           } else if (call.name === 'createTicket') {
@@ -1025,7 +1111,7 @@ Usuário: ${userMessage.content}`,
             const args = call.args as any;
             const ticket = store.tickets.find(t => t.id === args.ticketId || t.osNumber === args.ticketId);
             if (ticket) {
-              store.addTicketHistory(ticket.id, args.note, 'Bia AI');
+              store.addTicketHistory(ticket.id, args.note, 'Vivian AI');
               assistantReply = `Com certeza! Adicionei a nota ao histórico do chamado ${ticket.osNumber || ticket.id} para você.`;
             } else {
               assistantReply = `Sinto muito, mas não encontrei o chamado com ID/OS "${args.ticketId}".`;
@@ -1237,13 +1323,13 @@ Usuário: ${userMessage.content}`,
         onClick={() => setIsOpen(true)}
         className={`fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-white to-slate-50 rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(0,0,0,0.15)] z-50 overflow-hidden border-2 border-blue-500 hover:border-blue-600 hover:shadow-blue-500/30 transition-all duration-300 ring-4 ring-blue-500/10 ${isOpen ? 'hidden' : 'flex'}`}
       >
-        {!biaAvatarError ? (
+        {!vivianAvatarError ? (
           <img 
-            src={BIA_AVATAR_URL} 
-            alt="Bia" 
+            src={VIVIAN_AVATAR_URL} 
+            alt="Vivian" 
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
-            onError={() => setBiaAvatarError(true)}
+            onError={() => setVivianAvatarError(true)}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white">
@@ -1266,13 +1352,13 @@ Usuário: ${userMessage.content}`,
             <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-white/20 shadow-inner">
-                  {!biaAvatarError ? (
+                  {!vivianAvatarError ? (
                     <img 
-                      src={BIA_AVATAR_URL} 
-                      alt="Bia" 
+                      src={VIVIAN_AVATAR_URL} 
+                      alt="Vivian" 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
-                      onError={() => setBiaAvatarError(true)}
+                      onError={() => setVivianAvatarError(true)}
                     />
                   ) : (
                     <div className="w-full h-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
@@ -1281,7 +1367,7 @@ Usuário: ${userMessage.content}`,
                   )}
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg leading-tight">Bia</h3>
+                  <h3 className="font-bold text-lg leading-tight">Vivian</h3>
                   <p className="text-xs text-blue-100">Assistente Virtual</p>
                 </div>
               </div>
@@ -1308,13 +1394,13 @@ Usuário: ${userMessage.content}`,
                     {msg.role === 'user' ? (
                       <User className="w-5 h-5" />
                     ) : (
-                      !biaAvatarError ? (
+                      !vivianAvatarError ? (
                         <img 
-                          src={BIA_AVATAR_URL} 
-                          alt="Bia" 
+                          src={VIVIAN_AVATAR_URL} 
+                          alt="Vivian" 
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
-                          onError={() => setBiaAvatarError(true)}
+                          onError={() => setVivianAvatarError(true)}
                         />
                       ) : (
                         <Bot className="w-5 h-5 text-indigo-600" />
@@ -1333,13 +1419,13 @@ Usuário: ${userMessage.content}`,
               {isTyping && (
                 <div className="flex gap-3">
                   <div className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {!biaAvatarError ? (
+                    {!vivianAvatarError ? (
                       <img 
-                        src={BIA_AVATAR_URL} 
-                        alt="Bia" 
+                        src={VIVIAN_AVATAR_URL} 
+                        alt="Vivian" 
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
-                        onError={() => setBiaAvatarError(true)}
+                        onError={() => setVivianAvatarError(true)}
                       />
                     ) : (
                       <Bot className="w-5 h-5 text-indigo-600" />
@@ -1347,7 +1433,7 @@ Usuário: ${userMessage.content}`,
                   </div>
                   <div className="bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                    <span className="text-xs text-slate-500">Bia está digitando...</span>
+                    <span className="text-xs text-slate-500">Vivian está digitando...</span>
                   </div>
                 </div>
               )}

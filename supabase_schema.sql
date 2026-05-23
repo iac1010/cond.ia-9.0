@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS quotes (
   status TEXT NOT NULL CHECK (status IN ('DRAFT', 'SENT', 'APPROVED', 'REJECTED')),
   items JSONB NOT NULL, -- Array de objetos QuoteItem: [{id, description, quantity, unitPrice, total}]
   installments JSONB DEFAULT '[]',
+  tax_value DECIMAL(10, 2) DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -623,6 +624,8 @@ ALTER TABLE IF EXISTS company_settings ADD COLUMN IF NOT EXISTS energy_data JSON
 ALTER TABLE IF EXISTS company_settings ADD COLUMN IF NOT EXISTS iot_state JSONB DEFAULT '{}';
 ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS used_materials JSONB DEFAULT '[]';
 ALTER TABLE IF EXISTS quotes ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]';
+ALTER TABLE IF EXISTS quotes ADD COLUMN IF NOT EXISTS tax_value DECIMAL(10, 2) DEFAULT 0;
+ALTER TABLE IF EXISTS quotes ADD COLUMN IF NOT EXISTS observations TEXT;
 
 -- Contracts updates
 ALTER TABLE IF EXISTS contracts ADD COLUMN IF NOT EXISTS title TEXT;

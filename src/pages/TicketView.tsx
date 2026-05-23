@@ -290,6 +290,30 @@ export default function TicketView() {
 
             new Paragraph({ text: "", spacing: { after: 200 } }),
 
+            // Products/Materials
+            ...((ticket.productsForQuote || (ticket.usedMaterials && ticket.usedMaterials.length > 0)) ? [
+              new Paragraph({ children: [new TextRun({ text: "PRODUTOS / MATERIAIS NECESSÁRIOS", size: 20, bold: true, color: "000000" })], spacing: { after: 100 } }),
+              new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: { top: { style: BorderStyle.SINGLE, size: 4, color: "E4E4E7" }, bottom: { style: BorderStyle.SINGLE, size: 4, color: "E4E4E7" }, left: { style: BorderStyle.SINGLE, size: 4, color: "E4E4E7" }, right: { style: BorderStyle.SINGLE, size: 4, color: "E4E4E7" } },
+                rows: [
+                  new TableRow({
+                    children: [
+                      new TableCell({
+                        children: [
+                          ...(ticket.productsForQuote ? ticket.productsForQuote.split('\n').map(line => new Paragraph({ children: [new TextRun({ text: line, bold: true, size: 22 })] })) : []),
+                          ...(ticket.usedMaterials ? ticket.usedMaterials.map(m => new Paragraph({ children: [new TextRun({ text: `${m.quantity} - ${m.name}${m.price ? ` R$ ${m.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}`, bold: true, size: 22 })] })) : []),
+                        ],
+                        shading: { fill: "F9FAFB" },
+                        margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                      })
+                    ]
+                  })
+                ]
+              }),
+              new Paragraph({ text: "", spacing: { after: 200 } }),
+            ] : []),
+
             // Observations Box
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
@@ -437,6 +461,16 @@ export default function TicketView() {
                 Aguardando Aprovação
               </span>
             )}
+            <button 
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('vivian-analyze-ticket', { detail: { ticketId: ticket.id } }));
+              }}
+              className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-200 px-4 py-2 rounded-lg text-sm font-black transition-colors flex items-center gap-2 border border-amber-500/20 backdrop-blur-md shadow-lg group/vivian"
+              title="Análise Avançada com Vivian"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400 group-hover/vivian:scale-110 transition-transform" /> 
+              Vivian Analisar
+            </button>
             <button 
               onClick={() => {
                 const sections = [];
@@ -692,6 +726,33 @@ export default function TicketView() {
                     <p className="text-black text-xs font-bold leading-relaxed" style={{ fontWeight: 700, fontSize: '12px' }}>
                       {ticket.serviceReport}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Products/Materials */}
+              {(ticket.productsForQuote || (ticket.usedMaterials && ticket.usedMaterials.length > 0)) && (
+                <div className="break-inside-avoid">
+                  <h3 className="text-[8px] font-black text-black uppercase tracking-widest mb-1.5" style={{ fontWeight: 900, fontSize: '8px' }}>PRODUTOS / MATERIAIS NECESSÁRIOS</h3>
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl" style={{ padding: '12px', backgroundColor: '#fcfcfc', border: '1px solid #e4e4e7', borderRadius: '12px' }}>
+                    {ticket.productsForQuote && (
+                      <div className={`space-y-0.5 ${ticket.usedMaterials && ticket.usedMaterials.length > 0 ? 'mb-2' : ''}`}>
+                        {ticket.productsForQuote.split('\n').map((line, i) => (
+                          <p key={i} className="text-black text-xs leading-tight font-bold" style={{ fontWeight: 700, fontSize: '12px', margin: 0 }}>
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {ticket.usedMaterials && ticket.usedMaterials.length > 0 && (
+                      <div className="space-y-0.5">
+                        {ticket.usedMaterials.map((m, i) => (
+                          <p key={i} className="text-black text-xs leading-tight font-bold" style={{ fontWeight: 700, fontSize: '12px', margin: 0 }}>
+                            {m.quantity} - {m.name} {m.price ? ` R$ ${m.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

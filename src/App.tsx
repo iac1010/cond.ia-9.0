@@ -43,12 +43,12 @@ import DocumentFactory from './pages/DocumentFactory';
 import DocumentManagement from './pages/DocumentManagement';
 import SystemPresentation from './pages/SystemPresentation';
 import ExecutionCenter from './pages/ExecutionCenter';
-import { AssistantBia } from './components/AssistantBia';
-import { BiaBrain } from './components/BiaBrain';
+import { AssistantVivian } from './components/AssistantVivian';
+import { VivianBrain } from './components/VivianBrain';
 
 
 function Layout({ children }: { children: React.ReactNode }) {
-  const { theme, toggleTheme, isAuthenticated, logout, notifications, markNotificationAsRead, clearNotifications, companyLogo, backgroundImage, fetchInitialData, biaEnabled } = useStore();
+  const { theme, toggleTheme, isAuthenticated, logout, notifications, markNotificationAsRead, clearNotifications, companyLogo, backgroundImage, fetchInitialData, vivianEnabled } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
@@ -233,7 +233,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <main className={`flex-1 relative z-10 ${isDashboard ? '' : 'p-6 md:p-8'}`}>
         {children}
       </main>
-      {biaEnabled && <AssistantBia />}
+      {vivianEnabled && <AssistantVivian />}
     </div>
   );
 }
@@ -248,11 +248,11 @@ import SalesPlanning from './pages/SalesPlanning';
 import { CommercialCenter } from './pages/CommercialCenter';
 
 export default function App() {
-  const { biaEnabled } = useStore();
+  const { vivianEnabled } = useStore();
   
   return (
     <HashRouter>
-      {biaEnabled && <BiaBrain />}
+      {vivianEnabled && <VivianBrain />}
       <Toaster position="top-right" />
       <Layout>
         <Routes>

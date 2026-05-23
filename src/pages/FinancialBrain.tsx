@@ -52,7 +52,7 @@ const INITIAL_INSIGHTS = [
 
 export default function FinancialBrain() {
   const navigate = useNavigate();
-  const { receipts, costs, biaEnabled, clients } = useStore();
+  const { receipts, costs, vivianEnabled, clients } = useStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiInsights, setAiInsights] = useState(INITIAL_INSIGHTS);
   const [aiScore, setAiScore] = useState(88);
@@ -82,6 +82,7 @@ export default function FinancialBrain() {
         ${JSON.stringify(financialData)}
 
         Gere 3 insights estratégicos, um score de saúde financeira (0-100) e um status (EXCELENTE, BOM, ATENÇÃO, CRÍTICO).
+        Utilize o nome da Vivian como assistente que fornece esses insights.
         
         Responda APENAS em formato JSON:
         {
@@ -300,7 +301,7 @@ export default function FinancialBrain() {
 
           {/* AI Insights List */}
           <div className="md:col-span-4 flex flex-col gap-6">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/40 px-2">Insights da Bia</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/40 px-2">Insights da Vivian</h3>
             {aiInsights.map((insight) => (
               <GlassCard key={insight.id} className="p-6">
                 <div className="flex items-start gap-4">

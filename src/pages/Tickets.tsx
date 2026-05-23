@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { TicketStatus } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Eye, Edit, Hammer, Clock, ShieldAlert, Bell, Wrench, ExternalLink, Filter, Search, Tag, TrendingUp, Building2 } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit, Hammer, Clock, ShieldAlert, Bell, Wrench, ExternalLink, Filter, Search, Tag, TrendingUp, Building2, Sparkles } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { Modal } from '../components/Modal';
 import { TicketsMirror } from '../components/TicketsMirror';
@@ -156,6 +156,16 @@ export default function Tickets() {
                           </p>
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.dispatchEvent(new CustomEvent('vivian-analyze-ticket', { detail: { ticketId: ticket.id } }));
+                            }}
+                            className="p-2 hover:bg-white/20 rounded-lg transition-colors group/vivian"
+                            title="Analisar com Vivian"
+                          >
+                            <Sparkles className="w-4 h-4 text-white group-hover/vivian:text-amber-300 transition-colors" />
+                          </button>
                           <Link 
                             to={`/tickets/${ticket.id}/edit`}
                             onClick={(e) => e.stopPropagation()}

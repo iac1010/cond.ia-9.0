@@ -44,6 +44,7 @@ export default function Quotes() {
   });
   const [clientId, setClientId] = useState('');
   const [items, setItems] = useState<QuoteItem[]>([]);
+  const [taxValue, setTaxValue] = useState(0);
   const [installments, setInstallments] = useState<QuoteInstallment[]>([]);
   const [observations, setObservations] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -159,7 +160,8 @@ export default function Quotes() {
     setInstallments(installments.filter(inst => inst.id !== id));
   };
 
-  const totalValue = items.reduce((sum, item) => sum + item.total, 0);
+  const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.total, 0), [items]);
+  const totalValue = subtotal + taxValue;
   const totalInstallmentsValue = installments.reduce((sum, inst) => sum + inst.value, 0);
 
   const handleSave = () => {
@@ -185,7 +187,7 @@ export default function Quotes() {
         };
       });
 
-      const validatedTotalValue = validatedItems.reduce((sum, item) => sum + item.total, 0);
+      const validatedTotalValue = validatedItems.reduce((sum, item) => sum + item.total, 0) + (Number(taxValue) || 0);
 
       // Validar parcelas
       const validatedInstallments = installments.map(inst => ({
@@ -199,6 +201,7 @@ export default function Quotes() {
           clientId,
           items: validatedItems,
           installments: validatedInstallments,
+          taxValue: Number(taxValue) || 0,
           totalValue: validatedTotalValue,
           observations,
         });
@@ -209,6 +212,7 @@ export default function Quotes() {
           date: new Date().toISOString(),
           items: validatedItems,
           installments: validatedInstallments,
+          taxValue: Number(taxValue) || 0,
           totalValue: validatedTotalValue,
           status: 'DRAFT',
           observations,
@@ -223,6 +227,7 @@ export default function Quotes() {
         setEditingQuote(null);
         setClientId('');
         setItems([]);
+        setTaxValue(0);
         setInstallments([]);
         setObservations('');
       }, 300);
@@ -620,8 +625,8 @@ export default function Quotes() {
                 <div className="flex items-center gap-4">
                   <BackButton />
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                      <FileText className="w-6 h-6 text-blue-400" />
+                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center border border-red-400/50 shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+                      <FileText className="w-6 h-6 text-red-400" />
                     </div>
                     <div>
                       <h1 className="text-2xl md:text-3xl font-light tracking-wide">
@@ -632,7 +637,7 @@ export default function Quotes() {
                 </div>
                 <button 
                   onClick={() => setIsCreating(true)}
-                  className="bg-blue-600/80 hover:bg-blue-500 border border-blue-400/30 text-white px-6 py-3 rounded-xl font-bold tracking-wider uppercase text-xs transition-all flex items-center gap-2 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                  className="bg-red-600/80 hover:bg-red-500 border border-red-400/30 text-white px-6 py-3 rounded-xl font-bold tracking-wider uppercase text-xs transition-all flex items-center gap-2 backdrop-blur-md shadow-[0_0_15px_rgba(220,38,38,0.3)]"
                 >
                   <Plus className="w-5 h-5" /> 
                   Novo Orçamento
@@ -679,7 +684,7 @@ export default function Quotes() {
                   
                   const statusColors = {
                     DRAFT: 'bg-white/10 text-white/60 border-white/20',
-                    SENT: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                    SENT: 'bg-red-500/10 text-red-300 border-red-500/20',
                     APPROVED: 'bg-white/20 text-white border-white/30',
                     REJECTED: 'bg-red-500/20 text-red-300 border-red-500/30'
                   };
@@ -713,7 +718,7 @@ export default function Quotes() {
                         <select 
                           value={quote.status}
                           onChange={(e) => handleStatusChange(quote, e.target.value as Quote['status'])}
-                          className="text-xs bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 outline-none focus:border-blue-500/50 transition-colors font-bold uppercase tracking-wider"
+                          className="text-xs bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 outline-none focus:border-red-500/50 transition-colors font-bold uppercase tracking-wider"
                         >
                           <option value="DRAFT" className="bg-[#0f0f11]">Rascunho</option>
                           <option value="SENT" className="bg-[#0f0f11]">Enviado</option>
@@ -727,11 +732,12 @@ export default function Quotes() {
                               setEditingQuote(quote);
                               setClientId(quote.clientId);
                               setItems(quote.items);
+                              setTaxValue(quote.taxValue || 0);
                               setInstallments(quote.installments || []);
                               setObservations(quote.observations || '');
                               setIsCreating(true);
                             }}
-                            className="p-2 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                             title="Editar"
                           >
                             <Wrench className="w-4 h-4" />
@@ -761,7 +767,7 @@ export default function Quotes() {
                           <button 
                             onClick={() => handleDownloadWord(quote)}
                             disabled={isGenerating}
-                            className="p-2 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                             title="Baixar Word"
                           >
                             <FileText className="w-4 h-4" />
@@ -769,7 +775,7 @@ export default function Quotes() {
                           <button 
                             onClick={() => handleSharePdf(quote)}
                             disabled={isGenerating}
-                            className="p-2 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                             title="Compartilhar"
                           >
                             <Share2 className="w-4 h-4" />
@@ -823,6 +829,7 @@ export default function Quotes() {
                     setEditingQuote(null);
                     setClientId('');
                     setItems([]);
+                    setTaxValue(0);
                     setInstallments([]);
                     setObservations('');
                   }} />
@@ -853,7 +860,7 @@ export default function Quotes() {
                         <select 
                           value={clientId}
                           onChange={(e) => setClientId(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 focus:border-blue-500/50 rounded-xl px-4 py-3 outline-none transition-colors text-white font-bold"
+                          className="w-full bg-white/5 border border-white/10 focus:border-red-500/50 rounded-xl px-4 py-3 outline-none transition-colors text-white font-bold"
                         >
                           <option value="" className="bg-[#0f0f11]">Selecione um cliente...</option>
                           {clients.map(c => (
@@ -868,7 +875,20 @@ export default function Quotes() {
                           value={observations}
                           onChange={(e) => setObservations(e.target.value)}
                           placeholder="Observações adicionais para o orçamento..."
-                          className="w-full bg-white/5 border border-white/10 focus:border-blue-500/50 rounded-xl px-4 py-3 outline-none transition-colors text-white text-sm min-h-[120px] resize-none"
+                          className="w-full bg-white/5 border border-white/10 focus:border-red-500/50 rounded-xl px-4 py-3 outline-none transition-colors text-white text-sm min-h-[120px] resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-white/50 mb-2">Acrescentar Impostos / Taxas (R$)</label>
+                        <input 
+                          type="number"
+                          value={taxValue}
+                          onChange={(e) => setTaxValue(parseFloat(e.target.value) || 0)}
+                          placeholder="Valor a somar ao total..."
+                          className="w-full bg-white/5 border border-white/10 focus:border-red-500/50 rounded-xl px-4 py-3 outline-none transition-colors text-white font-mono font-bold"
+                          min="0"
+                          step="0.01"
                         />
                       </div>
 
@@ -894,10 +914,10 @@ export default function Quotes() {
                           <button 
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
-                            className="bg-blue-600/20 hover:bg-blue-500/30 border border-blue-400/30 text-blue-400 px-4 py-3 rounded-xl font-bold tracking-wider uppercase text-xs transition-all flex items-center justify-center gap-2"
+                            className="bg-red-600/20 hover:bg-red-500/30 border border-red-400/30 text-red-400 px-4 py-3 rounded-xl font-bold tracking-wider uppercase text-xs transition-all flex items-center justify-center gap-2"
                           >
                             {isUploading ? (
-                              <div className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin"></div>
+                              <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin"></div>
                             ) : uploadSuccess ? (
                               <CheckCircle className="w-4 h-4 text-white" />
                             ) : (
@@ -911,19 +931,32 @@ export default function Quotes() {
                   </GlassPanel>
 
                   <GlassPanel className="p-8 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-blue-500/20 transition-colors duration-700"></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-red-500/20 transition-colors duration-700"></div>
                     <h3 className="text-sm font-bold uppercase tracking-widest text-white/50 mb-6 relative z-10">Resumo Financeiro</h3>
                     <div className="space-y-4 relative z-10">
                       <div className="flex justify-between items-center">
                         <span className="text-white/50 uppercase tracking-widest text-[10px] font-bold">Subtotal Bruto</span>
-                        <span className="font-mono font-bold text-white/80">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}</span>
+                        <span className="font-mono font-bold text-white/80">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/50 uppercase tracking-widest text-[10px] font-bold">Impostos / Taxas</span>
+                        <span className="font-mono font-bold text-white/80">
+                          {taxValue > 0 ? `+ ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(taxValue)}` : 'R$ 0,00'}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-white/50 uppercase tracking-widest text-[10px] font-bold">Descontos</span>
                         <span className="font-mono font-bold text-white">R$ 0,00</span>
                       </div>
-                      <div className="pt-6 border-t border-white/10 flex flex-col gap-2">
-                        <span className="text-xs font-bold uppercase tracking-widest text-white/50">Total Geral</span>
+                      <div className="pt-6 border-t border-white/10 flex flex-col gap-2 relative">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase tracking-widest text-white/50">Total Final</span>
+                          {taxValue > 0 && (
+                            <span className="text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full border border-red-400/20 animate-pulse">
+                              + Impostos inclusos
+                            </span>
+                          )}
+                        </div>
                         <span className="text-4xl font-black text-white tracking-tighter drop-shadow-md">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}
                         </span>
@@ -1005,7 +1038,7 @@ export default function Quotes() {
                             }
                             e.target.value = '';
                           }}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest focus:border-blue-500/50 outline-none transition-colors text-white"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest focus:border-red-500/50 outline-none transition-colors text-white"
                         >
                           <option value="" className="bg-[#0f0f11]">Catálogo...</option>
                           {products.map(p => (
@@ -1120,10 +1153,26 @@ export default function Quotes() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-1">Valor Total</p>
-                <p className="text-4xl font-light text-white">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(viewingQuote.totalValue)}
-                </p>
+                <div className="flex flex-col items-end">
+                  {viewingQuote.taxValue !== undefined && viewingQuote.taxValue > 0 && (
+                    <div className="mb-4 text-right">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-1">Subtotal Bruto</p>
+                      <p className="text-sm font-bold text-white/60 mb-2">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(viewingQuote.totalValue - viewingQuote.taxValue)}
+                      </p>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/60 mb-1">Impostos (+) </p>
+                      <p className="text-sm font-bold text-red-400/80 mb-2 font-mono">
+                        + {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(viewingQuote.taxValue)}
+                      </p>
+                    </div>
+                  )}
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-1">Investimento Total Final</p>
+                    <p className="text-4xl font-black text-white tracking-tighter">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(viewingQuote.totalValue)}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1187,13 +1236,13 @@ export default function Quotes() {
             <div className="flex gap-3 pt-4 flex-wrap">
               <button 
                 onClick={() => handleDownloadPdf(viewingQuote)}
-                className="flex-1 bg-blue-600/80 hover:bg-blue-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-blue-400/30 transition-all active:scale-95 shadow-[0_0_20px_rgba(59,130,246,0.2)]"
+                className="flex-1 bg-red-600/80 hover:bg-red-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-red-400/30 transition-all active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.2)]"
               >
                 <Download className="w-5 h-5" /> Baixar PDF do Orçamento
               </button>
               <button 
                 onClick={() => handleDownloadWord(viewingQuote)}
-                className="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-blue-500/30 transition-all active:scale-95 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-red-500/30 transition-all active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.1)]"
               >
                 <FileText className="w-5 h-5" /> Baixar Word (Editável)
               </button>
@@ -1206,7 +1255,7 @@ export default function Quotes() {
                   window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                   toast.success('Abrindo cliente de e-mail...');
                 }}
-                className="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-blue-500/30 transition-all active:scale-95"
+                className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-red-500/30 transition-all active:scale-95"
               >
                 <Mail className="w-5 h-5" /> Enviar por E-mail
               </button>
@@ -1228,122 +1277,128 @@ export default function Quotes() {
             ref={printRef}
             ref-name="printRef"
             className="bg-white text-zinc-900 font-sans pdf-content relative overflow-hidden"
-            style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', padding: '0' }}
+            style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', padding: '0', boxSizing: 'border-box' }}
           >
             {/* Top Accent Line */}
-            <div className="h-2 w-full bg-blue-600 mb-0"></div>
+            <div className="h-1.5 w-full bg-red-600 mb-0" style={{ height: '6px', backgroundColor: '#dc2626' }}></div>
 
-            <div className="p-10">
+            <div className="p-8" style={{ padding: '32px' }}>
               {/* Header Section Section */}
-              <div className="grid grid-cols-12 gap-6 mb-6 pb-6 border-b border-zinc-200 items-start break-inside-avoid">
-                <div className="col-span-7 flex gap-5 items-center">
+              <div className="flex justify-between items-start mb-6 pb-6 break-inside-avoid" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e4e4e7', paddingBottom: '24px', marginBottom: '24px' }}>
+                <div className="flex gap-5 items-center" style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '55%' }}>
                   {companyLogo ? (
                     <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 flex items-center justify-center shrink-0">
                       <img src={companyLogo} alt="Logo" className="h-14 w-auto object-contain" />
                     </div>
                   ) : (
-                    <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shrink-0">
+                    <div className="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shrink-0" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <FileText className="w-7 h-7 text-white" />
                     </div>
                   )}
                   <div className="flex flex-col">
-                    <h2 className="text-xl font-black text-black uppercase tracking-tight leading-none mb-1.5">
+                    <h2 className="text-xl font-black text-black uppercase tracking-tight leading-none mb-1.5" style={{ fontWeight: 900, marginBottom: '6px' }}>
                       {companyData?.name || 'IA COMPANY'}
                     </h2>
                     <div className="space-y-0.5">
-                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5">
-                        <span className="w-1 h-1 rounded-full bg-zinc-300"></span> CNPJ: {companyData?.document || '---'}
+                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                        <span className="w-1 h-1 rounded-full bg-zinc-300" style={{ display: 'inline-block', width: '4px', height: '4px', backgroundColor: '#d4d4d8', borderRadius: '50%' }}></span> CNPJ: {companyData?.document || '---'}
                       </p>
-                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5">
-                        <span className="w-1 h-1 rounded-full bg-zinc-300"></span> {companyData?.email || 'contato@empresa.com'}
+                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                        <span className="w-1 h-1 rounded-full bg-zinc-300" style={{ display: 'inline-block', width: '4px', height: '4px', backgroundColor: '#d4d4d8', borderRadius: '50%' }}></span> {companyData?.email || 'contato@empresa.com'}
                       </p>
-                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5">
-                        <span className="w-1 h-1 rounded-full bg-zinc-300"></span> {companyData?.phone || '(00) 0000-0000'}
+                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                        <span className="w-1 h-1 rounded-full bg-zinc-300" style={{ display: 'inline-block', width: '4px', height: '4px', backgroundColor: '#d4d4d8', borderRadius: '50%' }}></span> {companyData?.phone || '(00) 0000-0000'}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="col-span-5 text-right flex flex-col justify-between items-end h-full">
-                  <div>
-                    <div className="inline-block px-3 py-1 bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-3 rounded">
+                <div className="text-right flex flex-col justify-between items-end" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '40%' }}>
+                  <div className="flex flex-col items-end">
+                    <div className="px-3 py-1 bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-3 rounded" style={{ display: 'inline-block', backgroundColor: '#dc2626', color: '#ffffff', borderRadius: '4px', padding: '4px 12px' }}>
                       PROPOSTA COMERCIAL
                     </div>
-                    <h1 className="text-4xl font-black tracking-tighter text-black uppercase leading-none">
+                    <h1 className="text-4xl font-black tracking-tighter text-black uppercase leading-none" style={{ fontWeight: 900, fontSize: '32px', margin: 0 }}>
                       ORÇAMENTO
                     </h1>
                   </div>
-                  <div className="mt-4 flex flex-col gap-1 items-end">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Nº Proposta</span>
-                      <span className="text-sm font-black text-black">#{quoteToPrint.id.substring(0, 8).toUpperCase()}</span>
+                  <div className="mt-4 flex flex-col gap-1 items-end" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', marginTop: '16px' }}>
+                    <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontSize: '10px', color: '#a1a1aa', fontWeight: 900 }}>Nº Proposta</span>
+                      <span className="text-sm font-black text-black" style={{ fontSize: '14px', color: '#000000', fontWeight: 900 }}>#{quoteToPrint.id.substring(0, 8).toUpperCase()}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Data Emissão</span>
-                      <span className="text-sm font-black text-black">{safeFormatDate(quoteToPrint.date)}</span>
+                    <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontSize: '10px', color: '#a1a1aa', fontWeight: 900 }}>Data Emissão</span>
+                      <span className="text-sm font-black text-black" style={{ fontSize: '14px', color: '#000000', fontWeight: 900 }}>{safeFormatDate(quoteToPrint.date)}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Validade</span>
-                      <span className="text-sm font-black text-black">15 Dias úteis</span>
+                    <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest" style={{ fontSize: '10px', color: '#a1a1aa', fontWeight: 900 }}>Validade</span>
+                      <span className="text-sm font-black text-black" style={{ fontSize: '14px', color: '#000000', fontWeight: 900 }}>15 Dias úteis</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Client Card */}
-              <div className="mb-6 bg-zinc-50 p-6 rounded-2xl border border-zinc-100 flex flex-col relative overflow-hidden break-inside-avoid">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
-                <h3 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-4 ml-1">Destinatário da Proposta</h3>
-                <div className="ml-1">
-                  <p className="text-2xl font-black text-black leading-tight mb-4">
+              <div className="mb-4 bg-zinc-50 p-5 rounded-xl flex flex-col relative overflow-hidden break-inside-avoid" style={{ border: '1px solid #e4e4e7', backgroundColor: '#fafafa', padding: '16px', borderRadius: '12px', marginBottom: '16px', position: 'relative' }}>
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600" style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#dc2626' }}></div>
+                <h3 className="text-[8px] font-black uppercase tracking-widest text-zinc-400 mb-2 ml-1" style={{ fontSize: '8px', color: '#a1a1aa', fontWeight: 900, marginBottom: '8px', marginLeft: '4px' }}>Destinatário da Proposta</h3>
+                <div className="ml-1" style={{ marginLeft: '4px' }}>
+                  <p className="text-xl font-black text-black leading-tight mb-3" style={{ fontWeight: 900, fontSize: '18px', color: '#000000', marginBottom: '12px', margin: 0 }}>
                     {clients.find(c => c.id === quoteToPrint.clientId)?.name}
                   </p>
-                  <div className="grid grid-cols-3 gap-6">
-                    <div>
-                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Documento / CPF</p>
-                      <p className="text-xs font-bold text-black">{clients.find(c => c.id === quoteToPrint.clientId)?.document || '---'}</p>
+                  
+                  {/* Grid de Informações usando Inline-Blocks Seguros para o html2canvas */}
+                  <div style={{ display: 'block', width: '100%', marginTop: '4px', paddingBottom: '4px' }}>
+                    <div style={{ display: 'inline-block', width: '32%', verticalAlign: 'top' }}>
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '8px', color: '#a1a1aa', margin: 0, fontWeight: 900, lineHeight: '1.2' }}>Documento / CPF</p>
+                      <p className="text-xs font-bold text-black" style={{ fontSize: '11px', color: '#000000', fontWeight: 700, margin: 0, lineHeight: '1.4' }}>{clients.find(c => c.id === quoteToPrint.clientId)?.document || '---'}</p>
                     </div>
-                    <div>
-                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Telefone Origen</p>
-                      <p className="text-xs font-bold text-black">{clients.find(c => c.id === quoteToPrint.clientId)?.phone || '---'}</p>
+                    <div style={{ display: 'inline-block', width: '32%', verticalAlign: 'top' }}>
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '8px', color: '#a1a1aa', margin: 0, fontWeight: 900, lineHeight: '1.2' }}>Telefone</p>
+                      <p className="text-xs font-bold text-black" style={{ fontSize: '11px', color: '#000000', fontWeight: 700, margin: 0, lineHeight: '1.4' }}>{clients.find(c => c.id === quoteToPrint.clientId)?.phone || '---'}</p>
                     </div>
-                    <div>
-                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">E-mail Contato</p>
-                      <p className="text-xs font-bold text-black truncate">{clients.find(c => c.id === quoteToPrint.clientId)?.email || '---'}</p>
+                    <div style={{ display: 'inline-block', width: '35%', verticalAlign: 'top' }}>
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '8px', color: '#a1a1aa', margin: 0, fontWeight: 900, lineHeight: '1.2' }}>E-mail Contato</p>
+                      <p className="text-xs font-bold text-black truncate" style={{ fontSize: '11px', color: '#000000', fontWeight: 700, margin: 0, lineHeight: '1.4' }}>{clients.find(c => c.id === quoteToPrint.clientId)?.email || '---'}</p>
                     </div>
-                    <div className="col-span-3 pt-3 border-t border-zinc-200/50">
-                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Endereço de Atendimento / Instalação</p>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-3 h-3 text-zinc-300 mt-0.5" />
-                        <p className="text-[11px] font-bold text-black leading-relaxed">{clients.find(c => c.id === quoteToPrint.clientId)?.address || '---'}</p>
-                      </div>
+                  </div>
+                  
+                  {/* Divisória explícita de 1px para evitar subir */}
+                  <div style={{ height: '1px', backgroundColor: '#e4e4e7', margin: '12px 0 8px 0', width: '100%', display: 'block', clear: 'both' }}></div>
+                  
+                  <div style={{ marginTop: '4px', paddingBottom: '4px' }}>
+                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '8px', color: '#a1a1aa', margin: 0, fontWeight: 900, lineHeight: '1.2' }}>Endereço de Atendimento / Instalação</p>
+                    <div className="flex items-start gap-2" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '2px' }}>
+                      <MapPin className="w-3 h-3 text-zinc-300 mt-0.5 shrink-0" style={{ color: '#d4d4d8', width: '12px', height: '12px' }} />
+                      <p className="text-[11px] font-bold text-black leading-relaxed" style={{ fontSize: '11px', color: '#18181b', fontWeight: 700, margin: 0, lineHeight: '1.4' }}>{clients.find(c => c.id === quoteToPrint.clientId)?.address || '---'}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Items Table Section */}
-              <div className="mb-6 rounded-2xl overflow-hidden border border-zinc-200 shadow-sm break-inside-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-zinc-50 border-b border-zinc-200">
-                    <tr className="text-[8px] font-black uppercase tracking-widest text-zinc-400">
-                      <th className="p-4">Descrição do Item / Serviço</th>
-                      <th className="p-4 text-center w-20">Quant.</th>
-                      <th className="p-4 text-right w-32">Unitário</th>
-                      <th className="p-4 text-right w-36">Total</th>
+              <div className="mb-4 rounded-xl overflow-hidden border border-zinc-200 shadow-sm break-inside-auto" style={{ border: '1px solid #e4e4e7', borderRadius: '8px', marginBottom: '16px' }}>
+                <table className="w-full text-left border-collapse" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead className="bg-zinc-50" style={{ backgroundColor: '#f9fafb' }}>
+                    <tr className="text-[8px] font-black uppercase tracking-widest text-zinc-400" style={{ borderBottom: '1px solid #e4e4e7' }}>
+                      <th className="p-2" style={{ padding: '8px 12px', fontSize: '8px', color: '#a1a1aa', fontWeight: 900 }}>Descrição do Item / Serviço</th>
+                      <th className="p-2 text-center w-20" style={{ padding: '8px 12px', textAlign: 'center', width: '80px', fontSize: '8px', color: '#a1a1aa', fontWeight: 900 }}>Quant.</th>
+                      <th className="p-2 text-right w-32" style={{ padding: '8px 12px', textAlign: 'right', width: '128px', fontSize: '8px', color: '#a1a1aa', fontWeight: 900 }}>Unitário</th>
+                      <th className="p-2 text-right w-36" style={{ padding: '8px 12px', textAlign: 'right', width: '144px', fontSize: '8px', color: '#a1a1aa', fontWeight: 900 }}>Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-100 bg-white">
+                  <tbody className="bg-white">
                     {quoteToPrint.items.map((item) => (
-                      <tr key={item.id} className="break-inside-avoid border-b border-zinc-50 last:border-b-0">
-                        <td className="p-4">
-                          <p className="text-xs font-bold text-zinc-900 leading-relaxed capitalize">{item.description.toLowerCase()}</p>
+                      <tr key={item.id} className="break-inside-avoid">
+                        <td className="p-2" style={{ padding: '8px 12px', borderBottom: '1px solid #f4f4f5' }}>
+                          <p className="text-xs font-bold text-zinc-900 leading-relaxed capitalize" style={{ fontSize: '11px', color: '#18181b', fontWeight: 700, margin: 0 }}>{item.description.toLowerCase()}</p>
                         </td>
-                        <td className="p-4 text-center text-xs font-black text-zinc-600">{item.quantity}</td>
-                        <td className="p-4 text-right text-[10px] font-bold text-zinc-400 font-mono">
+                        <td className="p-2 text-center text-xs font-black text-zinc-600" style={{ padding: '8px 12px', textAlign: 'center', fontSize: '11px', color: '#52525b', fontWeight: 900, borderBottom: '1px solid #f4f4f5' }}>{item.quantity}</td>
+                        <td className="p-2 text-right text-[10px] font-bold text-zinc-400 font-mono" style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px', color: '#a1a1aa', fontWeight: 700, fontFamily: 'monospace', borderBottom: '1px solid #f4f4f5' }}>
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.unitPrice)}
                         </td>
-                        <td className="p-4 text-right text-sm font-black text-zinc-900 font-mono">
+                        <td className="p-2 text-right text-sm font-black text-zinc-900 font-mono" style={{ padding: '8px 12px', textAlign: 'right', fontSize: '12px', color: '#18181b', fontWeight: 900, fontFamily: 'monospace', borderBottom: '1px solid #f4f4f5' }}>
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total)}
                         </td>
                       </tr>
@@ -1352,113 +1407,139 @@ export default function Quotes() {
                 </table>
               </div>
 
-              {/* Financial & Terms Layout Section */}
-              <div className="grid grid-cols-12 gap-8 items-start mb-6 break-inside-avoid pt-2">
-                <div className="col-span-7 space-y-6">
-                  {quoteToPrint.observations && (
-                    <div className="bg-zinc-100/50 p-5 rounded-2xl border border-zinc-100">
-                      <h4 className="text-[9px] font-black uppercase tracking-widest text-blue-600 mb-2 flex items-center gap-1.5">
-                        <FileText className="w-3 h-3" /> Observações Gerais
-                      </h4>
-                      <p className="text-[10px] text-zinc-600 leading-relaxed font-medium whitespace-pre-wrap italic">
-                        "{quoteToPrint.observations}"
-                      </p>
-                    </div>
-                  )}
+              {/* Financial, Conditions & Signatures Group Block - Prevent page breaks within this block */}
+              <div className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                {/* Financial & Terms Layout Section */}
+                <div style={{ display: 'block', width: '100%', overflow: 'hidden', marginTop: '8px' }}>
+                  
+                  {/* Left Column (Observations & Info) */}
+                  <div style={{ display: 'inline-block', width: '58%', verticalAlign: 'top' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {quoteToPrint.observations && (
+                        <div className="bg-zinc-100/50 p-4 rounded-xl border border-zinc-100" style={{ border: '1px solid #f4f4f5', backgroundColor: '#fafafa', padding: '12px', borderRadius: '8px' }}>
+                          <h4 className="text-[8px] font-black uppercase tracking-widest text-red-600 mb-1 flex items-center gap-1.5" style={{ fontSize: '8px', color: '#dc2626', fontWeight: 900, marginBottom: '4px' }}>
+                            <FileText className="w-3 h-3" /> Observações Gerais
+                          </h4>
+                          <p className="text-[10px] text-zinc-600 leading-relaxed font-medium whitespace-pre-wrap italic" style={{ fontSize: '10px', color: '#52525b', fontStyle: 'italic', margin: 0 }}>
+                            "{quoteToPrint.observations}"
+                          </p>
+                        </div>
+                      )}
 
-                  <div className="bg-zinc-50 p-5 rounded-2xl border border-zinc-100">
-                    <h4 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2">Informações de Condição</h4>
-                    <p className="text-[9px] text-zinc-400 leading-relaxed font-bold">
-                      1. Proposta irrevogável pelo período de validade supracitado.<br />
-                      2. Impostos inclusos no valor total da proposta.<br />
-                      3. Prazo de execução à combinar após aprovação.
-                    </p>
-                  </div>
+                      <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100" style={{ border: '1px solid #f4f4f5', backgroundColor: '#fafafa', padding: '12px', borderRadius: '8px' }}>
+                        <h4 className="text-[8px] font-black uppercase tracking-widest text-zinc-400 mb-1" style={{ fontSize: '8px', color: '#a1a1aa', fontWeight: 900, marginBottom: '4px' }}>Informações de Condição</h4>
+                        <p className="text-[8px] text-zinc-400 leading-relaxed font-bold" style={{ fontSize: '8px', color: '#a1a1aa', fontWeight: 700, margin: 0 }}>
+                          1. Proposta irrevogável pelo período de validade supracitado.<br />
+                          2. Impostos inclusos no valor total da proposta.<br />
+                          3. Prazo de execução à combinar após aprovação.
+                        </p>
+                      </div>
 
-                  {quoteToPrint.installments && quoteToPrint.installments.length > 0 && (
-                    <div className="bg-zinc-50 p-5 rounded-2xl border border-zinc-100">
-                      <h4 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-1.5">
-                         <Clock className="w-3 h-3" /> Cronograma de Pagamento
-                      </h4>
-                      <div className="space-y-1.5">
-                        {quoteToPrint.installments.map((inst, i) => (
-                          <div key={inst.id} className="flex justify-between items-center text-[9px] py-1 border-b border-zinc-200/50 last:border-0 last:pb-0">
-                            <span className="font-bold text-zinc-900 uppercase tracking-tight">{inst.description}</span>
-                            <div className="flex items-center gap-5">
-                              {inst.dueDate && <span className="text-zinc-400 font-mono">{safeFormatDate(inst.dueDate)}</span>}
-                              <span className="font-black text-black font-mono w-24 text-right underline underline-offset-2">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(inst.value)}
-                              </span>
-                            </div>
+                      {quoteToPrint.installments && quoteToPrint.installments.length > 0 && (
+                        <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100" style={{ border: '1px solid #f4f4f5', backgroundColor: '#fafafa', padding: '12px', borderRadius: '8px' }}>
+                          <h4 className="text-[8px] font-black uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-1.5" style={{ fontSize: '8px', color: '#a1a1aa', fontWeight: 900, marginBottom: '8px' }}>
+                             <Clock className="w-3 h-3" /> Cronograma de Pagamento
+                          </h4>
+                          <div className="space-y-1">
+                            {quoteToPrint.installments.map((inst) => (
+                              <div key={inst.id} className="flex justify-between items-center text-[8px] py-1 border-b border-zinc-200/50 last:border-0 last:pb-0" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8px', borderBottom: '1px solid #f4f4f5' }}>
+                                <span className="font-bold text-zinc-900 uppercase tracking-tight" style={{ fontWeight: 700, color: '#18181b' }}>{inst.description}</span>
+                                <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  {inst.dueDate && <span className="text-zinc-400 font-mono" style={{ color: '#a1a1aa', fontFamily: 'monospace' }}>{safeFormatDate(inst.dueDate)}</span>}
+                                  <span className="font-black text-black font-mono w-20 text-right" style={{ fontWeight: 900, color: '#000000', fontFamily: 'monospace', width: '80px', textAlign: 'right' }}>
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(inst.value)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="col-span-5">
-                   <div className="bg-black p-6 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                    <div className="space-y-4 relative z-10">
-                      <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Subtotal</span>
-                        <span className="text-sm font-bold font-mono">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quoteToPrint.totalValue)}</span>
-                      </div>
-                      <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Impostos / Desc</span>
-                        <span className="text-sm font-bold font-mono text-emerald-400">R$ 0,00</span>
-                      </div>
-                      <div className="pt-1">
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-3 block">INVESTIMENTO TOTAL</span>
-                        <p className="text-4xl font-black tracking-tighter leading-none mb-1">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quoteToPrint.totalValue)}
-                        </p>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-3">
-                          * Valor sujeito a alteração após 15 dias
-                        </p>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              </div>
+                  
+                  {/* Spacer Column */}
+                  <div style={{ display: 'inline-block', width: '4%' }}></div>
 
-              {/* Signatures Area Section */}
-              <div className="mt-16 grid grid-cols-2 gap-16 break-inside-avoid pt-8">
-                <div className="text-center flex flex-col items-center">
-                  <div className="h-20 flex items-end justify-center mb-1 w-full relative">
-                    {companySignature && (
-                      <img 
-                        src={companySignature} 
-                        alt="Assinatura" 
-                        className="max-h-24 w-auto object-contain absolute bottom-1 -translate-y-1 opacity-90" 
-                      />
-                    )}
-                    <div className="w-full border-t border-zinc-900"></div>
-                  </div>
-                  <div className="w-full text-center">
-                    <p className="text-base font-black text-black leading-none mb-1">{companyData?.name || 'IA COMPANY'}</p>
-                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em]">Responsável Comercial</p>
+                  {/* Right Column (Total Investment Box) */}
+                  <div style={{ display: 'inline-block', width: '38%', verticalAlign: 'top' }}>
+                    <div className="bg-black p-5 rounded-2xl text-white shadow-xl relative overflow-hidden" style={{ backgroundColor: '#000000', padding: '20px', borderRadius: '16px', color: '#ffffff', position: 'relative' }}>
+                      <div className="space-y-3 relative z-10" style={{ position: 'relative', zIndex: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40" style={{ fontSize: '8px', color: 'rgba(255,255,255,0.4)', fontWeight: 900 }}>Subtotal Bruto</span>
+                          <span className="text-xs font-bold font-mono" style={{ fontSize: '12px', fontFamily: 'monospace', fontWeight: 700 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quoteToPrint.totalValue - (quoteToPrint.taxValue || 0))}</span>
+                        </div>
+                        {/* Linha divisória explícita para evitar subir */}
+                        <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '6px 0' }}></div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40" style={{ fontSize: '8px', color: 'rgba(255,255,255,0.4)', fontWeight: 900 }}>Impostos / Retenções</span>
+                          <span className="text-xs font-bold font-mono text-white/90" style={{ fontSize: '12px', fontFamily: 'monospace', fontWeight: 700 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quoteToPrint.taxValue || 0)}</span>
+                        </div>
+                        {/* Linha divisória explícita */}
+                        <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.15)', margin: '8px 0' }}></div>
+                        
+                        <div className="pt-0.5">
+                          <span className="text-[8px] font-black uppercase tracking-[0.3em] text-red-400 mb-1 block" style={{ fontSize: '8px', color: '#f87171', fontWeight: 900, display: 'block', marginBottom: '4px' }}>INVESTIMENTO TOTAL</span>
+                          <p className="text-3xl font-black tracking-tighter leading-none mb-1" style={{ fontWeight: 900, fontSize: '28px', color: '#ffffff', letterSpacing: '-0.03em', margin: 0 }}>
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quoteToPrint.totalValue)}
+                          </p>
+                          <p className="text-[7px] font-black text-white/20 uppercase tracking-widest mt-2" style={{ fontSize: '7px', color: 'rgba(255,255,255,0.2)', fontWeight: 900, marginTop: '8px' }}>
+                            * Valor sujeito a alteração após 15 dias
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="text-center flex flex-col items-center">
-                  <div className="h-20 flex items-end justify-center mb-1 w-full relative">
-                    <div className="w-full border-t border-zinc-900"></div>
+
+                {/* Signatures Area Section */}
+                <div style={{ display: 'block', width: '100%', overflow: 'hidden', marginTop: '32px' }}>
+                  
+                  {/* Rep Comercial Signature */}
+                  <div style={{ display: 'inline-block', width: '45%', verticalAlign: 'top', textAlign: 'center' }}>
+                    <div style={{ height: '60px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', position: 'relative', marginBottom: '4px' }}>
+                      {companySignature && (
+                        <img 
+                          src={companySignature} 
+                          alt="Assinatura" 
+                          style={{ maxHeight: '70px', width: 'auto', position: 'absolute', bottom: '4px', opacity: 0.9, left: '50%', transform: 'translateX(-50%)' }}
+                        />
+                      )}
+                      <div style={{ width: '100%', borderTop: '1px solid #18181b' }}></div>
+                    </div>
+                    <div style={{ width: '100%', textAlign: 'center' }}>
+                      <p className="text-sm font-black text-black leading-none mb-1" style={{ fontWeight: 900, fontSize: '13px', color: '#000000', margin: 0, marginBottom: '2px' }}>{companyData?.name || 'IA COMPANY'}</p>
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em]" style={{ fontSize: '8px', color: '#a1a1aa', fontWeight: 900 }}>Responsável Comercial</p>
+                    </div>
                   </div>
-                  <div className="w-full text-center">
-                    <p className="text-base font-black text-black leading-none mb-1">{clients.find(c => c.id === quoteToPrint.clientId)?.name.substring(0, 30)}</p>
-                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em]">Aceite do Cliente</p>
+                  
+                  {/* Spacer Column */}
+                  <div style={{ display: 'inline-block', width: '10%' }}></div>
+
+                  {/* Customer Signature */}
+                  <div style={{ display: 'inline-block', width: '45%', verticalAlign: 'top', textAlign: 'center' }}>
+                    <div style={{ height: '60px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', position: 'relative', marginBottom: '4px' }}>
+                      <div style={{ width: '100%', borderTop: '1px solid #18181b' }}></div>
+                    </div>
+                    <div style={{ width: '100%', textAlign: 'center' }}>
+                      <p className="text-sm font-black text-black leading-none mb-1" style={{ fontWeight: 900, fontSize: '13px', color: '#000000', margin: 0, marginBottom: '2px' }}>
+                        {clients.find(c => c.id === quoteToPrint.clientId)?.name.substring(0, 30)}
+                      </p>
+                      <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em]" style={{ fontSize: '8px', color: '#a1a1aa', fontWeight: 900 }}>Aceite do Cliente</p>
+                    </div>
                   </div>
                 </div>
+
               </div>
 
               {/* Footer Section */}
-              <div className="mt-16 pt-8 border-t border-zinc-100 flex justify-between items-center break-inside-avoid">
-                <p className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest">
+              <div className="mt-8 pt-6 flex justify-between items-center break-inside-avoid" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f4f4f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest" style={{ fontSize: '8px', color: '#d4d4d8', fontWeight: 700 }}>
                   Geração Eletrônica via Plataforma Condomínio v4.0
                 </p>
-                <div className="flex items-center gap-3">
-                  <p className="text-[8px] font-black text-zinc-900 uppercase tracking-widest">
+                <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <p className="text-[8px] font-black text-zinc-900 uppercase tracking-widest" style={{ fontSize: '8px', color: '#18181b', fontWeight: 900 }}>
                      Página 1 de 1
                   </p>
                 </div>

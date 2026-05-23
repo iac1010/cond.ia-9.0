@@ -63,6 +63,7 @@ export const useStore = create<AppState>()(
       staff: [],
       keys: [],
       sales: [],
+      technicalReports: [],
       iotState: {
         pumps: {
           caixa: false,
@@ -105,8 +106,8 @@ export const useStore = create<AppState>()(
       documentTemplates: [],
       isLoading: false,
       whatsappEnabled: true,
-      biaEnabled: true,
-      biaOnline: false,
+      vivianEnabled: true,
+      vivianOnline: false,
       
       lastSync: null,
   setLastSync: (date) => set({ lastSync: date }),
@@ -311,6 +312,7 @@ export const useStore = create<AppState>()(
               status: q.status as any,
               items: q.items,
               installments: q.installments,
+              taxValue: Number(q.tax_value) || 0,
               observations: q.observations
             }));
           }
@@ -1155,7 +1157,7 @@ export const useStore = create<AppState>()(
           toast.error(`Erro na sincronização: ${error.message}`, { id: loadingToast });
         }
       },
-      setBiaOnline: (online) => set({ biaOnline: online }),
+      setVivianOnline: (online) => set({ vivianOnline: online }),
       setShowBalance: (show) => set({ showBalance: show }),
       setCompanyLogo: async (logo) => {
         set({ companyLogo: logo });
@@ -1256,9 +1258,9 @@ export const useStore = create<AppState>()(
         set((state) => ({ whatsappEnabled: !state.whatsappEnabled }));
         toast.success(`WhatsApp ${get().whatsappEnabled ? 'ativado' : 'desativado'}`);
       },
-      toggleBia: () => {
-        set((state) => ({ biaEnabled: !state.biaEnabled }));
-        toast.success(`Bia ${get().biaEnabled ? 'ativada' : 'desativada'}`);
+      toggleVivian: () => {
+        set((state) => ({ vivianEnabled: !state.vivianEnabled }));
+        toast.success(`Vivian ${get().vivianEnabled ? 'ativada' : 'desativada'}`);
       },
       
       login: (user, pass) => {
@@ -1602,6 +1604,7 @@ export const useStore = create<AppState>()(
             status: quote.status,
             items: quote.items,
             installments: quote.installments,
+            tax_value: quote.taxValue || 0,
             observations: quote.observations
           }]);
           if (error) {
@@ -1630,6 +1633,7 @@ export const useStore = create<AppState>()(
             status: updatedQuote.status,
             items: updatedQuote.items,
             installments: updatedQuote.installments,
+            tax_value: updatedQuote.taxValue || 0,
             observations: updatedQuote.observations
           }).eq('id', id);
           if (error) {
@@ -3612,6 +3616,21 @@ export const useStore = create<AppState>()(
         }
       },
 
+      addTechnicalReport: async (report) => {
+        const newReport = { ...report, id: uuidv4() };
+        set((state) => ({ technicalReports: [newReport, ...state.technicalReports] }));
+      },
+      updateTechnicalReport: async (id, report) => {
+        set((state) => ({
+          technicalReports: state.technicalReports.map((r) => (r.id === id ? { ...r, ...report } : r))
+        }));
+      },
+      deleteTechnicalReport: async (id) => {
+        set((state) => ({
+          technicalReports: state.technicalReports.filter((r) => r.id !== id)
+        }));
+      },
+
       addFeedback: async (feedback) => {
         const id = uuidv4();
         const date = new Date().toISOString();
@@ -3920,7 +3939,7 @@ export const useStore = create<AppState>()(
           status: 'PENDENTE_APROVACAO',
           clientId: budget.clientId,
           date: new Date().toISOString(),
-          technician: 'Bia AI',
+          technician: 'Vivian AI',
           observations: budget.observations,
           budgetAmount: budget.budgetAmount,
           budgetApproved: false,

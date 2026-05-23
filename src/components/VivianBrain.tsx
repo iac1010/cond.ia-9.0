@@ -7,10 +7,10 @@ import { toast } from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * BiaBrain: The "brain" of the AI assistant that processes WhatsApp commands.
+ * VivianBrain: The "brain" of the AI assistant that processes WhatsApp commands.
  * It listens for new messages in Supabase and uses Gemini to interpret them.
  */
-export const BiaBrain: React.FC = () => {
+export const VivianBrain: React.FC = () => {
   const store = useStore();
   const processCommandRef = React.useRef<any>(null);
 
@@ -21,8 +21,8 @@ export const BiaBrain: React.FC = () => {
 
   useEffect(() => {
     // Expose a test function to the window for debugging
-    (window as any).testBia = async (message: string = "Bia, qual o nosso saldo?") => {
-      console.log('BiaBrain: Manually triggering test command:', message);
+    (window as any).testVivian = async (message: string = "Vivian, qual o nosso saldo?") => {
+      console.log('VivianBrain: Manually triggering test command:', message);
       const { data, error } = await supabase.from('whatsapp_commands').insert([{
         sender_name: 'Teste Manual',
         sender_number: '5521982240134@s.whatsapp.net',
@@ -32,17 +32,17 @@ export const BiaBrain: React.FC = () => {
       }]).select();
       
       if (error) {
-        console.error('BiaBrain: Error inserting test command:', error);
+        console.error('VivianBrain: Error inserting test command:', error);
         toast.error('Erro ao inserir comando de teste');
       } else {
-        console.log('BiaBrain: Test command inserted successfully:', data);
-        toast.success('Comando de teste inserido! Bia deve processar em instantes.');
+        console.log('VivianBrain: Test command inserted successfully:', data);
+        toast.success('Comando de teste inserido! Vivian deve processar em instantes.');
       }
     };
 
     // 1. Listen for new messages in the 'whatsapp_commands' table
-    console.log('BiaBrain: Starting to listen for WhatsApp commands via Supabase Realtime...');
-    store.setBiaOnline(true);
+    console.log('VivianBrain: Starting to listen for WhatsApp commands via Supabase Realtime...');
+    store.setVivianOnline(true);
     
     const channel = supabase
       .channel('whatsapp-commands')
@@ -51,32 +51,32 @@ export const BiaBrain: React.FC = () => {
         { event: 'INSERT', schema: 'public', table: 'whatsapp_commands' },
         (payload) => {
           const newCommand = payload.new;
-          console.log('BiaBrain: [REALTIME] New command received:', JSON.stringify(newCommand, null, 2));
+          console.log('VivianBrain: [REALTIME] New command received:', JSON.stringify(newCommand, null, 2));
           
           if (!newCommand.processed) {
-            console.log('BiaBrain: Processing new command...');
-            toast.success(`Bia recebeu um comando: "${newCommand.message_text.substring(0, 20)}..."`, {
+            console.log('VivianBrain: Processing new command...');
+            toast.success(`Vivian recebeu um comando: "${newCommand.message_text.substring(0, 20)}..."`, {
               icon: '🤖',
               duration: 4000
             });
             if (processCommandRef.current) {
               processCommandRef.current(newCommand);
             } else {
-              console.error('BiaBrain: processCommandRef is null, cannot process command.');
+              console.error('VivianBrain: processCommandRef is null, cannot process command.');
             }
           } else {
-            console.log('BiaBrain: Command already processed, skipping.');
+            console.log('VivianBrain: Command already processed, skipping.');
           }
         }
       )
       .subscribe((status, err) => {
-        console.log(`BiaBrain: Realtime subscription status: ${status}`);
-        if (err) console.error('BiaBrain: Subscription error:', err);
+        console.log(`VivianBrain: Realtime subscription status: ${status}`);
+        if (err) console.error('VivianBrain: Subscription error:', err);
       });
 
-    // Heartbeat to show Bia is alive
+    // Heartbeat to show Vivian is alive
     const heartbeatInterval = setInterval(() => {
-      console.log('BiaBrain Heartbeat: Still listening... 🤖');
+      console.log('VivianBrain Heartbeat: Still listening... 🤖');
     }, 60000); // Every minute
 
     // 2. Fallback polling for new commands (in case Realtime is not enabled)
@@ -89,12 +89,12 @@ export const BiaBrain: React.FC = () => {
           .order('created_at', { ascending: true });
 
         if (error) {
-          console.error('BiaBrain Polling Error:', error);
+          console.error('VivianBrain Polling Error:', error);
           return;
         }
 
         if (data && data.length > 0) {
-          console.log(`BiaBrain Polling: Found ${data.length} unprocessed commands.`);
+          console.log(`VivianBrain Polling: Found ${data.length} unprocessed commands.`);
           for (const command of data) {
             if (processCommandRef.current) {
               // Mark as processing immediately to avoid duplicate processing during poll
@@ -106,13 +106,13 @@ export const BiaBrain: React.FC = () => {
           }
         }
       } catch (err) {
-        console.error('BiaBrain Polling Exception:', err);
+        console.error('VivianBrain Polling Exception:', err);
       }
     }, 5000); // Poll every 5 seconds
 
     return () => {
-      console.log('BiaBrain: Cleaning up Realtime subscription and polling.');
-      store.setBiaOnline(false);
+      console.log('VivianBrain: Cleaning up Realtime subscription and polling.');
+      store.setVivianOnline(false);
       supabase.removeChannel(channel);
       clearInterval(heartbeatInterval);
       clearInterval(pollingInterval);
@@ -129,10 +129,10 @@ export const BiaBrain: React.FC = () => {
       return;
     }
     
-    console.log(`Bia received message: "${message_text}" from ${sender_name} (${sender_number})`);
+    console.log(`Vivian received message: "${message_text}" from ${sender_name} (${sender_number})`);
 
-    // Check if message is for Bia (starts with Bia or contains Bia)
-    const isTriggered = message_text.toLowerCase().includes('bia');
+    // Check if message is for Vivian (starts with Vivian or contains Vivian)
+    const isTriggered = message_text.toLowerCase().includes('vivian');
     
     if (!isTriggered) {
       // If not triggered, just mark as processed but with no action
@@ -140,35 +140,35 @@ export const BiaBrain: React.FC = () => {
       return;
     }
 
-    // Remove the "Bia, " or "Bia " prefix for the AI
-    const cleanMessage = message_text.replace(/bia/gi, '').trim();
+    // Remove the "Vivian, " or "Vivian " prefix for the AI
+    const cleanMessage = message_text.replace(/vivian/gi, '').trim();
 
     if (!cleanMessage) {
-      console.log('Bia: Message is just "Bia", sending greeting.');
+      console.log('Vivian: Message is just "Vivian", sending greeting.');
       await supabase.from('whatsapp_commands').update({ processed: true, action_taken: 'GREETING' }).eq('id', id);
-      await sendWhatsAppMessage(sender_number, "Olá! Sou a Bia, sua assistente. Como posso te ajudar hoje? Você pode me pedir para cadastrar moradores, encomendas, visitantes, agendar mudanças, abrir chamados, fazer orçamentos ou lançamentos financeiros.");
+      await sendWhatsAppMessage(sender_number, "Olá! Sou a Vivian, sua assistente. Como posso te ajudar hoje? Você pode me pedir para cadastrar moradores, encomendas, visitantes, agendar mudanças, abrir chamados, fazer orçamentos ou lançamentos financeiros.");
       return;
     }
 
-    console.log(`Bia is thinking about: "${cleanMessage}"`);
+    console.log(`Vivian is thinking about: "${cleanMessage}"`);
 
-    // Send an initial "thinking" message to show Bia is working
+    // Send an initial "thinking" message to show Vivian is working
     if (sender_number !== 'test@s.whatsapp.net') {
       await sendWhatsAppMessage(sender_number, "Recebi seu comando! Deixa eu processar aqui rapidinho... ⏳");
     } else {
-      console.log('BiaBrain: Skipping thinking message for internal test JID.');
+      console.log('VivianBrain: Skipping thinking message for internal test JID.');
     }
 
     try {
       const apiKey = process.env.GEMINI_API_KEY || (import.meta.env && (import.meta.env as any).VITE_GEMINI_API_KEY);
       
       if (!apiKey) {
-        console.error('Bia Error: GEMINI_API_KEY is not defined in process.env or import.meta.env');
+        console.error('Vivian Error: GEMINI_API_KEY is not defined in process.env or import.meta.env');
         await sendWhatsAppMessage(sender_number, "Minha inteligência está desligada (chave API não configurada). Peça ao administrador para verificar.");
         return;
       }
 
-      console.log('Bia: Using API Key (first 5 chars):', apiKey.substring(0, 5));
+      console.log('Vivian: Using API Key (first 5 chars):', apiKey.substring(0, 5));
 
       const ai = new GoogleGenAI({ apiKey });
       
@@ -193,7 +193,7 @@ export const BiaBrain: React.FC = () => {
       };
 
       const prompt = `
-        Você é a Bia, a assistente virtual inteligente do sistema de gestão condominial CONDFY.IA.
+        Você é a Vivian, a assistente virtual inteligente do sistema de gestão condominial CONDFY.IA.
         Sua tarefa é interpretar comandos de voz ou texto vindos do WhatsApp e transformá-los em ações no sistema.
 
         Comando do usuário: "${cleanMessage}"
@@ -214,9 +214,9 @@ export const BiaBrain: React.FC = () => {
 
         Exemplos de entrada e saída:
         - "aviso para todos: amanhã falta água das 14h às 16h" -> { "action": "ADD_ANNOUNCEMENT", "data": { "title": "Falta de Água", "content": "Amanhã faltará água das 14h às 16h para manutenção.", "category": "MANUTENCAO", "priority": "HIGH" }, "reply": "Comunicado criado! Todos os moradores serão avisados sobre a falta de água." }
-        - "Bia, como você está?" -> { "action": "REPLY_ONLY", "data": {}, "reply": "Estou ótima e pronta para te ajudar a gerenciar o condomínio! O que vamos fazer hoje?" }
+        - "Vivian, como você está?" -> { "action": "REPLY_ONLY", "data": {}, "reply": "Estou ótima e pronta para te ajudar a gerenciar o condomínio! O que vamos fazer hoje?" }
         - "chegou uma encomenda da Amazon para o apto 101 torre A" -> { "action": "ADD_PACKAGE", "data": { "carrier": "Amazon", "apartment": "101", "tower": "A" }, "reply": "Recebido! Registrei a encomenda da Amazon para o apto 101A." }
-        - "Bia, qual o nosso saldo?" -> { "action": "GET_SUMMARY", "data": { "topic": "financeiro" }, "reply": "Vou verificar o saldo para você agora mesmo." }
+        - "Vivian, qual o nosso saldo?" -> { "action": "GET_SUMMARY", "data": { "topic": "financeiro" }, "reply": "Vou verificar o saldo para você agora mesmo." }
         
         Responda APENAS em formato JSON seguindo o schema fornecido.
       `;
@@ -243,7 +243,7 @@ export const BiaBrain: React.FC = () => {
                              JSON.stringify(err).includes('RESOURCE_EXHAUSTED');
           
           if (isRateLimit && retries > 1) {
-            console.warn(`Bia: Gemini Rate Limit (429). Retrying in ${delay}ms... (${retries - 1} left)`);
+            console.warn(`Vivian: Gemini Rate Limit (429). Retrying in ${delay}ms... (${retries - 1} left)`);
             await new Promise(resolve => setTimeout(resolve, delay));
             retries--;
             delay *= 2; // Exponential backoff
@@ -261,7 +261,7 @@ export const BiaBrain: React.FC = () => {
       const result = JSON.parse(responseText);
       if (!result.action) throw new Error('Invalid AI response');
       
-      console.log('Bia interpreted:', result);
+      console.log('Vivian interpreted:', result);
 
       // Execute the action
       let success = false;
@@ -430,19 +430,19 @@ Status: ${saldo >= 0 ? 'Positivo ✅' : 'Negativo ⚠️'}`;
       // Send reply back via WhatsApp
       if (result.reply) {
         if (sender_number === 'test@s.whatsapp.net') {
-          console.log('BiaBrain: Skipping real WhatsApp reply for internal test JID.');
-          toast.success(`Bia responderia: "${result.reply}"`, { icon: '💬' });
+          console.log('VivianBrain: Skipping real WhatsApp reply for internal test JID.');
+          toast.success(`Vivian responderia: "${result.reply}"`, { icon: '💬' });
         } else {
           await sendWhatsAppMessage(sender_number, result.reply);
         }
       }
 
       if (success) {
-        toast.success(`Bia executou: ${result.action}`);
+        toast.success(`Vivian executou: ${result.action}`);
       }
 
     } catch (error: any) {
-      console.error('Bia failed to process command:', error);
+      console.error('Vivian failed to process command:', error);
       
       const isQuotaError = error.message?.includes('429') || 
                           error.message?.includes('RESOURCE_EXHAUSTED') ||

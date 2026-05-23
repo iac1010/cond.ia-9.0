@@ -10,6 +10,7 @@ interface GlassCardProps {
   icon?: React.ElementType;
   action?: React.ReactNode;
   noPadding?: boolean;
+  onClick?: () => void;
 }
 
 export const GlassCard: React.FC<GlassCardProps> = ({ 
@@ -20,12 +21,14 @@ export const GlassCard: React.FC<GlassCardProps> = ({
   subtitle,
   icon: Icon,
   action,
-  noPadding = false
+  noPadding = false,
+  onClick
 }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     whileHover={hover ? { y: -4, transition: { duration: 0.2 } } : {}}
+    onClick={onClick}
     className={`
       relative overflow-hidden
       bg-white/10 dark:bg-zinc-900/40 

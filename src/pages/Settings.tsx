@@ -24,7 +24,7 @@ export default function Settings() {
     criticalEvents, energyData, savingsGoals, assemblies, documentTemplates,
     restoreData, logout,
     whatsappEnabled, toggleWhatsApp,
-    biaEnabled, toggleBia,
+    vivianEnabled, toggleVivian,
     showBalance, setShowBalance,
     syncToSupabase
   } = useStore();
@@ -470,18 +470,18 @@ export default function Settings() {
 
             <div className="flex items-center justify-between p-6 bg-white rounded-2xl border border-zinc-200">
               <div>
-                <h3 className="text-lg font-bold text-zinc-900">Assistente Bia (IA)</h3>
-                <p className="text-zinc-500 font-light">Ative ou desative a assistente virtual Bia para suporte e automação.</p>
+                <h3 className="text-lg font-bold text-zinc-900">Assistente Vivian (IA)</h3>
+                <p className="text-zinc-500 font-light">Ative ou desative a assistente virtual Vivian para suporte e automação.</p>
               </div>
               <button
-                onClick={toggleBia}
+                onClick={toggleVivian}
                 className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none ${
-                  biaEnabled ? 'bg-blue-500' : 'bg-zinc-300'
+                  vivianEnabled ? 'bg-blue-500' : 'bg-zinc-300'
                 }`}
               >
                 <span
                   className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                    biaEnabled ? 'translate-x-7' : 'translate-x-1'
+                    vivianEnabled ? 'translate-x-7' : 'translate-x-1'
                   }`}
                 />
               </button>

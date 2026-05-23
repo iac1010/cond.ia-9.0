@@ -330,9 +330,9 @@ export default function Dashboard() {
     tileOrder: storeTileOrder,
     setTileSizes: updateStoreTileSizes,
     setTileOrder: updateStoreTileOrder,
-    biaOnline,
-    biaEnabled,
-    toggleBia,
+    vivianOnline,
+    vivianEnabled,
+    toggleVivian,
     showBalance,
     setShowBalance,
     lastSync,
@@ -357,7 +357,7 @@ export default function Dashboard() {
   });
   const backupInputRef = useRef<HTMLInputElement>(null);
   
-  const [biaStatus, setBiaStatus] = useState<{ 
+  const [vivianStatus, setVivianStatus] = useState<{ 
     status: string; 
     supabaseConfigured: boolean;
     geminiConfigured: boolean;
@@ -378,13 +378,13 @@ export default function Dashboard() {
         
         if (res.ok && contentType && contentType.includes('application/json')) {
           const data = await res.json();
-          setBiaStatus(data);
+          setVivianStatus(data);
           retryCount = 0;
         } else {
           // If API fails (e.g. on Vercel), check Supabase directly
           if (isSupabaseConfigured) {
             const { error } = await supabase.from('clients').select('id').limit(1);
-            setBiaStatus({
+            setVivianStatus({
               status: error ? 'error' : 'online',
               supabaseConfigured: true,
               geminiConfigured: !!(import.meta.env.VITE_GEMINI_API_KEY),
@@ -401,7 +401,7 @@ export default function Dashboard() {
         if (isSupabaseConfigured) {
           try {
             const { error } = await supabase.from('clients').select('id').limit(1);
-            setBiaStatus({
+            setVivianStatus({
               status: error ? 'error' : 'online',
               supabaseConfigured: true,
               geminiConfigured: !!(import.meta.env.VITE_GEMINI_API_KEY),
@@ -553,7 +553,7 @@ export default function Dashboard() {
     setIsTestingWhatsapp(true);
     try {
       // Test outgoing
-      const success = await sendWhatsAppMessage('5511999999999', 'Teste de conexão BiaBrain ' + new Date().toLocaleTimeString());
+      const success = await sendWhatsAppMessage('5511999999999', 'Teste de conexão VivianBrain ' + new Date().toLocaleTimeString());
       if (success) {
         toast.success('Mensagem de teste enviada!');
       } else {
@@ -570,7 +570,7 @@ export default function Dashboard() {
             messages: [{
               key: { remoteJid: 'test@s.whatsapp.net', fromMe: false },
               pushName: 'Testador',
-              message: { conversation: 'Bia, teste interno' }
+              message: { conversation: 'Vivian, teste interno' }
             }]
           }
         })
@@ -698,45 +698,45 @@ export default function Dashboard() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  toggleBia();
+                  toggleVivian();
                 }}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-bold transition-all ${
-                  biaEnabled 
+                  vivianEnabled 
                     ? 'bg-black text-white shadow-xl' 
                     : 'bg-zinc-700 text-zinc-400'
                 }`}
-                title={biaEnabled ? "Desativar Bia" : "Ativar Bia"}
+                title={vivianEnabled ? "Desativar Vivian" : "Ativar Vivian"}
               >
-                {biaEnabled ? 'ON' : 'OFF'}
+                {vivianEnabled ? 'ON' : 'OFF'}
               </button>
-              <div className={`w-2 h-2 rounded-full ${biaStatus?.status === 'online' ? 'bg-zinc-400 animate-pulse' : 'bg-red-400'}`} title="Servidor Webhook" />
-              <div className={`w-2 h-2 rounded-full ${biaOnline ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} title="Processador Local (Navegador)" />
+              <div className={`w-2 h-2 rounded-full ${vivianStatus?.status === 'online' ? 'bg-zinc-400 animate-pulse' : 'bg-red-400'}`} title="Servidor Webhook" />
+              <div className={`w-2 h-2 rounded-full ${vivianOnline ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} title="Processador Local (Navegador)" />
             </div>
           </div>
           
           <div className="flex-1 space-y-1.5 text-[9px] relative z-10">
             <div className="flex justify-between text-white/50">
               <span>Webhook URL:</span>
-              <span className="text-white font-mono truncate max-w-[100px]" title={`${biaStatus?.appUrl || ''}/api/webhook/whatsapp`}>
-                {biaStatus?.appUrl ? `${biaStatus.appUrl.substring(0, 15)}...` : 'N/A'}
+              <span className="text-white font-mono truncate max-w-[100px]" title={`${vivianStatus?.appUrl || ''}/api/webhook/whatsapp`}>
+                {vivianStatus?.appUrl ? `${vivianStatus.appUrl.substring(0, 15)}...` : 'N/A'}
               </span>
             </div>
             <div className="flex justify-between text-white/50">
               <span>Processador:</span>
-              <span className={`font-mono ${biaOnline ? 'text-blue-300' : 'text-gray-400'}`}>
-                {biaOnline ? 'ONLINE' : 'OFFLINE'}
+              <span className={`font-mono ${vivianOnline ? 'text-blue-300' : 'text-gray-400'}`}>
+                {vivianOnline ? 'ONLINE' : 'OFFLINE'}
               </span>
             </div>
             <div className="flex justify-between text-white/50">
               <span>Último Webhook:</span>
               <span className="text-white font-mono truncate max-w-[80px]">
-                {biaStatus?.lastWebhookReceived ? new Date(biaStatus.lastWebhookReceived).toLocaleTimeString() : 'Nunca'}
+                {vivianStatus?.lastWebhookReceived ? new Date(vivianStatus.lastWebhookReceived).toLocaleTimeString() : 'Nunca'}
               </span>
             </div>
             <div className="flex justify-between text-white/50">
               <span>Última Msg:</span>
               <span className="text-white font-mono truncate max-w-[80px]">
-                {biaStatus?.lastMessageExtracted || 'Nenhuma'}
+                {vivianStatus?.lastMessageExtracted || 'Nenhuma'}
               </span>
             </div>
             
@@ -966,7 +966,7 @@ export default function Dashboard() {
                 <p className="font-black text-xl truncate text-white leading-tight">Inteligência de Dados</p>
                 <div className="flex items-center gap-2 text-purple-300">
                   <Sparkles className="w-4 h-4" />
-                  <p className="text-sm font-bold">Insights da Bia Ativos</p>
+                  <p className="text-sm font-bold">Insights da Vivian Ativos</p>
                 </div>
               </div>
             </div>
@@ -1905,31 +1905,31 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-light tracking-tight text-white shrink-0">Iniciar</h1>
             
-            {/* Bia Status Indicator */}
+            {/* Vivian Status Indicator */}
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border backdrop-blur-md transition-all mt-2 md:mt-4 ${
-              biaStatus?.status === 'online' 
+              vivianStatus?.status === 'online' 
                 ? 'bg-white/10 border-white/20 text-white' 
                 : 'bg-red-500/10 border-red-500/20 text-red-400'
             }`}>
               <div className={`w-2 h-2 rounded-full animate-pulse ${
-                biaStatus?.status === 'online' ? 'bg-white' : 'bg-red-400'
+                vivianStatus?.status === 'online' ? 'bg-white' : 'bg-red-400'
               }`} />
               <span className="text-[10px] font-black uppercase tracking-widest">
-                Conexão com Banco de Dados: {biaStatus?.status === 'online' ? 'Online' : 'Offline'}
+                Conexão com Banco de Dados: {vivianStatus?.status === 'online' ? 'Online' : 'Offline'}
               </span>
-              {!biaStatus?.supabaseConfigured && biaStatus?.status === 'online' && (
+              {!vivianStatus?.supabaseConfigured && vivianStatus?.status === 'online' && (
                 <span className="text-[8px] opacity-60 ml-1">(Erro de Configuração)</span>
               )}
-              {!biaStatus?.geminiConfigured && biaStatus?.status === 'online' && (
+              {!vivianStatus?.geminiConfigured && vivianStatus?.status === 'online' && (
                 <span className="text-[8px] opacity-60 ml-1">(Erro IA)</span>
               )}
             </div>
           </div>
           
-            {biaStatus?.lastMessageExtracted && (
+            {vivianStatus?.lastMessageExtracted && (
               <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 mb-2 w-fit animate-pulse">
                 <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-1">Último comando recebido:</p>
-                <p className="text-[10px] italic text-white">"{biaStatus.lastMessageExtracted}"</p>
+                <p className="text-[10px] italic text-white">"{vivianStatus.lastMessageExtracted}"</p>
               </div>
             )}
 
@@ -1967,7 +1967,7 @@ export default function Dashboard() {
             onClick={async () => {
               const loadingToast = toast.loading('Enviando mensagem de teste...');
               try {
-                await sendWhatsAppMessage('21982240134', 'Olá! Eu sou a Bia, sua assistente virtual do CONDFY.IA. Recebi seu comando e estou pronta para ajudar! 🚀');
+                await sendWhatsAppMessage('21982240134', 'Olá! Eu sou a Vivian, sua assistente virtual do CONDFY.IA. Recebi seu comando e estou pronta para ajudar! 🚀');
                 toast.success('Mensagem enviada com sucesso!', { id: loadingToast });
               } catch (error) {
                 toast.error('Erro ao enviar mensagem.', { id: loadingToast });
