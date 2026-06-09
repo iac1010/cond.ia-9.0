@@ -279,8 +279,10 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
     }
   };
 
-  // Build a prefilled Google Calendar TEMPLATE url so that user can check details and click Save
-  const handleCreateEventTemplate = (e: React.FormEvent) => {
+  const [isSavingEvent, setIsSavingEvent] = useState<boolean>(false);
+
+  // Create the event directly on Google Calendar API
+  const handleCreateEventDirectly = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -289,46 +291,72 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
       return;
     }
 
+    if (!token) {
+      toast.error('Para agendar, sincronize sua Conta Google primeiro.');
+      return;
+    }
+
+    setIsSavingEvent(true);
+
     try {
-      // Format start and end dates to UTC format: YYYYMMDDTHHMMSSZ
+      // Format start and end dates based on inputs
       const startDateObj = new Date(`${newDate}T${newStartTime}:00`);
       const endDateObj = new Date(`${newDate}T${newEndTime}:00`);
       
       if (endDateObj <= startDateObj) {
         toast.error('A data/hora de término deve ser após o início.');
+        setIsSavingEvent(false);
         return;
       }
 
-      const toIsoStringNoMs = (d: Date) => {
-        // format: YYYYMMDDTHHMMSS (Google Template render can take both UTC 'Z' or local, let's output clean UTC format to prevent timezone offset bugs)
-        return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      // Build JSON body for Google Calendar Events Insert
+      const eventBody = {
+        summary: newTitle.trim(),
+        location: newLocation.trim() || undefined,
+        description: newDescription.trim() || 'Criado diretamente do Painel Condfy',
+        start: {
+          dateTime: startDateObj.toISOString(),
+        },
+        end: {
+          dateTime: endDateObj.toISOString(),
+        }
       };
 
-      const startFormatted = toIsoStringNoMs(startDateObj);
-      const endFormatted = toIsoStringNoMs(endDateObj);
-      const datesParam = `${startFormatted}/${endFormatted}`;
+      const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(eventBody)
+      });
 
-      const baseUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
-      const detailParams = [
-        `text=${encodeURIComponent(newTitle.trim())}`,
-        `dates=${datesParam}`,
-        `details=${encodeURIComponent(newDescription.trim() || 'Criado diretamente do Painel Condfy')}`,
-        newLocation.trim() ? `location=${encodeURIComponent(newLocation.trim())}` : ''
-      ].filter(Boolean).join('&');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Google Calendar direct insert error:', errorData);
+        if (res.status === 403 || errorData.error?.status === 'PERMISSION_DENIED') {
+          throw new Error('Sua conta está conectada apenas em modo de leitura. Por favor, desconecte sua agenda (no botão à direita com ícone de saída) e conecte novamente para ativar a permissão de salvar compromissos.');
+        }
+        throw new Error(errorData.error?.message || 'Erro ao salvar o compromisso na sua Google Agenda.');
+      }
 
-      const templateLink = `${baseUrl}&${detailParams}`;
-      window.open(templateLink, '_blank', 'noreferrer,noopener');
-      toast.success('Abrindo rascunho de compromisso no Google Calendar! 📅');
+      toast.success('Compromisso agendado com sucesso e sincronizado! 📅');
       
-      // Add a placeholder event locally for immediate visual satisfaction or refresh
-      // Reset form variables
+      // Reset form fields
       setNewTitle('');
       setNewDescription('');
       setNewLocation('');
       setShowCreateForm(false);
-    } catch (err) {
+      
+      // Automatically refresh upcoming events list
+      fetchEvents();
+    } catch (err: any) {
       console.error(err);
-      toast.error('Erro ao construir dados do compromisso.');
+      toast.error(err.message || 'Falha ao salvar compromisso.');
+    } finally {
+      setIsSavingEvent(false);
     }
   };
 
@@ -587,13 +615,13 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  onSubmit={handleCreateEventTemplate}
+                  onSubmit={handleCreateEventDirectly}
                   className="flex-grow flex flex-col justify-between h-full min-h-0 text-left"
                 >
                   <div className="space-y-1.5 overflow-y-auto pr-1 flex-grow scrollbar-thin">
                     <div className="flex items-center justify-between border-b border-white/5 pb-1">
                       <span className="text-[8px] font-black uppercase tracking-wider text-sky-400">Marcar Evento</span>
-                      <span className="text-[7.5px] text-white/40 italic font-semibold">Cria rascunho no Google</span>
+                      <span className="text-[7.5px] text-sky-400 font-extrabold uppercase tracking-wider animate-pulse bg-sky-400/10 px-1 rounded">Mecanismo Direto</span>
                     </div>
 
                     {/* Title input */}
@@ -606,6 +634,7 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
                         placeholder="Ex: Assembléia Geral Síndicos"
                         className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2.5 py-1 text-[9.5px] outline-none text-white focus:border-sky-400/50"
                         required
+                        disabled={isSavingEvent}
                       />
                     </div>
 
@@ -618,6 +647,7 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
                           value={newDate}
                           onChange={(e) => setNewDate(e.target.value)}
                           className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2 py-1 text-[9px] outline-none text-white focus:border-sky-400/50 uppercase font-bold"
+                          disabled={isSavingEvent}
                         />
                       </div>
                       <div className="space-y-1">
@@ -627,6 +657,7 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
                           value={newStartTime}
                           onChange={(e) => setNewStartTime(e.target.value)}
                           className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2 py-1 text-[9px] outline-none text-white focus:border-sky-400/50"
+                          disabled={isSavingEvent}
                         />
                       </div>
                       <div className="space-y-1">
@@ -636,6 +667,7 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
                           value={newEndTime}
                           onChange={(e) => setNewEndTime(e.target.value)}
                           className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2 py-1 text-[9px] outline-none text-white focus:border-sky-400/50"
+                          disabled={isSavingEvent}
                         />
                       </div>
                     </div>
@@ -649,6 +681,7 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
                         onChange={(e) => setNewLocation(e.target.value)}
                         placeholder="Ex: Salão de Festas ou Link Meet"
                         className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2.5 py-1 text-[9.5px] outline-none text-white focus:border-sky-400/50"
+                        disabled={isSavingEvent}
                       />
                     </div>
 
@@ -661,6 +694,7 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
                         placeholder="Ex: Pauta sobre despesas ordinárias."
                         rows={2}
                         className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2.5 py-1 text-[9.5px] outline-none text-white focus:border-sky-400/50 resize-none font-semibold leading-normal"
+                        disabled={isSavingEvent}
                       />
                     </div>
                   </div>
@@ -671,15 +705,26 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
                       type="button"
                       onClick={() => { setShowCreateForm(false); }}
                       className="flex-1 py-1 text-[8.5px] font-black uppercase text-white/50 hover:text-white hover:bg-white/5 border border-white/5 rounded-xl transition"
+                      disabled={isSavingEvent}
                     >
                       Voltar
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 py-1 text-[8.5px] font-black uppercase bg-sky-500 hover:bg-sky-600 text-black rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-sky-500/10"
+                      disabled={isSavingEvent}
+                      className="flex-1 py-1 text-[8.5px] font-black uppercase bg-sky-500 hover:bg-sky-600 disabled:bg-zinc-800 disabled:text-white/40 text-black rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-sky-500/10 cursor-pointer"
                     >
-                      <ExternalLink className="w-2.5 h-2.5" />
-                      Criar Comp.
+                      {isSavingEvent ? (
+                        <>
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-2.5 h-2.5 stroke-[3]" />
+                          Criar Comp.
+                        </>
+                      )}
                     </button>
                   </div>
                 </motion.form>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface DailyTask {
   id: string;
@@ -13,6 +14,7 @@ interface DailyTask {
   completed: boolean;
   category: 'Trabalho' | 'Pessoal' | 'Fazer Diariamente' | 'Urgente';
   createdAt: string;
+  completedAt?: string;
 }
 
 const CATEGORY_STYLES = {
@@ -39,6 +41,7 @@ const CATEGORY_STYLES = {
 };
 
 export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<DailyTask[]>(() => {
     const saved = localStorage.getItem('condfy_daily_tasks');
     if (saved) {
@@ -86,33 +89,38 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            setTimerActive(false);
-            if (pomodoroMode === 'trabalho') {
-              toast.success('Sessão Pomodoro Concluída! Hora de uma pausa curta. ☕', {
-                duration: 5000,
-                icon: '⏰',
-              });
-              setPomodoroMode('pausa');
-              return 5 * 60; // 5 mins break
-            } else {
-              toast.success('Pausa concluída! Pronto para focar novamente? 💪', {
-                duration: 5000,
-                icon: '🎯',
-              });
-              setPomodoroMode('trabalho');
-              return 25 * 60; // 25 mins work
-            }
+            return 0;
           }
           return prev - 1;
         });
       }, 1000);
-    } else if (interval) {
-      clearInterval(interval);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [timerActive, pomodoroMode]);
+  }, [timerActive]);
+
+  // Handle pomodoro timer completion
+  useEffect(() => {
+    if (timeLeft === 0 && timerActive) {
+      setTimerActive(false);
+      if (pomodoroMode === 'trabalho') {
+        toast.success('Sessão Pomodoro Concluída! Hora de uma pausa curta. ☕', {
+          duration: 5000,
+          icon: '⏰',
+        });
+        setPomodoroMode('pausa');
+        setTimeLeft(5 * 60); // 5 mins break
+      } else {
+        toast.success('Pausa concluída! Pronto para focar novamente? 💪', {
+          duration: 5000,
+          icon: '🎯',
+        });
+        setPomodoroMode('trabalho');
+        setTimeLeft(25 * 60); // 25 mins work
+      }
+    }
+  }, [timeLeft, timerActive, pomodoroMode]);
 
   const toggleTimer = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -163,7 +171,11 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
         if (isNowCompleted) {
           toast.success('Tarefa concluída! ✨', { icon: '👏' });
         }
-        return { ...t, completed: isNowCompleted };
+        return { 
+          ...t, 
+          completed: isNowCompleted,
+          completedAt: isNowCompleted ? new Date().toISOString() : undefined
+        };
       }
       return t;
     }));
@@ -222,8 +234,14 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
   return (
     <div 
       id="daily-tasks-widget"
-      className="w-full h-full text-white bg-zinc-950/90 p-4 md:p-5 rounded-3xl border border-white/10 flex flex-col justify-between overflow-hidden relative shadow-2xl pointer-events-auto"
-      onClick={(e) => e.stopPropagation()}
+      className="w-full h-full text-white bg-zinc-950/90 p-4 md:p-5 rounded-3xl border border-white/10 flex flex-col justify-between overflow-hidden relative shadow-2xl pointer-events-auto cursor-pointer hover:border-[#39FF14]/30 transition-all duration-300 hover:shadow-[0_0_30px_rgba(57,255,20,0.03)] group"
+      onClick={(e) => {
+        e.stopPropagation();
+        const isInteractive = (e.target as HTMLElement).closest('button, input, select, textarea, form, a');
+        if (!isInteractive) {
+          navigate('/tasks');
+        }
+      }}
     >
       {/* Background Glow */}
       <div className="absolute inset-0 bg-gradient-to-tr from-[#39FF14]/5 via-transparent to-purple-500/5 pointer-events-none" />
@@ -236,8 +254,11 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
               <CheckSquare className="w-4 h-4 text-[#39FF14]" />
             </div>
             <div>
-              <h3 className="text-xs font-black uppercase text-white tracking-wide">
+              <h3 className="text-xs font-black uppercase text-white tracking-wide flex items-center gap-1.5">
                 Checklist Diário
+                <span className="text-[7.5px] text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 px-1 py-0.2 rounded font-black uppercase tracking-wider animate-pulse">
+                  Abrir Métricas ➔
+                </span>
               </h3>
               <p className="text-[8px] text-white/30 uppercase tracking-widest font-bold">Produtividade</p>
             </div>
@@ -411,11 +432,21 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
                         {task.title}
                       </p>
                       
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
                         <span className={`inline-flex items-center gap-1 px-1.5 py-px rounded border text-[7px] font-black uppercase tracking-wider ${style.bg}`}>
                           <span className={`w-1 h-1 rounded-full ${style.dot}`} />
                           {task.category === 'Fazer Diariamente' ? 'Rotina' : task.category}
                         </span>
+                        {task.createdAt && (
+                          <span className="text-[6.5px] font-extrabold text-white/30 uppercase">
+                            Criada: {new Date(task.createdAt).toLocaleDateString('pt-BR')} às {new Date(task.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                        {task.completed && task.completedAt && (
+                          <span className="text-[6.5px] font-extrabold text-[#39FF14] uppercase">
+                            ✓ {new Date(task.completedAt).toLocaleDateString('pt-BR')} às {new Date(task.completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

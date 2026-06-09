@@ -102,6 +102,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     '/clients',
     '/checklist',
     '/intelligent-checklist',
+    '/tasks',
     '/qr-codes',
     '/supplies',
     '/accountability',
@@ -246,6 +247,7 @@ import FinancialBrain from './pages/FinancialBrain';
 import TechnicalReport from './pages/TechnicalReport';
 import SalesPlanning from './pages/SalesPlanning';
 import { CommercialCenter } from './pages/CommercialCenter';
+import TasksProductivity from './pages/TasksProductivity';
 
 export default function App() {
   const { vivianEnabled } = useStore();
@@ -261,6 +263,7 @@ export default function App() {
           <Route path="/clients" element={<Residents />} />
           <Route path="/products" element={<Products />} />
           <Route path="/checklist" element={<ChecklistManager />} />
+          <Route path="/tasks" element={<TasksProductivity />} />
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/service-orders" element={<Tickets />} />
           <Route path="/kanban" element={<KanbanBoard />} />

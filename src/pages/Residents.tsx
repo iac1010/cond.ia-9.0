@@ -127,8 +127,8 @@ export default function Residents() {
         <div className="flex items-center gap-4 md:gap-6">
           <BackButton iconSize={6} className="p-3 md:p-4" />
           <div>
-            <h1 className="text-2xl md:text-6xl font-light tracking-tight">Moradores</h1>
-            <p className="text-xs md:text-xl opacity-60 mt-1 md:mt-2 font-light">Gerencie os residentes e unidades</p>
+            <h1 className="text-2xl md:text-6xl font-light tracking-tight">Empresas Parceiras</h1>
+            <p className="text-xs md:text-xl opacity-60 mt-1 md:mt-2 font-light">Gerencie os parceiros, prestadores de serviços e empresas contratadas</p>
           </div>
         </div>
         
@@ -137,7 +137,7 @@ export default function Residents() {
             <div className="relative flex-1 md:w-64">
               <input 
                 type="text" 
-                placeholder="Buscar morador ou apto..." 
+                placeholder="Buscar empresa, ramo de atuação ou responsável..." 
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 outline-none focus:bg-white/20 transition-all text-white placeholder:text-white/40"
@@ -148,9 +148,9 @@ export default function Residents() {
               onChange={e => setTowerFilter(e.target.value)}
               className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 outline-none focus:bg-white/20 transition-all text-white"
             >
-              <option value="" className="bg-zinc-900">Todas Torres</option>
+              <option value="" className="bg-zinc-900">Todos os Segmentos</option>
               {towers.map(t => (
-                <option key={t} value={t} className="bg-zinc-900">Torre {t}</option>
+                <option key={t} value={t} className="bg-zinc-900">{t}</option>
               ))}
             </select>
           </div>
@@ -161,7 +161,7 @@ export default function Residents() {
             className="bg-white text-black px-6 md:px-8 py-3 md:py-4 flex items-center justify-center gap-3 border border-white/20 transition-all group w-full md:w-auto rounded-xl font-bold"
           >
             <Plus className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-90 transition-transform" /> 
-            <span>Novo Morador</span>
+            <span>Cadastrar Empresa</span>
           </motion.button>
         </div>
       </header>
@@ -209,17 +209,27 @@ export default function Residents() {
 
               <div className="mt-4 relative z-10">
                 <h3 className="text-xl md:text-2xl font-bold leading-tight mb-1 line-clamp-2 drop-shadow-lg">{client.name}</h3>
-                <div className="flex gap-2 mb-2">
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   {client.tower && (
-                    <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Torre {client.tower}</span>
+                    <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{client.tower}</span>
                   )}
                   {client.unit && (
-                    <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Apto {client.unit}</span>
+                    <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{client.unit}</span>
                   )}
                 </div>
+                {client.document && (
+                  <p className="text-[10px] md:text-xs opacity-90 flex items-center gap-1 drop-shadow-md mb-1 text-white/90">
+                    <FileText className="w-3.5 h-3.5" /> <span className="font-semibold">CNPJ:</span> {client.document}
+                  </p>
+                )}
                 {client.contactPerson && (
-                  <p className="text-[10px] md:text-sm opacity-80 flex items-center gap-1 drop-shadow-md">
-                    <User className="w-3 h-3" /> {client.contactPerson}
+                  <p className="text-[10px] md:text-xs opacity-80 flex items-center gap-1 drop-shadow-md mb-1">
+                    <User className="w-3.5 h-3.5" /> <span className="font-semibold">Cargo/Resp:</span> {client.contactPerson}
+                  </p>
+                )}
+                {client.pets && (
+                  <p className="text-[9.5px] md:text-[10.5px] opacity-75 flex items-center gap-1 mt-1 font-medium bg-black/10 px-1.5 py-0.5 rounded border border-white/5 max-w-full truncate drop-shadow-md" title={client.pets}>
+                    🛠️ {client.pets}
                   </p>
                 )}
               </div>
@@ -254,8 +264,8 @@ export default function Residents() {
                 referrerPolicy="no-referrer"
               />
             </div>
-            <h3 className="text-2xl font-light opacity-60">Nenhum morador encontrado</h3>
-            <p className="opacity-40 mt-2">Tente ajustar seus filtros ou cadastrar um novo morador.</p>
+            <h3 className="text-2xl font-light opacity-60">Nenhuma empresa encontrada</h3>
+            <p className="opacity-40 mt-2">Tente ajustar seus filtros ou cadastrar uma nova empresa.</p>
           </div>
         )}
       </div>
@@ -263,65 +273,65 @@ export default function Residents() {
       <Modal 
         isOpen={isModalOpen} 
         onClose={closeModal} 
-        title={editingId ? 'Editar Cliente' : 'Novo Cliente'}
+        title={editingId ? 'Editar Empresa Parceira' : 'Nova Empresa Parceira'}
         maxWidth="md"
         glass
       >
         <form onSubmit={handleSubmit} className="space-y-6 p-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
-              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Nome Completo *</label>
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Razão Social / Nome da Empresa *</label>
               <input 
                 required
                 type="text" 
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="Ex: João da Silva"
+                placeholder="Ex: Condfy Serviços Gerais Ltda"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Torre</label>
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Ramo / Segmento de Atuação</label>
               <input 
                 type="text" 
                 value={formData.tower}
                 onChange={e => setFormData({...formData, tower: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="Ex: A"
+                placeholder="Ex: Elevadores, Dedetizadora, Segurança, Pintura"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Apartamento / Unidade</label>
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Sala / Conjunto / Unidade</label>
               <input 
                 type="text" 
                 value={formData.unit}
                 onChange={e => setFormData({...formData, unit: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="Ex: 101"
+                placeholder="Ex: Sala 204 ou Bloco Principal"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">CPF</label>
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">CNPJ</label>
               <input 
                 type="text" 
                 value={formData.document}
                 onChange={e => setFormData({...formData, document: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="00.000.000/0000-00"
+                placeholder="Ex: 00.000.000/0001-00"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Responsável</label>
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Responsável / Contato</label>
               <input 
                 type="text" 
                 value={formData.contactPerson}
                 onChange={e => setFormData({...formData, contactPerson: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="Nome do síndico"
+                placeholder="Ex: João da Silva (Gerente)"
               />
             </div>
 
@@ -333,40 +343,40 @@ export default function Residents() {
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="(00) 00000-0000"
+                placeholder="Ex: (11) 99999-9999"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">E-mail</label>
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">E-mail de Contrato</label>
               <input 
                 type="email" 
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="email@exemplo.com"
+                placeholder="Ex: comercial@empresa.com"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Veículos</label>
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Inscrição Estadual (IE)</label>
               <input 
                 type="text" 
                 value={formData.vehicles}
                 onChange={e => setFormData({...formData, vehicles: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="Placa, Modelo, Cor"
+                placeholder="Ex: 123.456.789.111"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Pets</label>
+              <label className="block text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Serviços Oferecidos / Especialidade</label>
               <input 
                 type="text" 
                 value={formData.pets}
                 onChange={e => setFormData({...formData, pets: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
-                placeholder="Nome, Raça, Porte"
+                placeholder="Ex: Limpeza de Ar Condicionado, Manutenção Predial de Caldeiras"
               />
             </div>
 
@@ -419,7 +429,7 @@ export default function Residents() {
       >
         <div className="space-y-6 p-2">
           <p className="text-xl font-light text-white/70">
-            Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir esta empresa parceira? Esta ação não pode ser desfeita.
           </p>
           <div className="flex justify-end gap-3 pt-6">
             <button 

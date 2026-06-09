@@ -144,7 +144,7 @@ export default function Contracts() {
             {[
               { icon: Home, label: 'Início', path: '/' },
               { icon: FileText, label: 'Todos os Contratos', onClick: () => document.getElementById('contracts-table')?.scrollIntoView({ behavior: 'smooth' }) },
-              { icon: FolderOpen, label: 'Moradores', path: '/clients' },
+              { icon: FolderOpen, label: 'Empresas', path: '/clients' },
               { icon: PieChart, label: 'Análise', onClick: () => document.getElementById('stats-section')?.scrollIntoView({ behavior: 'smooth' }) },
               { icon: SettingsIcon, label: 'Configurações', path: '/settings' },
             ].map((item: any, i) => (

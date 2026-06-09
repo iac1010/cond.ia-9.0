@@ -376,7 +376,7 @@ export default function IntelligentChecklist() {
               { icon: DollarSign, label: 'Financeiro', path: '/financial' },
               { icon: MessageSquare, label: 'Comunicação', path: '/notices' },
               { icon: Wrench, label: 'Operacional', path: '/tickets' },
-              { icon: Users, label: 'Moradores', path: '/clients' },
+              { icon: Users, label: 'Empresas', path: '/clients' },
               { icon: Settings, label: 'Configurações', path: '/settings' },
             ].map((item, idx) => (
               <button 

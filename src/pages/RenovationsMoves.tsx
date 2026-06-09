@@ -137,7 +137,7 @@ export default function RenovationsMoves() {
             {[
               { icon: Home, label: 'Início', path: '/' },
               { icon: LayoutGrid, label: 'Visão Geral', onClick: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
-              { icon: Building2, label: 'Moradores', path: '/clients' },
+              { icon: Building2, label: 'Empresas', path: '/clients' },
               { icon: Truck, label: 'Mudanças', onClick: () => setActiveTab('MOVES') },
               { icon: PieChart, label: 'Análise', onClick: () => document.getElementById('stats-section')?.scrollIntoView({ behavior: 'smooth' }) },
               { icon: SettingsIcon, label: 'Configurações', path: '/settings' },
