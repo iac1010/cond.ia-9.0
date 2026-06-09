@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   color TEXT,
   history JSONB, -- Array de objetos: [{id, date, note, userName}]
   used_materials JSONB DEFAULT '[]',
+  started_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -537,6 +538,20 @@ CREATE TABLE IF NOT EXISTS whatsapp_commands (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 37. Tabela de Relatórios Técnicos
+CREATE TABLE IF NOT EXISTS technical_reports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+  client_name TEXT,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  type TEXT NOT NULL CHECK (type IN ('standard', 'client')),
+  os_number TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Habilitar Realtime para estas tabelas
 ALTER PUBLICATION supabase_realtime ADD TABLE whatsapp_commands;
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
@@ -649,3 +664,70 @@ ALTER TABLE IF EXISTS budget_forecasts ADD COLUMN IF NOT EXISTS monthly_projecti
 ALTER TABLE IF EXISTS budget_forecasts ADD COLUMN IF NOT EXISTS categories JSONB DEFAULT '[]';
 ALTER TABLE IF EXISTS budget_forecasts ADD COLUMN IF NOT EXISTS insights TEXT[] DEFAULT '{}';
 ALTER TABLE IF EXISTS budget_forecasts ADD COLUMN IF NOT EXISTS confidence DECIMAL(5, 2);
+
+-- ==========================================================
+-- NOVAS TABELAS PARA AS FUNCIONALIDADES RECENTES (2026)
+-- ==========================================================
+
+-- 17. Bloco de Notas (Estilo Google Keep)
+CREATE TABLE IF NOT EXISTS keep_notes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT,
+  content TEXT,
+  color_id TEXT DEFAULT 'default',
+  is_pinned BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 18. Histórico do Google Meet Express
+CREATE TABLE IF NOT EXISTS google_meet_records (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT NOT NULL,
+  code TEXT NOT NULL,
+  url TEXT NOT NULL,
+  tags TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 19. Histórico de Tradução do Google Tradutor IA
+CREATE TABLE IF NOT EXISTS translate_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  source_text TEXT NOT NULL,
+  translated_text TEXT NOT NULL,
+  sl TEXT NOT NULL, -- Código do idioma de origem (ex: auto, pt, en)
+  tl TEXT NOT NULL, -- Código do idioma de destino (ex: en, es, pt)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Habilitar RLS (Row Level Security) e Políticas de acesso para as novas tabelas
+ALTER TABLE keep_notes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow full access to authenticated users" ON keep_notes;
+CREATE POLICY "Allow full access to authenticated users" ON keep_notes FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow full access to anon" ON keep_notes;
+CREATE POLICY "Allow full access to anon" ON keep_notes FOR ALL TO anon USING (true) WITH CHECK (true);
+
+ALTER TABLE google_meet_records ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow full access to authenticated users" ON google_meet_records;
+CREATE POLICY "Allow full access to authenticated users" ON google_meet_records FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow full access to anon" ON google_meet_records;
+CREATE POLICY "Allow full access to anon" ON google_meet_records FOR ALL TO anon USING (true) WITH CHECK (true);
+
+ALTER TABLE translate_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow full access to authenticated users" ON translate_history;
+CREATE POLICY "Allow full access to authenticated users" ON translate_history FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow full access to anon" ON translate_history;
+CREATE POLICY "Allow full access to anon" ON translate_history FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Gatilhos (triggers) de modificação modtime para as novas tabelas
+DROP TRIGGER IF EXISTS update_keep_notes_modtime ON keep_notes;
+CREATE TRIGGER update_keep_notes_modtime BEFORE UPDATE ON keep_notes FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+DROP TRIGGER IF EXISTS update_google_meet_records_modtime ON google_meet_records;
+CREATE TRIGGER update_google_meet_records_modtime BEFORE UPDATE ON google_meet_records FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+DROP TRIGGER IF EXISTS update_translate_history_modtime ON translate_history;
+CREATE TRIGGER update_translate_history_modtime BEFORE UPDATE ON translate_history FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+

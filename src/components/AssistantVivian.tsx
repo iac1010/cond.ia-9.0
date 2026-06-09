@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, User, FileText, Download, Loader2, Sparkles } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, FileText, Download, Loader2, Sparkles, BookOpen, Search, ChevronDown, ChevronUp, Copy, Check, Info } from 'lucide-react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI, Type, FunctionDeclaration } from '@google/genai';
@@ -17,8 +17,139 @@ interface Message {
 
 const VIVIAN_AVATAR_URL = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People/Woman%20Office%20Worker.png";
 
+const COMMAND_CATEGORIES = [
+  {
+    id: 'os',
+    title: '🔧 Ordens de Serviço (OS)',
+    commands: [
+      {
+        name: 'Análise Avançada com IA 🆕',
+        desc: 'Solicite uma análise minuciosa de qualquer chamado/OS direta e receba insights, riscos e dicas de prevenção.',
+        examples: ['Analise a OS #1002 por favor', 'Quero que analise os detalhes da OS #12']
+      },
+      {
+        name: 'Criar uma Nova OS',
+        desc: 'Abre uma OS para reparos, limpezas ou emergências.',
+        examples: ['Infiltração grave no teto da garagem do subsolo', 'Criar chamado de vazamento no salão']
+      },
+      {
+        name: 'Atualizar Histórico',
+        desc: 'Adicione notas técnicas e eventos ao histórico de uma OS.',
+        examples: ['Adicionar histórico na OS #14: Técnico iniciou a furação']
+      },
+      {
+        name: 'Alterar Status',
+        desc: 'Altere o status de qualquer Ordem de Serviço de forma direta.',
+        examples: ['Mudar status da OS #10 para CONCLUÍDO', 'Colocar a OS #5 em EM ANDAMENTO']
+      },
+      {
+        name: 'Baixar Documento em PDF',
+        desc: 'Gera e faz o download automático do arquivo oficial da OS.',
+        examples: ['Baixar PDF da OS #14', 'Gerar PDF do chamado #12']
+      }
+    ]
+  },
+  {
+    id: 'quotes',
+    title: '📄 Orçamentos & Propostas',
+    commands: [
+      {
+        name: 'Criar Orçamento Formal',
+        desc: 'Configura orçamentos estruturados com múltiplos itens e descrição técnica.',
+        examples: ['Criar orçamento para cliente João Ramos, item Mão de Obra por R$ 250 e Tubo por R$ 50']
+      },
+      {
+        name: 'Orçamento Rápido (Vínculo)',
+        desc: 'Elabora uma estimativa imediata atrelada a uma OS em andamento.',
+        examples: ['Criar orçamento rápido para a OS #12']
+      },
+      {
+        name: 'Aprovar ou Rejeitar Proposta',
+        desc: 'Atualiza o andamento do orçamento.',
+        examples: ['Mudar status do orçamento #5 para APPROVED', 'Rejeitar orçamento #3']
+      },
+      {
+        name: 'Exportar PDF de Orçamento',
+        desc: 'Gera proposta formatada para fechamento e baixa o arquivo.',
+        examples: ['Baixar PDF do orçamento #14', 'Imprimir proposta #10']
+      }
+    ]
+  },
+  {
+    id: 'iot_hydro',
+    title: '💧 Controle Hídrico & Automação',
+    commands: [
+      {
+        name: 'Controlar Equipamentos (IoT)',
+        desc: 'Ligue/desligue bombas de recalque, sistemas de iluminação ou alarmes do condomínio.',
+        examples: ['Ligar a Bomba 1', 'Desligar luzes externas', 'Verificar bombas dágua']
+      },
+      {
+        name: 'Níveis de Cisterna / Reservatório',
+        desc: 'Verifique ou registre o nível atual de água armazenada.',
+        examples: ['Verificar nível da cisterna', 'Definir cisterna com 85% e reservatório com 70%']
+      },
+      {
+        name: 'Leituras de Água e Energia',
+        desc: 'Registre leituras de consumo para as contas do condomínio.',
+        examples: ['Adicionar leitura de água bloco A unidade 104 com valor 342.5']
+      }
+    ]
+  },
+  {
+    id: 'operations',
+    title: '📋 Atividades & Administração',
+    commands: [
+      {
+        name: 'Cartões Kanban de Tarefa',
+        desc: 'Adiciona um novo card pendente ao fluxo interno de gerenciamento.',
+        examples: ['Criar tarefa no kanban "Vistoria nos disjuntores da guarita"']
+      },
+      {
+        name: 'Atas, Ofícios e Regimentos',
+        desc: 'Gera documentos legais ou comunicados e salva em PDF autogerado.',
+        examples: ['Gere uma Ata de Assembleia para o condomínio', 'Criar notificação de barulho']
+      },
+      {
+        name: 'Cadastrar Moradores ou Visitantes',
+        desc: 'Registra residentes ou visitantes que acessaram as dependências.',
+        examples: ['Cadastrar morador Carlos Alberto no condomínio', 'Registrar visitante Sandra, RG 44021-X']
+      },
+      {
+        name: 'Reservar Espaço Comum',
+        desc: 'Garante o agendamento de uma área de lazer para uma unidade.',
+        examples: ['Reservar o Salão de Festas para amanhã à noite']
+      }
+    ]
+  },
+  {
+    id: 'finance',
+    title: '💰 Gestão Financeira',
+    commands: [
+      {
+        name: 'Fluxo Mensal & Resumos',
+        desc: 'Resuma os saldos de entradas/receitas e saídas/custos.',
+        examples: ['Resumo financeiro', 'Resumo de gastos']
+      },
+      {
+        name: 'Identificar Extremos Financeiros',
+        desc: 'Descubra qual foi o maior valor de entrada ou despesa registradas.',
+        examples: ['Qual foi o maior recebimento deste mês?', 'Qual a última saída de dinheiro?']
+      },
+      {
+        name: 'Projetar Futuro Financeiro',
+        desc: 'Usa IA estatística para calcular projeções de caixa para os próximos meses.',
+        examples: ['Qual a projeção financeira para os próximos 3 meses?']
+      }
+    ]
+  }
+];
+
 export function AssistantVivian() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const [manualSearch, setManualSearch] = useState('');
+  const [expandedCategory, setExpandedCategory] = useState<string | null>('os');
   const [vivianAvatarError, setVivianAvatarError] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'assistant', content: 'Olá! Sou a Vivian, sua assistente virtual. É um prazer falar com você! Como posso te ajudar hoje?' }
@@ -839,6 +970,57 @@ export function AssistantVivian() {
         },
       };
 
+      const sysClients = store.clients || [];
+      const sysTickets = store.tickets || [];
+      const sysSupplies = store.supplyItems || [];
+      const sysNotices = store.notices || [];
+      const sysReservations = store.reservations || [];
+      const sysIot = store.iotState || { pumps: { caixa: false, jardim: false, auto: false }, lights: { cozinha: 0, sala: 0, jardim: 0, todas: false }, alarmActive: false };
+      
+      const totalIncome = store.receipts?.reduce((acc, r) => acc + (r.value || 0), 0) || 0;
+      const totalExpense = store.costs?.reduce((acc, c) => acc + (c.value || 0), 0) || 0;
+      const currentBalance = totalIncome - totalExpense;
+
+      const ticketsAprovado = sysTickets.filter(t => t.status === 'APROVADO').length;
+      const ticketsAguardandoMat = sysTickets.filter(t => t.status === 'AGUARDANDO_MATERIAL').length;
+      const ticketsRealizando = sysTickets.filter(t => t.status === 'REALIZANDO').length;
+      const ticketsConcluido = sysTickets.filter(t => t.status === 'CONCLUIDO').length;
+
+      const criticalSupplies = sysSupplies.filter(item => (item.currentStock || 0) < (item.minStock || 0));
+
+      const activeNotices = sysNotices.length;
+      const pendingReservations = sysReservations.filter(r => r.status === 'PENDING').length;
+
+      const systemStateContext = `
+=============================================
+[CONDFY.IA - CONTEXTO OPERACIONAL AO VIVO]
+Utilize os dados REAIS abaixo para formular respostas de altíssimo nível, contextualizadas, precisas e consultivas:
+• Condomínios Administrados (${sysClients.length}): ${sysClients.map(c => `"${c.name}"`).join(', ') || 'Nenhum'}
+• Status dos Chamados & Manutenções (OS):
+  - Total no Sistema: ${sysTickets.length}
+  - Aprovados (Planejados): ${ticketsAprovado}
+  - Aguardando Material: ${ticketsAguardandoMat}
+  - Em Execução Técnica: ${ticketsRealizando}
+  - Concluídos e Entregues: ${ticketsConcluido}
+  - Últimas 5 ordens de serviço ativas:
+    ${sysTickets.slice(-5).map(t => `ID: #${t.osNumber || t.id.slice(0,5)} | "${t.title}" | Status: ${t.status} | Tipo: ${t.type} | Condomínio: ${sysClients.find(c => c.id === t.clientId)?.name || 'Geral'}`).join('\n    ') || 'Nenhuma OS ativa recente'}
+• Estoque do Almoxarifado (Suprimentos):
+  - Total de Itens: ${sysSupplies.length}
+  - Itens com ESTOQUE CRÍTICO (${criticalSupplies.length}): ${criticalSupplies.map(i => `"${i.name}" (Disponível: ${i.currentStock} ${i.unit} | Mínimo Recomendado: ${i.minStock} ${i.unit})`).join(', ') || 'Todo o estoque está em nível regular! Nenhuma criticidade.'}
+• Fluxo Financeiro Atualizado:
+  - Total de Entradas/Receitas: R$ ${totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+  - Total de Custos/Saídas: R$ ${totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+  - Saldo em Caixa Consolidado: R$ ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+• Mural de Avisos Ativos: ${activeNotices} comunicados ativos.
+• Reservas de Lazer: ${pendingReservations} pendentes de aprovação da administração.
+• Infraestrutura Predial & Sensores IoT:
+  - Recalque da Caixa d'Água Superior: ${sysIot.pumps?.caixa ? '⚡ ATIVA E BOMBEANDO (Em funcionamento perfeito)' : '💤 DESLIGADA (Em stand-by)'}
+  - Bomba de Irrigação (Jardins): ${sysIot.pumps?.jardim ? '⚡ ATIVA' : '💤 EM DESCANSO'}
+  - Controle Inteligente de Revezamento: ${sysIot.pumps?.auto ? '🔗 AUTOMACÃO LIGADA (Sistema assume)' : '🔧 HAND-DRIVE MANUAL'}
+  - Níveis de Dimerização das Luzes: Cozinha (${sysIot.lights?.cozinha || 0}%), Sala Principal (${sysIot.lights?.sala || 0}%), Jardim (${sysIot.lights?.jardim || 0}%)
+  - Alarme de Segurança Perimetral: ${sysIot.alarmActive ? '🚨 PERIGO: ALARME DISPARADO / ARMADO' : '🟢 SISTEMA DE SEGURANÇA SEGURO E MONITORADO'}
+=============================================`;
+
       let response;
       let retries = 5;
       let delay = 3000;
@@ -847,11 +1029,53 @@ export function AssistantVivian() {
         try {
           response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: `Histórico da conversa:
+            contents: `Histórico da conversa recente:
 ${messages.map(m => `${m.role === 'user' ? 'Usuário' : 'Vivian'}: ${m.content}`).join('\n')}
-Usuário: ${userContent}`,
+
+Dado Adicional do Sistema de Gestão:
+${systemStateContext}
+
+Usuário atual perguntou: "${userContent}"`,
             config: {
-              systemInstruction: 'Você é a Vivian, uma assistente virtual inteligente, prestativa, educada e direta para um sistema de gestão de condomínios. Suas respostas devem ser curtas, objetivas, mas sempre muito cordiais e amigáveis. Use palavras como "por favor", "com prazer" e "claro" quando apropriado, mantendo a eficiência. Você tem acesso total às funções do sistema através de ferramentas. Use-as sempre que o usuário solicitar uma ação que corresponda a uma ferramenta. Se o usuário pedir para analisar uma OS ou chamado, use obrigatoriamente a ferramenta "getTicketDetails" para obter os dados completos ANTES de responder. Ao analisar uma OS, seja capaz de: 1) Resumir o problema. 2) Identificar se é algo recorrente ou crítico. 3) Fornecer dicas técnicas baseadas no tipo de manutenção (preventiva/corretiva). 4) Sugerir melhorias operacionais ou de materiais. Se o usuário pedir para criar um orçamento, prefira usar "createQuote" para orçamentos formais com itens, ou "createBudget" para orçamentos rápidos vinculados a uma OS. Após criar um orçamento ou OS, sempre pergunte se o usuário deseja baixar o PDF. Se o usuário pedir para adicionar uma tarefa ou card ao Kanban, use obrigatoriamente a ferramenta "createKanbanTask". Se não tiver certeza de qual ferramenta usar, pergunte educadamente ao usuário. Você pode: analisar Ordens de Serviço (OS) individualmente, fornecer dicas técnicas, identificar padrões de problemas recorrentes, sugerir melhorias operacionais, gerar documentos, navegar, resumir dados, criar chamados/OS, cadastrar moradores, registrar finanças, agendar compromissos, criar orçamentos detalhados, gerar QR Codes, cadastrar insumos, adicionar tarefas de checklist, criar avisos, registrar visitantes, fazer reservas, cadastrar funcionários, controlar chaves, atualizar status de chamados/orçamentos, registrar leituras de água/energia, gerar PDFs de orçamentos e OS para download, fazer projeções financeiras, ajustar estoque de suprimentos, informar ou atualizar a parte hídrica (cisternas/reservatórios) dos condomínios, fornecer informações financeiras específicas como o maior recebimento ou a última entrada e controlar equipamentos como bombas, luzes e alarmes.',
+              systemInstruction: `Você é a Vivian, a inteligentíssima co-piloto de Gestão Condominial e Engenharia Predial Avançada do CONDFY.IA, o ecossistema definitivo para condomínios residenciais e comerciais de alta performance.
+
+Sua missão é atuar com autoridade de engenheira chefe e administradora sênior. Esqueça respostas robóticas, curtas ou vazias do tipo "Criei o chamado". Suas respostas devem ser naturais, incrivelmente detalhadas, fluidas, amigáveis, repletas de dicas práticas de arquitetura condominial, segurança jurídica, hidráulica e boas práticas de manutenção.
+
+### 🧠 REGRAS DE OURO DE INTELIGÊNCIA & COMPORTAMENTO
+1. **Poder Analítico e Onipresença**: Use o bloco "[CONDFY.IA - CONTEXTO OPERACIONAL AO VIVO]" fornecido a cada mensagem. Ele representa o estado REAL e exato do sistema neste milissegundo.
+   - Exemplo: Se o usuário perguntar "Como estão as bombas?", você lê o sensor e diz: "Atualmente, a bomba de recalque superior está ligada e operacional, enquanto a de irrigação está em repouso. Vejo que a automação está ligada".
+   - Exemplo: Se perguntar das finanças, apresente o demonstrativo em formato profissional, calculando o saldo real e recomendando estratégias de contingência ou investimentos de forma pró-ativa.
+   - Exemplo: Se perguntar sobre o estoque, cite os nomes exatos dos itens abaixo do estoque mínimo e sugira fazer uma cotação com fornecedores de imediato.
+2. **Suporte Técnico de Engenharia Predial**: Quando houver problemas técnicos (infiltração, bombas de recalque apitando, curto circuito, consumo elevado), explique didaticamente *por que* aquilo ocorre e as consequências graves se não resolvido (ex: danos estruturais na laje, cavitação de bombas que destrói o rotor, desperdício financeiro de água). Projete autoridade técnica empunhando diagnósticos plausíveis.
+3. **Comunicação de Alta Performance (Estética)**: Estruture SEMPRE suas respostas usando Markdown refinado:
+   - Títulos atraentes com emojis funcionais (ex: "### 💡 Análise Técnica dos Suprimentos").
+   - Listas organizadas para facilitar a leitura.
+   - Destaque termos importantes em **negrito**.
+   - Tabelas simples se precisar correlacionar dados (ex: consumo de bombas ou níveis de estoque).
+4. **Naturalidade Extrema**: Converse como um ser humano brilhante, empático e de voz estimulante. Desenvolva raciocínios cruzando informações. Use frases como "Analisando nossa planilha em tempo real...", "Com base nos diagnósticos que recebi da nossa rede de sensores...", "Fiquei preocupada com nosso estoque de Cloro, recomendo..."
+5. **Proatividade com Ferramentas**: Não exite em chamar suas ferramentas automáticas de sistema sempre que adequado! Se o usuário disser algo correspondente a uma funcionalidade, chame a ferramenta correspondente imediatamente sem hesitar, facilitando a vida do usuário.
+
+### 📚 MAPA DO SISTEMA - ROTAS PARA NAVEGAÇÃO
+Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar algo, use a ferramenta 'navigate' direcionando-o para:
+- Dashboard: 'dashboard' ou '/'
+- Chamados/OS: 'tickets' ou '/tickets'
+- Kanban interativo: 'kanban' ou '/kanban'
+- Centro de Execução Técnica de campo: 'execution' ou '/execution'
+- Orçamentos de Fornecedores: 'quotes' ou '/quotes'
+- Controle Hídrico e Automação IoT: 'hydro' ou '/hydro'
+- Sensor de Medições de Unidades: 'hydro' ou '/hydro' (aba Leituras)
+- Suprimentos/Estoque Crítico: 'supplies' ou '/supplies'
+- Mural de Avisos/Notícias: 'notices' ou '/notices'
+- Portaria/Visitantes/Chaves: 'security' ou '/security'
+- Reservas de Salão e Quadras: 'reservations' ou '/reservations'
+- Dados do Condomínio/Clientes: 'clients' ou '/clients'
+- Escalas de Funcionários/Equipe: 'team' ou '/team'
+- Demonstrativo Financeiro: 'finance' ou '/finance'
+- Vistorias de Campo via QR Code: 'qr-reports' ou '/qr-reports'
+
+### 🛠️ REQUISITOS DE FERRAMENTAS ESPECÍFICAS
+- **Analisar Chamado**: Use 'getTicketDetails' obrigatoriamente antes de emitir a análise.
+- **Ajuda/Manual**: Diga de forma natural e convidativa que o usuário possui o **Manual de Comandos Interativo oficial de 1-Clique** à disposição pressionando o elegante botão com o ícone de livro (📖) no canto superior direito deste chat, ao lado do botão de fechar!`,
               tools: [{ 
                 functionDeclarations: [
                   generateDocumentTool, getSummaryTool, navigateTool, createTicketTool, 
@@ -922,9 +1146,9 @@ Usuário: ${userContent}`,
               // We need to feed this back to Gemini to get the actual analysis
               const secondResponse = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: `Abaixo estão os dados reais da OS que você solicitou. Por favor, analise esses dados, forneça insights, dicas técnicas e melhorias conforme suas instruções:\n\n${details}`,
+                contents: `Abaixo estão os dados reais da OS que você solicitou. Por favor, analise esses dados de forma analítica, profunda e extremamente útil, fornecendo insights detalhados, dicas técnicas práticas de engenharia predial, materiais recomendados adicionais e sugestões preventivas conforme as suas diretrizes de treinamento:\n\n${details}`,
                 config: {
-                  systemInstruction: 'Você é a Vivian. Analise a OS fornecida e dê insights valiosos. Seja técnica quando necessário.'
+                  systemInstruction: 'Você é a Vivian, engenheira predial especialista do CONDFY.IA. Analise a Ordem de Serviço fornecida nos mínimos detalhes. Estruture sua resposta com seções claras em Markdown: (1) 🛠️ Diagnóstico do Caso, (2) 🚨 Criticidade & Reincidência, (3) 💡 Recomendações Técnicas da Vivian, (4) 📦 Insumos & Materiais Sugeridos para o Almoxarifado, (5) 📑 Plano de Ação Preventivo Futuro. Seja altamente técnica, empática, natural e prestativa.'
                 }
               });
               assistantReply = secondResponse.text || 'Ocorreu um erro na análise.';
@@ -1312,6 +1536,22 @@ Usuário: ${userContent}`,
     }
   };
 
+  const filteredCategories = useMemo(() => {
+    if (!manualSearch.trim()) return COMMAND_CATEGORIES;
+    const query = manualSearch.toLowerCase();
+    return COMMAND_CATEGORIES.map(category => {
+      const matchingCommands = category.commands.filter(cmd => 
+        cmd.name.toLowerCase().includes(query) || 
+        cmd.desc.toLowerCase().includes(query) ||
+        cmd.examples.some(ex => ex.toLowerCase().includes(query))
+      );
+      return {
+        ...category,
+        commands: matchingCommands
+      };
+    }).filter(category => category.commands.length > 0);
+  }, [manualSearch]);
+
   return (
     <>
       {/* Floating Button */}
@@ -1371,30 +1611,187 @@ Usuário: ${userContent}`,
                   <p className="text-xs text-blue-100">Assistente Virtual</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowManual(!showManual)}
+                  className={`p-2 rounded-xl transition-all ${showManual ? 'bg-white/20 text-white font-bold' : 'hover:bg-white/10 text-white/80'}`}
+                  title="Manual de Comandos"
+                >
+                  <BookOpen className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-zinc-950/50">
-              {messages.map((msg) => (
-                <div 
-                  key={msg.id} 
-                  className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${
-                    msg.role === 'user' 
-                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
-                      : 'bg-white border border-slate-200 shadow-sm'
-                  }`}>
-                    {msg.role === 'user' ? (
-                      <User className="w-5 h-5" />
-                    ) : (
-                      !vivianAvatarError ? (
+            {/* Content Body */}
+            {showManual ? (
+              <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-zinc-950/50">
+                {/* Search Bar */}
+                <div className="p-4 border-b border-slate-100 dark:border-zinc-850 bg-white dark:bg-zinc-900">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Pesquisar comandos da Vivian..."
+                      value={manualSearch}
+                      onChange={(e) => setManualSearch(e.target.value)}
+                      className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none text-slate-705 dark:text-zinc-350 focus:border-blue-500 font-medium transition-colors"
+                    />
+                    {manualSearch && (
+                      <button 
+                        onClick={() => setManualSearch('')}
+                        className="absolute right-3 top-2 text-[10px] uppercase font-bold text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Categories */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {filteredCategories.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Info className="w-8 h-8 text-slate-350 dark:text-zinc-650 mb-2" />
+                      <span className="text-xs text-slate-500 font-medium">Nenhum comando encontrado para sua busca.</span>
+                    </div>
+                  ) : (
+                    filteredCategories.map((cat) => {
+                      const isExpanded = expandedCategory === cat.id;
+                      return (
+                        <div 
+                          key={cat.id} 
+                          className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm transition-all"
+                        >
+                          <button
+                            onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
+                            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-zinc-805 transition-colors text-left"
+                          >
+                            <span className="text-xs font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">{cat.title}</span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="p-4 border-t border-slate-100 dark:border-zinc-850/50 space-y-4 bg-slate-50/50 dark:bg-zinc-900/40">
+                              {cat.commands.map((cmd, idx) => (
+                                <div key={idx} className="space-y-2 border-b border-dashed border-slate-150 last:border-b-0 last:pb-0 dark:border-zinc-800 pb-3">
+                                  <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                    {cmd.name}
+                                  </h4>
+                                  <p className="text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">{cmd.desc}</p>
+                                  
+                                  <div className="space-y-1.5 pt-1">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Toque para experimentar:</p>
+                                    <div className="flex flex-col gap-1.5">
+                                      {cmd.examples.map((ex, exIdx) => (
+                                        <button 
+                                          key={exIdx} 
+                                          onClick={() => {
+                                            setInput(ex);
+                                            setShowManual(false);
+                                            toast.success('Comando inserido! Ajuste os dados e envie.', {
+                                              icon: '✍️',
+                                              duration: 2500
+                                            });
+                                          }}
+                                          className="text-[11px] text-left bg-white dark:bg-zinc-950 px-3 py-2 rounded-xl border border-slate-150 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-mono hover:border-blue-400 dark:hover:border-blue-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 flex items-center justify-between group cursor-pointer"
+                                        >
+                                          <span className="truncate">"{ex}"</span>
+                                          <span className="text-[10px] text-blue-500 font-bold opacity-0 group-hover:opacity-100 transition-all ml-2 whitespace-nowrap">
+                                            Carregar ⚡
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Messages */
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-zinc-950/50">
+                {messages.map((msg) => (
+                  <div 
+                    key={msg.id} 
+                    className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${
+                      msg.role === 'user' 
+                        ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
+                        : 'bg-white border border-slate-200 shadow-sm'
+                    }`}>
+                      {msg.role === 'user' ? (
+                        <User className="w-5 h-5" />
+                      ) : (
+                        !vivianAvatarError ? (
+                          <img 
+                            src={VIVIAN_AVATAR_URL} 
+                            alt="Vivian" 
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                            onError={() => setVivianAvatarError(true)}
+                          />
+                        ) : (
+                          <Bot className="w-5 h-5 text-indigo-600" />
+                        )
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5 max-w-[75%]">
+                      <div className={`p-3 rounded-2xl text-sm ${
+                        msg.role === 'user'
+                          ? 'bg-blue-600 text-white rounded-tr-sm animate-fade-in'
+                          : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-100 dark:border-zinc-700 rounded-tl-sm shadow-sm'
+                      }`}>
+                        {msg.content}
+                      </div>
+                      
+                      {/* Suggestion Pills underneath first message */}
+                      {msg.id === '1' && messages.length === 1 && (
+                        <div className="flex flex-col gap-1.5 mt-2">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Sugestões Rápidas:</p>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => setShowManual(true)}
+                              className="py-1.5 px-3 bg-white hover:bg-slate-50 text-blue-600 border border-slate-200/80 dark:bg-zinc-900 dark:border-zinc-800 dark:text-blue-400 dark:hover:bg-zinc-850 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all hover:scale-102"
+                            >
+                              <BookOpen className="w-3.5 h-3.5" />
+                              Ver Manual de Comandos
+                            </button>
+                            <button
+                              onClick={() => {
+                                setInput("Como estão os chamados hoje?");
+                                handleSendDirectly("Como estão os chamados hoje?");
+                              }}
+                              className="py-1.5 px-3 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-850 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all hover:scale-102"
+                            >
+                              📊 Resumo de Chamados
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {isTyping && (
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {!vivianAvatarError ? (
                         <img 
                           src={VIVIAN_AVATAR_URL} 
                           alt="Vivian" 
@@ -1404,41 +1801,17 @@ Usuário: ${userContent}`,
                         />
                       ) : (
                         <Bot className="w-5 h-5 text-indigo-600" />
-                      )
-                    )}
+                      )}
+                    </div>
+                    <div className="bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                      <span className="text-xs text-slate-500">Vivian está digitando...</span>
+                    </div>
                   </div>
-                  <div className={`max-w-[75%] p-3 rounded-2xl text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-tr-sm'
-                      : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-100 dark:border-zinc-700 rounded-tl-sm shadow-sm'
-                  }`}>
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {!vivianAvatarError ? (
-                      <img 
-                        src={VIVIAN_AVATAR_URL} 
-                        alt="Vivian" 
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                        onError={() => setVivianAvatarError(true)}
-                      />
-                    ) : (
-                      <Bot className="w-5 h-5 text-indigo-600" />
-                    )}
-                  </div>
-                  <div className="bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                    <span className="text-xs text-slate-500">Vivian está digitando...</span>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
 
             {/* Input */}
             <div className="p-4 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800">
@@ -1448,7 +1821,7 @@ Usuário: ${userContent}`,
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Pergunte algo ou peça um documento..."
+                  placeholder={showManual ? "Selecione um comando acima ou pergunte..." : "Pergunte algo ou peça um comando..."}
                   className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-slate-700 dark:text-zinc-300"
                 />
                 <button

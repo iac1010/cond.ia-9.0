@@ -110,6 +110,12 @@ export const useStore = create<AppState>()(
       vivianOnline: false,
       
       lastSync: null,
+      kanbanColumnNames: {
+        APROVADO: 'Aprovado',
+        AGUARDANDO_MATERIAL: 'Aguardando Material',
+        REALIZANDO: 'Realizando',
+        CONCLUIDO: 'Concluído'
+      },
   setLastSync: (date) => set({ lastSync: date }),
   fetchInitialData: async () => {
         if (!isSupabaseConfigured) {
@@ -187,7 +193,8 @@ export const useStore = create<AppState>()(
             safeFetch(supabase.from('feedbacks').select('*'), 'feedbacks'),
             safeFetch(supabase.from('reservations').select('*'), 'reservations'),
             safeFetch(supabase.from('staff').select('*'), 'staff'),
-            safeFetch(supabase.from('keys').select('*'), 'keys')
+            safeFetch(supabase.from('keys').select('*'), 'keys'),
+            safeFetch(supabase.from('technical_reports').select('*'), 'technical_reports')
           ]);
 
           const [
@@ -200,7 +207,7 @@ export const useStore = create<AppState>()(
             companySettingsRes, notificationsRes, savingsGoalsRes, 
             documentTemplatesRes, salesRes, contractsRes, renovationsRes, 
             movesRes, billingRulesRes, budgetForecastsRes, feedbacksRes,
-            reservationsRes, staffRes, keysRes
+            reservationsRes, staffRes, keysRes, technicalReportsRes
           ] = results;
 
           // If company settings don't exist, create a default row
@@ -288,7 +295,8 @@ export const useStore = create<AppState>()(
               budgetApproved: t.budget_approved,
               color: t.color,
               history: t.history,
-              usedMaterials: t.used_materials
+              usedMaterials: t.used_materials,
+              startedAt: t.started_at
             }));
           }
 
@@ -692,6 +700,19 @@ export const useStore = create<AppState>()(
             }));
           }
 
+          if (technicalReportsRes.data) {
+            newState.technicalReports = technicalReportsRes.data.map(r => ({
+              id: r.id,
+              clientId: r.client_id,
+              clientName: r.client_name,
+              title: r.title,
+              content: r.content,
+              date: r.date,
+              type: r.type as any,
+              osNumber: r.os_number
+            }));
+          }
+
           if (companySettingsRes.data) {
             const companySettingsData = companySettingsRes.data;
             newState.companySettingsId = companySettingsData.id;
@@ -805,7 +826,8 @@ export const useStore = create<AppState>()(
               budget_approved: t.budgetApproved,
               color: t.color,
               history: t.history,
-              used_materials: t.usedMaterials
+              used_materials: t.usedMaterials,
+              started_at: t.startedAt
             })) },
             { name: 'products', data: state.products.map(p => ({
               id: p.id,
@@ -1109,6 +1131,16 @@ export const useStore = create<AppState>()(
               borrowed_by: k.borrowedBy,
               borrowed_at: k.borrowedAt,
               returned_at: k.returnedAt
+            })) },
+            { name: 'technical_reports', data: state.technicalReports.map(r => ({
+              id: r.id,
+              client_id: r.clientId,
+              client_name: r.clientName,
+              title: r.title,
+              content: r.content,
+              date: r.date,
+              type: r.type,
+              os_number: r.osNumber
             })) }
           ];
 
@@ -1210,6 +1242,14 @@ export const useStore = create<AppState>()(
             await supabase.from('company_settings').update({ menu_order: order }).eq('id', id);
           } catch (e) { console.error(e); }
         }
+      },
+      setKanbanColumnNames: (names) => {
+        set((state) => ({
+          kanbanColumnNames: {
+            ...state.kanbanColumnNames,
+            ...names
+          }
+        }));
       },
       setTileSizes: async (sizes) => {
         set({ tileSizes: sizes });
@@ -1508,7 +1548,8 @@ export const useStore = create<AppState>()(
             budget_approved: ticket.budgetApproved,
             color: ticket.color,
             history: ticket.history,
-            used_materials: ticket.usedMaterials
+            used_materials: ticket.usedMaterials,
+            started_at: ticket.startedAt
           }]);
           if (error) {
             console.error('Erro Supabase addTicket:', error);
@@ -1556,7 +1597,8 @@ export const useStore = create<AppState>()(
             budget_approved: updatedTicket.budgetApproved,
             color: updatedTicket.color,
             history: updatedTicket.history,
-            used_materials: updatedTicket.usedMaterials
+            used_materials: updatedTicket.usedMaterials,
+            started_at: updatedTicket.startedAt
           }).eq('id', id);
           if (error) {
             console.error('Erro Supabase updateTicket:', error);
@@ -3617,18 +3659,64 @@ export const useStore = create<AppState>()(
       },
 
       addTechnicalReport: async (report) => {
-        const newReport = { ...report, id: uuidv4() };
+        const id = uuidv4();
+        const newReport = { ...report, id };
         set((state) => ({ technicalReports: [newReport, ...state.technicalReports] }));
+        if (!isSupabaseConfigured) return;
+        try {
+          const { error } = await supabase.from('technical_reports').insert([{
+            id,
+            client_id: report.clientId || null,
+            client_name: report.clientName || null,
+            title: report.title,
+            content: report.content,
+            date: report.date || new Date().toISOString(),
+            type: report.type,
+            os_number: report.osNumber || null
+          }]);
+          if (error) throw error;
+          toast.success('Relatório técnico salvo no servidor');
+        } catch (e) {
+          console.error(e);
+          toast.error('Erro ao salvar relatório no servidor');
+        }
       },
       updateTechnicalReport: async (id, report) => {
         set((state) => ({
           technicalReports: state.technicalReports.map((r) => (r.id === id ? { ...r, ...report } : r))
         }));
+        if (!isSupabaseConfigured) return;
+        try {
+          const updateData: any = {};
+          if (report.clientId !== undefined) updateData.client_id = report.clientId;
+          if (report.clientName !== undefined) updateData.client_name = report.clientName;
+          if (report.title !== undefined) updateData.title = report.title;
+          if (report.content !== undefined) updateData.content = report.content;
+          if (report.date !== undefined) updateData.date = report.date;
+          if (report.type !== undefined) updateData.type = report.type;
+          if (report.osNumber !== undefined) updateData.os_number = report.osNumber;
+
+          const { error } = await supabase.from('technical_reports').update(updateData).eq('id', id);
+          if (error) throw error;
+          toast.success('Relatório técnico atualizado');
+        } catch (e) {
+          console.error(e);
+          toast.error('Erro ao atualizar relatório no servidor');
+        }
       },
       deleteTechnicalReport: async (id) => {
         set((state) => ({
           technicalReports: state.technicalReports.filter((r) => r.id !== id)
         }));
+        if (!isSupabaseConfigured) return;
+        try {
+          const { error } = await supabase.from('technical_reports').delete().eq('id', id);
+          if (error) throw error;
+          toast.success('Relatório técnico removido');
+        } catch (e) {
+          console.error(e);
+          toast.error('Erro ao remover relatório do servidor');
+        }
       },
 
       addFeedback: async (feedback) => {
@@ -4164,7 +4252,8 @@ export const useStore = create<AppState>()(
               budget_amount: t.budgetAmount,
               budget_approved: t.budgetApproved,
               color: t.color,
-              history: t.history
+              history: t.history,
+              started_at: t.startedAt
             })));
           }
 
@@ -4637,7 +4726,8 @@ export const useStore = create<AppState>()(
         tileSizes: state.tileSizes,
         tileOrder: state.tileOrder,
         hiddenTiles: state.hiddenTiles,
-        isAuthenticated: state.isAuthenticated
+        isAuthenticated: state.isAuthenticated,
+        kanbanColumnNames: state.kanbanColumnNames
       }),
     }
   )

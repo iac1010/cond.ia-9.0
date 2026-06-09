@@ -131,6 +131,7 @@ export type Ticket = {
     note: string;
     userName?: string;
   }[];
+  startedAt?: string;
 };
 
 export type CompanyData = {
@@ -548,6 +549,8 @@ export interface AppState {
   vivianEnabled: boolean;
   vivianOnline: boolean;
   lastSync: string | null;
+  kanbanColumnNames: { [key in TicketStatus]?: string };
+  setKanbanColumnNames: (names: { [key in TicketStatus]?: string }) => void;
   
   fetchInitialData: () => Promise<void>;
   syncToSupabase: () => Promise<void>;

@@ -27,6 +27,9 @@ import { QuotesMirror } from '../components/QuotesMirror';
 import { CommercialMirror } from '../components/CommercialMirror';
 import { WaterManagementMirror } from '../components/WaterManagementMirror';
 import { MonitoringMirror } from '../components/MonitoringMirror';
+import { DashboardKeepNotesTile } from '../components/DashboardKeepNotesTile';
+import { DashboardGoogleMeetTile } from '../components/DashboardGoogleMeetTile';
+import { DashboardGoogleTranslateTile } from '../components/DashboardGoogleTranslateTile';
 import { Modal } from '../components/Modal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import toast from 'react-hot-toast';
@@ -340,6 +343,12 @@ export default function Dashboard() {
   } = useStore();
 
   const [isEditMode, setIsEditMode] = useState(false);
+  const executionTickets = useMemo(() => {
+    const activeStatuses: TicketStatus[] = ['PENDENTE_APROVACAO', 'APROVADO', 'EM_ROTA', 'AGUARDANDO_MATERIAL', 'REALIZANDO'];
+    return tickets
+      .filter(t => t.status && activeStatuses.includes(t.status))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [tickets]);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [isAddingMoneyToGoal, setIsAddingMoneyToGoal] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
@@ -612,20 +621,85 @@ export default function Dashboard() {
       id: 'execution-center',
       type: 'wide',
       component: (
-        <Link 
-          to={isEditMode ? '#' : "/execution"} 
-          onClick={(e) => isEditMode && e.preventDefault()}
-          className="metro-tile-wide plastic-effect p-6 flex flex-col justify-between group border-white/20 bg-black/40"
+        <div 
+          onClick={() => {
+            if (!isEditMode) navigate('/execution');
+          }}
+          className="w-full h-full cursor-pointer p-4 md:p-6 bg-zinc-950/70 hover:brightness-110 transition-all border border-white/10 rounded-3xl flex flex-col justify-between group relative overflow-hidden text-white shadow-lg active:scale-95"
         >
-          <div className="flex justify-between items-start">
-            <Play size={48} className="text-white group-hover:scale-110 transition-transform" fill="currentColor" />
-            <span className="text-xs font-black uppercase tracking-[0.2em] text-white/40 animate-pulse">Live Now</span>
+          {/* Background Ambient Glow */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#39FF14]/5 via-transparent to-white/5 pointer-events-none" />
+          <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#39FF14]/10 blur-2xl rounded-full mix-blend-screen pointer-events-none" />
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-4 items-center h-full relative z-10 w-full">
+            {/* Left side info (glowing play & title) */}
+            <div className="col-span-1 md:col-span-2 flex flex-col justify-between h-full py-1">
+              <div className="flex justify-between items-start">
+                <Play 
+                  size={36} 
+                  className="text-[#39FF14] drop-shadow-[0_0_12px_rgba(57,255,20,0.7)] group-hover:scale-110 transition-transform" 
+                  fill="currentColor" 
+                />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 animate-pulse bg-white/5 px-2 py-0.5 rounded-full md:hidden">Live Now</span>
+              </div>
+              <div className="mt-2 md:mt-0">
+                <span className="text-xl font-black text-white uppercase tracking-tighter block leading-none">Central de Execução</span>
+                <span className="text-[10px] text-[#39FF14] font-bold uppercase tracking-wider mt-1 block">PLAY EM PENDENTES</span>
+              </div>
+            </div>
+
+            {/* Right side interactive ticket list */}
+            <div className="col-span-1 md:col-span-3 flex flex-col justify-center gap-1.5 h-full border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-4">
+              <div className="hidden md:flex justify-between items-center mb-1">
+                <span className="text-[9px] font-black uppercase text-white/50 tracking-widest">Tarefas Pendentes</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#39FF14] animate-pulse">Live Now</span>
+              </div>
+              
+              {executionTickets.length > 0 ? (
+                executionTickets.slice(0, 2).map((ticket) => {
+                  const client = clients.find(c => c.id === ticket.clientId);
+                  const clientName = client ? client.name : 'Geral/Avulso';
+                  
+                  return (
+                    <div 
+                      key={ticket.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isEditMode) navigate(`/execution?play=${ticket.id}`);
+                      }}
+                      className="flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-[#39FF14]/10 border border-white/5 hover:border-[#39FF14]/30 transition-all duration-300 group/item cursor-pointer w-full min-w-0"
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-[8px] font-black text-white/50">{ticket.osNumber || 'OS'}</span>
+                          <span className="text-[9px] font-semibold text-white/80 truncate shrink-1 block max-w-[120px]">{clientName}</span>
+                        </div>
+                        <p className="text-[10px] font-black text-white truncate leading-tight">{ticket.title || 'Iniciar OS'}</p>
+                      </div>
+                      <div 
+                        className="px-2 py-1 bg-[#39FF14]/20 border border-[#39FF14]/40 rounded-lg group-hover/item:bg-[#39FF14] group-hover/item:scale-105 transition-all text-[#39FF14] group-hover/item:text-black flex items-center justify-center shadow-[0_0_8px_rgba(57,255,20,0.2)] shrink-0"
+                        title="Iniciar Execução"
+                      >
+                        <Play size={10} fill="currentColor" />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-2 bg-white/5 rounded-xl border border-dashed border-white/10 flex flex-col items-center justify-center">
+                  <span className="text-[9px] text-white/40 uppercase">Nenhuma OS pendente</span>
+                  <span className="text-[8px] text-white/30 italic">Tudo em ordem!</span>
+                </div>
+              )}
+
+              {executionTickets.length > 2 && (
+                <div className="text-right text-[8px] font-black uppercase text-white/40 tracking-wider">
+                  + {executionTickets.length - 2} outras pendentes
+                </div>
+              )}
+            </div>
           </div>
-          <div>
-            <span className="text-2xl font-black text-white uppercase tracking-tighter">Central de Execução</span>
-            <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Acompanhamento em Tempo Real</p>
-          </div>
-        </Link>
+        </div>
       )
     },
     {
@@ -1741,6 +1815,42 @@ export default function Dashboard() {
             <span className="text-[8px] font-bold text-white/50 tracking-widest mt-1">SISTEMA EXTERNO</span>
           </div>
         </a>
+      )
+    },
+    {
+      id: 'keep-notes',
+      type: 'wide',
+      component: (
+        <DashboardKeepNotesTile 
+          onNavigate={() => {
+            navigate('/execution');
+            setTimeout(() => {
+              const notesSection = document.getElementById('execution-keep-notes-section');
+              if (notesSection) {
+                notesSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }, 150);
+          }}
+          isEditMode={isEditMode}
+        />
+      )
+    },
+    {
+      id: 'google-meet-creator',
+      type: 'wide',
+      component: (
+        <DashboardGoogleMeetTile 
+          isEditMode={isEditMode}
+        />
+      )
+    },
+    {
+      id: 'google-translator',
+      type: 'wide',
+      component: (
+        <DashboardGoogleTranslateTile 
+          isEditMode={isEditMode}
+        />
       )
     }
   ];
