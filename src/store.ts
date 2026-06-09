@@ -17,6 +17,55 @@ import {
 import { sendWhatsAppMessage } from './services/whatsappService';
 import { safeFormatDate } from './utils/dateUtils';
 
+async function executeResilientDbOp(
+  opFn: (payload: any) => Promise<{ error: any }>,
+  initialPayload: any
+): Promise<{ error: any }> {
+  let payload = Array.isArray(initialPayload) ? JSON.parse(JSON.stringify(initialPayload)) : { ...initialPayload };
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  while (attempts < maxAttempts) {
+    const { error } = await opFn(payload);
+    if (!error) {
+      return { error: null };
+    }
+
+    // Check if the error indicates a missing column in database schema cache
+    if (error.message && (error.message.includes("Could not find the '") || (error.message.includes("column") && error.message.includes("does not exist")))) {
+      let missingColumn: string | null = null;
+      const match = error.message.match(/Could not find the '([^']+)' column/);
+      if (match && match[1]) {
+        missingColumn = match[1];
+      } else {
+        const matchPg = error.message.match(/column "([^"]+)"/);
+        if (matchPg && matchPg[1]) {
+          missingColumn = matchPg[1];
+        }
+      }
+
+      if (missingColumn) {
+        console.warn(`ResilientDbOp: Column '${missingColumn}' is missing from Supabase database schema. Filtering it out and retrying.`);
+        
+        if (Array.isArray(payload)) {
+          payload = payload.map((item: any) => {
+            const newItem = { ...item };
+            delete newItem[missingColumn!];
+            return newItem;
+          });
+        } else {
+          delete payload[missingColumn];
+        }
+        attempts++;
+        continue;
+      }
+    }
+    
+    return { error };
+  }
+  return { error: new Error('Failed to complete operations on Supabase even with schema auto-healing.') };
+}
+
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -1524,7 +1573,7 @@ export const useStore = create<AppState>()(
         if (!isSupabaseConfigured) return;
 
         try {
-          const { error } = await supabase.from('tickets').insert([{
+          const payload = {
             id,
             os_number: osNumber,
             title: ticket.title,
@@ -1550,7 +1599,12 @@ export const useStore = create<AppState>()(
             history: ticket.history,
             used_materials: ticket.usedMaterials,
             started_at: ticket.startedAt
-          }]);
+          };
+
+          const { error } = await executeResilientDbOp(
+            async (p) => await supabase.from('tickets').insert([p]),
+            payload
+          );
           if (error) {
             console.error('Erro Supabase addTicket:', error);
             if (error.message === 'Failed to fetch') {
@@ -1574,7 +1628,7 @@ export const useStore = create<AppState>()(
         if (!isSupabaseConfigured) return;
 
         try {
-          const { error } = await supabase.from('tickets').update({
+          const payload = {
             os_number: updatedTicket.osNumber,
             title: updatedTicket.title,
             type: updatedTicket.type,
@@ -1599,7 +1653,12 @@ export const useStore = create<AppState>()(
             history: updatedTicket.history,
             used_materials: updatedTicket.usedMaterials,
             started_at: updatedTicket.startedAt
-          }).eq('id', id);
+          };
+
+          const { error } = await executeResilientDbOp(
+            async (p) => await supabase.from('tickets').update(p).eq('id', id),
+            payload
+          );
           if (error) {
             console.error('Erro Supabase updateTicket:', error);
             toast.error(`Erro ao atualizar OS: ${error.message}`);

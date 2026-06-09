@@ -28,6 +28,10 @@ import { CommercialMirror } from '../components/CommercialMirror';
 import { WaterManagementMirror } from '../components/WaterManagementMirror';
 import { MonitoringMirror } from '../components/MonitoringMirror';
 import { DashboardKeepNotesTile } from '../components/DashboardKeepNotesTile';
+import { DailyTasksWidget } from '../components/DailyTasksWidget';
+import WorkspaceWidget from '../components/WorkspaceWidget';
+import GmailWidget from '../components/GmailWidget';
+import GoogleCalendarWidget from '../components/GoogleCalendarWidget';
 import { DashboardGoogleMeetTile } from '../components/DashboardGoogleMeetTile';
 import { DashboardGoogleTranslateTile } from '../components/DashboardGoogleTranslateTile';
 import { Modal } from '../components/Modal';
@@ -700,6 +704,34 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )
+    },
+    {
+      id: 'daily-tasks',
+      type: 'wide',
+      component: (
+        <DailyTasksWidget isEditMode={isEditMode} />
+      )
+    },
+    {
+      id: 'workspace-shortcuts',
+      type: 'square',
+      component: (
+        <WorkspaceWidget isEditMode={isEditMode} />
+      )
+    },
+    {
+      id: 'gmail-inbox',
+      type: 'wide',
+      component: (
+        <GmailWidget isEditMode={isEditMode} />
+      )
+    },
+    {
+      id: 'google-calendar-widget',
+      type: 'wide',
+      component: (
+        <GoogleCalendarWidget isEditMode={isEditMode} />
       )
     },
     {
@@ -2136,7 +2168,7 @@ export default function Dashboard() {
         >
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3 relative z-10 max-w-[1400px] perspective-1000 grid-flow-dense">
             {tiles.filter(t => !hiddenTiles.includes(t.id)).map((tile) => {
-              const currentSize = tileSizes[tile.id] || (tile.type === 'wide' ? 'medium' : 'small');
+              const currentSize = tileSizes[tile.id] || (tile.id === 'daily-tasks' ? 'large' : tile.type === 'wide' ? 'medium' : 'small');
               const sizeClasses = currentSize === 'small' ? 'col-span-1 row-span-1 aspect-square' :
                                   currentSize === 'medium' ? 'col-span-2 row-span-1 aspect-[2/1] sm:aspect-video md:aspect-[2/1]' :
                                   'col-span-2 row-span-2 aspect-square';
