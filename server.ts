@@ -17,7 +17,7 @@ const isSupabaseConfigured =
   !supabaseUrl.includes('YOUR_SUPABASE_PROJECT_URL');
 
 if (!isSupabaseConfigured) {
-  console.error('❌ Supabase credentials missing or invalid in server environment!');
+  console.warn('⚠️ Supabase credentials missing or invalid in server environment. Fallbacking safely.');
 }
 
 const supabase = createClient(
@@ -55,6 +55,94 @@ async function startServer() {
       appUrl: process.env.APP_URL || process.env.VITE_APP_URL || 'http://localhost:3000',
       time: new Date().toISOString() 
     });
+  });
+
+  // IoT Webhook proxy endpoint to bypass CORS and Mixed Content limitations
+  apiRouter.post('/iot-proxy', async (req, res) => {
+    try {
+      const { url, method, headers, body } = req.body;
+      if (!url) {
+        return res.status(400).json({ error: 'URL is required' });
+      }
+
+      console.log(`[IoT Proxy] Relaying request: ${method || 'GET'} ${url}`);
+
+      // Detect local/internal network domains/IPs that are unreachable by cloud server
+      let isLocal = false;
+      try {
+        const parsedUrl = new URL(url);
+        const host = parsedUrl.hostname.toLowerCase();
+        if (
+          host === 'localhost' ||
+          host === '127.0.0.1' ||
+          host.endsWith('.local') ||
+          host.startsWith('192.168.') ||
+          host.startsWith('10.') ||
+          /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)
+        ) {
+          isLocal = true;
+        }
+      } catch (e) {}
+
+      if (isLocal) {
+        return res.status(400).json({
+          error: 'Local URL Unreachable from Cloud Server',
+          details: 'Endereços locais (.local ou IP privado) não são acessíveis a partir de servidores na nuvem. Eles precisam ser disparados diretamente pelo seu navegador (canal local).'
+        });
+      }
+
+      let parsedHeaders: Record<string, string> = {};
+      if (typeof headers === 'string') {
+        try {
+          parsedHeaders = JSON.parse(headers);
+        } catch (e) {
+          // Ignore parsing error, fallback to default or empty
+        }
+      } else if (headers && typeof headers === 'object') {
+        parsedHeaders = { ...headers };
+      }
+
+      // Prepare request option
+      const options: RequestInit = {
+        method: method || 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...parsedHeaders
+        }
+      };
+
+      if (options.method !== 'GET' && body) {
+        options.body = typeof body === 'string' ? body : JSON.stringify(body);
+      }
+
+      // Fetch with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      options.signal = controller.signal;
+
+      const response = await fetch(url, options);
+      clearTimeout(timeoutId);
+
+      const responseText = await response.text();
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = responseText;
+      }
+
+      res.status(response.status).json({
+        status: response.status,
+        statusText: response.statusText,
+        data: responseData
+      });
+    } catch (error: any) {
+      console.warn('[IoT Proxy Warn]: Expected proxy relay restriction or host unreachable:', error?.message || error);
+      res.status(500).json({
+        error: 'Proxy execution failed',
+        details: error?.message || String(error)
+      });
+    }
   });
 
   app.use('/api', apiRouter);

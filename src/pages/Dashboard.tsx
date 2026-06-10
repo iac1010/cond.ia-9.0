@@ -34,6 +34,7 @@ import GmailWidget from '../components/GmailWidget';
 import GoogleCalendarWidget from '../components/GoogleCalendarWidget';
 import { DashboardGoogleMeetTile } from '../components/DashboardGoogleMeetTile';
 import { DashboardGoogleTranslateTile } from '../components/DashboardGoogleTranslateTile';
+import { DashboardIoTTile } from '../components/DashboardIoTTile';
 import { Modal } from '../components/Modal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import toast from 'react-hot-toast';
@@ -1881,6 +1882,15 @@ export default function Dashboard() {
       type: 'wide',
       component: (
         <DashboardGoogleTranslateTile 
+          isEditMode={isEditMode}
+        />
+      )
+    },
+    {
+      id: 'iot-trigger',
+      type: 'square',
+      component: (
+        <DashboardIoTTile 
           isEditMode={isEditMode}
         />
       )
