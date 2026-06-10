@@ -79,6 +79,23 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
   }, [tasks]);
 
   useEffect(() => {
+    const handleTasksBackupUpdated = () => {
+      const saved = localStorage.getItem('condfy_daily_tasks');
+      if (saved) {
+        try {
+          setTasks(JSON.parse(saved));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+    window.addEventListener('condfy_daily_tasks_updated', handleTasksBackupUpdated);
+    return () => {
+      window.removeEventListener('condfy_daily_tasks_updated', handleTasksBackupUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('condfy_pomodoro_time', timeLeft.toString());
     localStorage.setItem('condfy_pomodoro_mode', pomodoroMode);
   }, [timeLeft, pomodoroMode]);

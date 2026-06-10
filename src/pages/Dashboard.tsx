@@ -1957,6 +1957,16 @@ export default function Dashboard() {
   };
 
   const handleExportBackup = () => {
+    let tasks: any[] = [];
+    try {
+      const savedTasks = localStorage.getItem('condfy_daily_tasks');
+      if (savedTasks) {
+        tasks = JSON.parse(savedTasks);
+      }
+    } catch (e) {
+      console.error('Error reading daily tasks for backup:', e);
+    }
+
     const backupData = {
       clients,
       checklistItems: useStore.getState().checklistItems,
@@ -1970,6 +1980,7 @@ export default function Dashboard() {
       companySignature,
       companyData,
       hiddenTiles,
+      dailyTasks: tasks,
       version: '1.0',
       exportDate: new Date().toISOString()
     };

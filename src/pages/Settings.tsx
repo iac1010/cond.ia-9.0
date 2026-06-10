@@ -125,6 +125,16 @@ export default function Settings() {
   };
 
   const handleExportBackup = () => {
+    let tasks: any[] = [];
+    try {
+      const savedTasks = localStorage.getItem('condfy_daily_tasks');
+      if (savedTasks) {
+        tasks = JSON.parse(savedTasks);
+      }
+    } catch (e) {
+      console.error('Error reading daily tasks for backup:', e);
+    }
+
     const backupData = {
       clients,
       checklistItems,
@@ -158,6 +168,7 @@ export default function Settings() {
       hiddenTiles,
       tileSizes,
       tileOrder,
+      dailyTasks: tasks,
       version: '1.1',
       exportDate: new Date().toISOString()
     };

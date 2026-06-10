@@ -15,9 +15,9 @@ provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
 provider.addScope('https://www.googleapis.com/auth/calendar');
 provider.addScope('https://www.googleapis.com/auth/calendar.events');
 
-// Cache the access token in memory
+// Cache the access token in memory with localStorage backup for refresh persistence
 let isSigningIn = false;
-let cachedAccessToken: string | null = null;
+let cachedAccessToken: string | null = typeof window !== 'undefined' ? localStorage.getItem('workspace_google_access_token') : null;
 
 // Initialize auth state listener
 export const initAuth = (
@@ -26,18 +26,19 @@ export const initAuth = (
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
-      // In a real application we can verify if the cachedAccessToken is still active or refresh it
+      if (!cachedAccessToken && typeof window !== 'undefined') {
+        cachedAccessToken = localStorage.getItem('workspace_google_access_token');
+      }
       if (cachedAccessToken) {
         if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
       } else if (!isSigningIn) {
-        // Try to fetch from sessionStorage safely if needed, but the spec says:
-        // "do NOT store the access token in localStorage or sessionStorage. Use onAuthStateChanged to clear the cached token when the user signs out."
-        // So we strictly stick to in-memory cachedAccessToken.
-        cachedAccessToken = null;
         if (onAuthFailure) onAuthFailure();
       }
     } else {
       cachedAccessToken = null;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('workspace_google_access_token');
+      }
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -54,6 +55,9 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     }
 
     cachedAccessToken = credential.accessToken;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('workspace_google_access_token', cachedAccessToken);
+    }
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Sign in error:', error);
@@ -64,14 +68,27 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
 };
 
 export const getAccessToken = (): string | null => {
+  if (!cachedAccessToken && typeof window !== 'undefined') {
+    cachedAccessToken = localStorage.getItem('workspace_google_access_token');
+  }
   return cachedAccessToken;
 };
 
 export const setAccessToken = (token: string | null) => {
   cachedAccessToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('workspace_google_access_token', token);
+    } else {
+      localStorage.removeItem('workspace_google_access_token');
+    }
+  }
 };
 
 export const logout = async () => {
   await auth.signOut();
   cachedAccessToken = null;
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('workspace_google_access_token');
+  }
 };

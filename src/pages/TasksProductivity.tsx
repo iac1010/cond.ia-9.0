@@ -85,7 +85,7 @@ export default function TasksProductivity() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('Todos');
   const [priorityFilter, setPriorityFilter] = useState<string>('Todos');
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Completados' | 'Pendentes'>('Todos');
+  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Completados' | 'Pendentes'>('Pendentes');
 
   // Form creation / editing states
   const [editingTask, setEditingTask] = useState<DailyTask | null>(null);
@@ -98,7 +98,7 @@ export default function TasksProductivity() {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   // Load and populate tasks
-  useEffect(() => {
+  const loadTasksFromStorage = () => {
     const saved = localStorage.getItem('condfy_daily_tasks');
     if (saved) {
       try {
@@ -180,6 +180,19 @@ export default function TasksProductivity() {
       setTasks(defaultTasks);
       localStorage.setItem('condfy_daily_tasks', JSON.stringify(defaultTasks));
     }
+  };
+
+  useEffect(() => {
+    loadTasksFromStorage();
+
+    const handleTasksUpdatedEvent = () => {
+      loadTasksFromStorage();
+    };
+
+    window.addEventListener('condfy_daily_tasks_updated', handleTasksUpdatedEvent);
+    return () => {
+      window.removeEventListener('condfy_daily_tasks_updated', handleTasksUpdatedEvent);
+    };
   }, []);
 
   // Save to LocalStorage whenever tasks update

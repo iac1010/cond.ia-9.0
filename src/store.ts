@@ -4224,6 +4224,19 @@ export const useStore = create<AppState>()(
       },
 
       restoreData: async (data) => {
+        // Restaurar tarefas do backup se estiverem disponíveis
+        const rawData = data as any;
+        if (rawData && rawData.dailyTasks) {
+          try {
+            localStorage.setItem('condfy_daily_tasks', JSON.stringify(rawData.dailyTasks));
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new Event('condfy_daily_tasks_updated'));
+            }
+          } catch (e) {
+            console.error('Erro ao restaurar condfy_daily_tasks:', e);
+          }
+        }
+
         set((state) => ({
           ...state,
           ...data,
