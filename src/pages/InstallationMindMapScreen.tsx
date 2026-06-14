@@ -4,7 +4,7 @@ import {
   Network, Plus, Trash2, Edit3, HelpCircle, Save, Sliders, Check, 
   Map, ZoomIn, ZoomOut, Maximize2, RefreshCw, Layout, Smartphone,
   Radio, Cpu, Lightbulb, Shield, Thermometer, Wifi, Link, Info, Eye,
-  ArrowLeft, Users, FileText, ChevronRight, Activity, Zap, CheckCircle2,
+  ArrowLeft, Users, FileText, ChevronRight, ChevronLeft, Activity, Zap, CheckCircle2,
   Printer, Download, Layers, Sparkles, MessageSquare, AlertCircle, Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -135,9 +135,12 @@ export default function InstallationMindMapScreen() {
   const [nodes, setNodes] = useState<MindMapNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<MindMapNode | null>(null);
   const [mapViewMode, setMapViewMode] = useState<'view' | 'edit-node' | 'add' | 'templates'>('view');
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState<boolean>(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState<boolean>(true);
 
   // Client Summary Report & Checklists details
   const [clientHubIp, setClientHubIp] = useState('');
+  const [clientRouterIp, setClientRouterIp] = useState('');
   const [clientNotes, setClientNotes] = useState('');
   const [checklist, setChecklist] = useState({
     survey: false,
@@ -177,11 +180,13 @@ export default function InstallationMindMapScreen() {
     const savedNodesKey = `condfy_installation_mindmap_${activeClient.id}`;
     const savedNotesKey = `condfy_installation_notes_${activeClient.id}`;
     const savedIpKey = `condfy_installation_ip_${activeClient.id}`;
+    const savedRouterIpKey = `condfy_installation_router_ip_${activeClient.id}`;
     const savedChecklistKey = `condfy_installation_checklist_${activeClient.id}`;
 
     const savedNodes = localStorage.getItem(savedNodesKey);
     const savedNotes = localStorage.getItem(savedNotesKey);
     const savedIp = localStorage.getItem(savedIpKey);
+    const savedRouterIp = localStorage.getItem(savedRouterIpKey);
     const savedChecklistString = localStorage.getItem(savedChecklistKey);
 
     // Node restoration
@@ -198,6 +203,7 @@ export default function InstallationMindMapScreen() {
     // Load static inputs
     setClientNotes(savedNotes !== null ? savedNotes : activeClient.notes);
     setClientHubIp(savedIp !== null ? savedIp : activeClient.hubIp);
+    setClientRouterIp(savedRouterIp !== null ? savedRouterIp : ((activeClient as any).routerIp || '192.168.1.1'));
     
     if (savedChecklistString) {
       try {
@@ -227,6 +233,7 @@ export default function InstallationMindMapScreen() {
     if (!activeClient) return;
     localStorage.setItem(`condfy_installation_notes_${activeClient.id}`, clientNotes);
     localStorage.setItem(`condfy_installation_ip_${activeClient.id}`, clientHubIp);
+    localStorage.setItem(`condfy_installation_router_ip_${activeClient.id}`, clientRouterIp);
     localStorage.setItem(`condfy_installation_checklist_${activeClient.id}`, JSON.stringify(checklist));
     toast.success('Resumo e especificações técnicas salvas com sucesso!');
   };
@@ -515,7 +522,8 @@ export default function InstallationMindMapScreen() {
   // Calculated topology metrics
   const activeDeviceCount = nodes.filter(n => n.type === 'device' && n.status === 'active').length;
   const inactiveDeviceCount = nodes.filter(n => n.type === 'device' && n.status === 'inactive').length;
-  const totalRooms = nodes.filter(n => n.type === 'room').length;
+  const roomNodes = nodes.filter(n => n.type === 'room');
+  const totalRooms = roomNodes.length;
   
   // Protocol breakdown
   const protocolsCount = nodes.reduce((acc, current) => {
@@ -534,10 +542,11 @@ export default function InstallationMindMapScreen() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="w-full min-h-screen bg-zinc-950 text-white relative flex flex-col overflow-hidden leading-relaxed">
-      {/* GLOW DECORATIONS */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-indigo-600/5 rounded-full blur-[180px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-sky-500/5 rounded-full blur-[180px] pointer-events-none" />
+    <div className="w-full min-h-screen bg-zinc-950 text-white relative flex flex-col overflow-hidden leading-relaxed animate-fade-in">
+      <div className="print:hidden flex flex-col flex-1 min-h-0">
+        {/* GLOW DECORATIONS */}
+        <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-indigo-600/5 rounded-full blur-[180px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-sky-500/5 rounded-full blur-[180px] pointer-events-none" />
 
       {/* HEADER SECTION */}
       <header className="border-b border-white/5 bg-zinc-900/60 backdrop-blur-xl p-4 md:px-8 flex flex-col md:flex-row md:items-center justify-between gap-4 z-40 print:hidden shrink-0">
@@ -585,12 +594,21 @@ export default function InstallationMindMapScreen() {
       {/* INTERACTIVE SPLIT BODY */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden relative">
         
-        {/* LEFT CLIENT SELECTOR SIDEBAR */}
-        <aside className="w-full lg:w-80 border-r border-white/5 bg-zinc-900/40 p-4 shrink-0 flex flex-col gap-4 overflow-y-auto max-h-[30vh] lg:max-h-full print:hidden">
+        {/* LEFT CLIENT SELECTOR SIDEBAR WITH FLUID COLLAPSE */}
+        <aside className={`${isLeftSidebarOpen ? 'w-full lg:w-80 p-4 border-r opacity-100' : 'w-0 h-0 lg:h-full p-0 border-r-0 opacity-0 overflow-hidden'} border-white/5 bg-zinc-900/40 shrink-0 flex flex-col gap-4 overflow-y-auto max-h-[30vh] lg:max-h-full print:hidden transition-all duration-300`}>
           <div className="space-y-1.5">
-            <h3 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest flex items-center gap-1.5">
-              <Users size={12} /> Projetos &amp; Clientes
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest flex items-center gap-1.5">
+                <Users size={12} /> Projetos &amp; Clientes
+              </h3>
+              <button 
+                onClick={() => setIsLeftSidebarOpen(false)}
+                className="p-1 px-1.5 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all text-[8px] uppercase font-black tracking-widest flex items-center gap-0.5"
+                title="Recolher Menu de Clientes"
+              >
+                <ChevronLeft size={10} /> Ocultar
+              </button>
+            </div>
             <input
               type="text"
               placeholder="Pesquisar cliente ou endereço..."
@@ -664,8 +682,8 @@ export default function InstallationMindMapScreen() {
           onMouseLeave={handleGlobalMouseUp}
         >
           {/* TAB HEADERS PANEL */}
-          <div className="border-b border-white/5 bg-zinc-900/20 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky top-0 z-30 backdrop-blur opacity-95 print:hidden">
-            <div className="flex gap-2">
+          <div className="border-b border-white/5 bg-zinc-900/20 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 sticky top-0 z-30 backdrop-blur opacity-95 print:hidden">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setActiveTab('map')}
                 className={`flex items-center gap-1.5 py-1.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
@@ -686,6 +704,36 @@ export default function InstallationMindMapScreen() {
               >
                 <FileText size={14} /> 📊 Relatório &amp; Inventário
               </button>
+
+              {activeTab === 'map' && (
+                <div className="flex items-center gap-1.5 border-l border-white/10 pl-2.5 ml-0.5">
+                  <button
+                    onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+                    className={`flex items-center gap-1 py-1 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border ${
+                      isLeftSidebarOpen 
+                        ? 'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10 hover:text-white' 
+                        : 'bg-indigo-500 text-white/90 border-indigo-400/50 hover:bg-indigo-600 shadow-[0_0_12px_rgba(99,102,241,0.3)] animate-pulse'
+                    }`}
+                    title={isLeftSidebarOpen ? "Ocultar painel de clientes" : "Mostrar painel de clientes"}
+                  >
+                    <Users size={11} />
+                    {isLeftSidebarOpen ? "← Ocultar Clientes" : "→ Mostrar Clientes"}
+                  </button>
+
+                  <button
+                    onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+                    className={`flex items-center gap-1 py-1 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border ${
+                      isRightSidebarOpen 
+                        ? 'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10 hover:text-white' 
+                        : 'bg-[#39FF14] text-black border-[#39FF14]/50 hover:bg-[#34e012] shadow-[0_0_12px_rgba(57,255,20,0.3)] animate-pulse'
+                    }`}
+                    title={isRightSidebarOpen ? "Ocultar painel técnico" : "Mostrar painel técnico"}
+                  >
+                    <Sliders size={11} />
+                    {isRightSidebarOpen ? "Ocultar Painel →" : "← Mostrar Painel"}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Quick customer metadata card */}
@@ -983,11 +1031,45 @@ export default function InstallationMindMapScreen() {
                         </div>
                       </div>
                     )}
+
+                    {/* FLOATING COLLAPSED DRAWER PULLS */}
+                    {!isLeftSidebarOpen && (
+                      <button
+                        type="button"
+                        onClick={() => setIsLeftSidebarOpen(true)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-r-2xl bg-zinc-900/90 hover:bg-indigo-600 border border-l-0 border-white/10 hover:border-indigo-500/50 text-indigo-400 hover:text-white shadow-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 text-[10px] font-black uppercase tracking-wider print:hidden"
+                        title="Ver Clientes"
+                      >
+                        <ChevronRight size={13} className="animate-pulse" /> Clientes
+                      </button>
+                    )}
+
+                    {!isRightSidebarOpen && (
+                      <button
+                        type="button"
+                        onClick={() => setIsRightSidebarOpen(true)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-l-2xl bg-zinc-900/90 hover:bg-[#39FF14] border border-r-0 border-white/10 hover:border-[#39FF14]/50 text-[#39FF14] hover:text-black shadow-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 text-[10px] font-black uppercase tracking-wider print:hidden"
+                        title="Ver Propriedades e Métricas"
+                      >
+                        Painel <ChevronLeft size={13} className="animate-pulse" />
+                      </button>
+                    )}
                   </div>
 
-                  {/* RIGHT PANEL FORM AND TEMPLATES ON MAP TAB */}
-                  <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-white/5 bg-zinc-900/60 p-4 overflow-y-auto max-h-[40vh] md:max-h-full shrink-0 flex flex-col justify-start">
+                  {/* RIGHT PANEL FORM AND TEMPLATES ON MAP TAB WITH FLUID COLLAPSE */}
+                  <div className={`${isRightSidebarOpen ? 'w-full md:w-80 p-4 border-t md:border-t-0 md:border-l opacity-100' : 'w-0 h-0 md:h-full p-0 border-t-0 md:border-l-0 opacity-0 overflow-hidden'} border-white/5 bg-zinc-900/60 overflow-y-auto max-h-[40vh] md:max-h-full shrink-0 flex flex-col justify-start transition-all duration-300`}>
                     
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3 shrink-0">
+                      <span className="text-[9px] font-black uppercase text-zinc-400 tracking-wider">Painel Técnico</span>
+                      <button 
+                        onClick={() => setIsRightSidebarOpen(false)}
+                        className="p-1 px-1.5 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all text-[8px] uppercase font-black tracking-widest flex items-center gap-0.5"
+                        title="Recolher Painel Técnico"
+                      >
+                        Ocultar <ChevronRight size={10} />
+                      </button>
+                    </div>
+
                     <AnimatePresence mode="wait">
                       
                       {mapViewMode === 'view' && (
@@ -1305,22 +1387,32 @@ export default function InstallationMindMapScreen() {
                       
                       {/* Connection IP Setup Box */}
                       <div className="p-4 bg-black/40 rounded-2xl border border-white/5 space-y-2">
-                        <span className="text-[8px] font-black text-indigo-400 uppercase block tracking-widest">Gateway Config</span>
+                        <span className="text-[8px] font-black text-indigo-400 uppercase block tracking-widest">Gateway Config (Infra &amp; IPs)</span>
                         <div className="space-y-3">
                           <div>
-                            <label className="text-[7.5px] uppercase font-black text-zinc-500 block mb-1">IP Local Central</label>
+                            <label className="text-[7.5px] uppercase font-black text-zinc-500 block mb-1">IP Local Central IoT (Hub)</label>
                             <input
                               type="text"
                               value={clientHubIp}
                               onChange={(e) => setClientHubIp(e.target.value)}
                               placeholder="Ex: 192.168.1.150"
-                              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white"
+                              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2 py-1 text-xs text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[7.5px] uppercase font-black text-zinc-500 block mb-1">IP do Roteador / Gateway Principal</label>
+                            <input
+                              type="text"
+                              value={clientRouterIp}
+                              onChange={(e) => setClientRouterIp(e.target.value)}
+                              placeholder="Ex: 192.168.1.1"
+                              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2 py-1 text-xs text-white"
                             />
                           </div>
                           <div>
                             <span className="text-[7.5px] uppercase font-black text-zinc-500 block">Hub Status</span>
-                            <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 mt-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Online &amp; Sincronizado
+                            <span className="text-xs text-[#39FF14] font-bold flex items-center gap-1 mt-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-ping shrink-0" /> Online &amp; Integrado
                             </span>
                           </div>
                         </div>
@@ -1466,6 +1558,293 @@ export default function InstallationMindMapScreen() {
           </div>
 
         </main>
+      </div>
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────── */}
+      {/* SEÇÃO DE IMPRESSÃO - NOSSO PADRÃO DE QUALIDADE (ONLY VISIBLE ON PRINT)  */}
+      {/* ──────────────────────────────────────────────────────────────────────── */}
+      <div className="hidden print:block bg-white text-zinc-900 p-8 sm:p-12 font-sans w-full min-h-screen text-xs">
+        {/* LOGO & EMISSÃO HEADER */}
+        <div className="border-b-4 border-indigo-600 pb-4 mb-6 flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-extrabold tracking-wider uppercase text-indigo-700 font-sans">CONDFY SMART HOME</span>
+              <span className="text-[8px] bg-indigo-100 text-indigo-800 font-black px-1.5 py-0.5 rounded uppercase">PADRÃO DE QUALIDADE</span>
+            </div>
+            <p className="text-[10px] text-zinc-500 font-medium font-mono">LAUDO TÉCNICO DE CERTIFICAÇÃO E HOMOLOGAÇÃO DE REDE IOT</p>
+          </div>
+          <div className="text-right">
+            <span className="text-[9px] font-bold text-zinc-400 block uppercase">Código do Checklist</span>
+            <span className="text-sm font-mono font-bold text-zinc-800">#CF-{activeClient?.id?.toUpperCase() || 'PRJ'}-{Date.now().toString().slice(-4)}</span>
+            <span className="text-[9px] text-zinc-400 block mt-1">Geração Automática: {new Date().toLocaleDateString('pt-BR')}</span>
+          </div>
+        </div>
+
+        {/* CARTA DE PADRÃO DE QUALIDADE - "NOSSO PADRÃO DE QUALIDADE" */}
+        <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 mb-6 leading-relaxed">
+          <h3 className="text-xs font-bold text-indigo-800 uppercase tracking-wide mb-1.5 flex items-center gap-1.5 font-sans">
+            🛡️ CERTIFICADO DE EXCELÊNCIA E PADRÃO DE QUALIDADE CONDFY
+          </h3>
+          <p className="text-[10px] text-zinc-650 font-sans">
+            A Condfy certifica solenemente que este projeto de automação residencial e IoT cumpre integralmente com os nossos rigorosos <strong>padrões técnicos de qualidade e redundância ativa de sinal</strong>. Todas as baterias, switches e atuadores de rádio foram pareados com canais de rádio analisados contra interferências mútuas, o barramento de alimentação está dimensionado e a malha mesh possui redundância ativa garantindo estabilidade e conectividade ininterrupta.
+          </p>
+        </div>
+
+        {/* METADADOS DO CLIENTE */}
+        <div className="grid grid-cols-2 gap-4 border border-zinc-200 rounded-xl p-4 mb-6 bg-white shadow-xs">
+          <div className="space-y-1.5">
+            <h4 className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">Dados do Cliente Mapeado</h4>
+            <div className="space-y-1">
+              <p className="text-sm font-black text-zinc-850 uppercase">{activeClient?.name}</p>
+              <p className="text-[10px] text-zinc-500">📍 Endereço de Instalação: {activeClient?.address}</p>
+              <p className="text-[10px] text-zinc-500">📞 Contato de Suporte: {activeClient?.phone || 'Não informado'}</p>
+              <p className="text-[10px] text-zinc-500">📊 Status Atual do Sistema: {activeClient?.status || 'Homologado'}</p>
+            </div>
+          </div>
+          
+          <div className="space-y-1.5 border-l border-zinc-200 pl-4">
+            <h4 className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">Parâmetros Críticos de Conectividade (Endereços IP)</h4>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="bg-zinc-50 border border-zinc-200 p-2 rounded-lg text-center">
+                <span className="text-[8px] font-bold text-indigo-600 block uppercase">1. IP Central IoT (Hub)</span>
+                <span className="text-xs font-mono font-bold text-zinc-800 block mt-0.5">{clientHubIp || '192.168.1.150'}</span>
+              </div>
+              <div className="bg-zinc-50 border border-zinc-200 p-2 rounded-lg text-center">
+                <span className="text-[8px] font-bold text-emerald-650 block uppercase">2. IP Gateway/Roteador</span>
+                <span className="text-xs font-mono font-bold text-zinc-800 block mt-0.5">{clientRouterIp || '192.168.1.1'}</span>
+              </div>
+            </div>
+            <p className="text-[8.5px] text-zinc-400 font-mono mt-1 text-center">Subrede Unificada: 255.255.255.0 | DNS de Alta Velocidade (Cloudflare)</p>
+          </div>
+        </div>
+
+        {/* TOPOLOGY METRICS SUMMARY & PROTOCOLS */}
+        <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className="border border-zinc-200 p-2.5 rounded-lg text-center bg-zinc-50/50">
+            <span className="block text-base font-black text-zinc-850">{activeDeviceCount + inactiveDeviceCount}</span>
+            <span className="text-[8px] text-zinc-500 uppercase font-black tracking-wider">Dispositivos Mapeados</span>
+          </div>
+          <div className="border border-zinc-200 p-2.5 rounded-lg text-center bg-zinc-50/50">
+            <span className="block text-base font-black text-indigo-600">{totalRooms}</span>
+            <span className="text-[8px] text-zinc-500 uppercase font-black tracking-wider">Cômodos Regulados</span>
+          </div>
+          <div className="border border-zinc-200 p-2.5 rounded-lg text-center bg-zinc-50/50">
+            <span className="block text-base font-black text-emerald-600">{nodes.filter(n => n.type === 'device' && n.status === 'active').length}</span>
+            <span className="text-[8px] text-zinc-500 uppercase font-black tracking-wider">Dispositivos em Operação</span>
+          </div>
+        </div>
+
+        {/* ORDERED ROOMS AND RELEVANT DEVICES INVENTORY (Todos Ordenados!) */}
+        <div className="space-y-4 mb-6">
+          <h3 className="text-xs font-extrabold uppercase tracking-widest text-zinc-800 border-b border-zinc-300 pb-1 flex items-center gap-1.5 font-sans">
+            📋 INVENTÁRIO TÉCNICO DE HARDWARE POR CÔMODOS (ORDEM ALFABÉTICA)
+          </h3>
+
+          {/* Loop over sorted rooms */}
+          {roomNodes.slice().sort((a,b) => a.label.localeCompare(b.label)).map(room => {
+            const roomDevices = nodes.filter(n => n.type === 'device' && n.parentId === room.id).slice().sort((a,b) => a.label.localeCompare(b.label));
+            if (roomDevices.length === 0) return null;
+            return (
+              <div key={room.id} className="border border-zinc-200 rounded-lg overflow-hidden shrink-0 page-break-inside-avoid">
+                <div className="bg-zinc-100 p-2 font-black text-[10px] text-zinc-800 uppercase flex justify-between items-center border-b border-zinc-200">
+                  <span className="flex items-center gap-1">🏠 AMBIENTE: {room.label}</span>
+                  <span className="text-[8px] text-zinc-500 font-mono italic">Área Consolidada</span>
+                </div>
+                <table className="w-full text-left text-[10px]">
+                  <thead>
+                    <tr className="bg-zinc-50/50 text-[8px] uppercase font-bold text-zinc-500 border-b border-zinc-100">
+                      <th className="p-2 pl-3">Rótulo do Equipamento</th>
+                      <th className="p-2">Tipo de Hardware</th>
+                      <th className="p-2">Tecnologia</th>
+                      <th className="p-2">Observações / Insumos do Ponto</th>
+                      <th className="p-2 text-right pr-3">Integrado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {roomDevices.map(device => (
+                      <tr key={device.id} className="hover:bg-zinc-50/50">
+                        <td className="p-2 pl-3 font-bold text-zinc-900">{device.label}</td>
+                        <td className="p-2 uppercase text-zinc-500 text-[9px] font-mono">
+                          {device.deviceType ? DEVICE_ICONS[device.deviceType] + ' ' + device.deviceType : 'Outro'}
+                        </td>
+                        <td className="p-2 text-indigo-700 font-black text-[9px]">
+                          {device.protocol ? PROTOCOL_ICONS[device.protocol] + ' ' + device.protocol : 'N/A'}
+                        </td>
+                        <td className="p-2 text-zinc-500 italic max-w-xs truncate">{device.details || 'Conexão estável certificada.'}</td>
+                        <td className="p-2 text-right pr-3 font-mono font-bold text-[9px]">
+                          {device.connectionDisabled ? (
+                            <span className="text-rose-500 font-bold uppercase">[❌ CANAL DESATIVADO]</span>
+                          ) : device.status === 'active' ? (
+                            <span className="text-emerald-700 font-bold uppercase">[✓ 100% ONLINE]</span>
+                          ) : (
+                            <span className="text-zinc-400 font-bold uppercase">[OFFLINE]</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
+
+          {/* Infrastructure/Hub elements */}
+          {nodes.filter(n => n.type === 'hub' || n.type === 'group').length > 0 && (
+            <div className="border border-zinc-200 rounded-lg overflow-hidden shrink-0 page-break-inside-avoid">
+              <div className="bg-zinc-100 p-2 font-black text-[10px] text-zinc-800 uppercase flex justify-between items-center border-b border-zinc-200">
+                <span className="flex items-center gap-1">🎛️ BACKBONE DE INFRAESTRUTURA E GATEWAYS</span>
+                <span className="text-[8px] text-zinc-500 font-mono italic font-bold">Distribuição Primária</span>
+              </div>
+              <table className="w-full text-left text-[10px]">
+                <thead>
+                  <tr className="bg-zinc-50/50 text-[8px] uppercase font-bold text-zinc-500 border-b border-zinc-100">
+                    <th className="p-2 pl-3">Central / Nó</th>
+                    <th className="p-2">Categoria</th>
+                    <th className="p-2">IP Vinculado</th>
+                    <th className="p-2">Descrição de Localização</th>
+                    <th className="p-2 text-right pr-3">Integrado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {nodes.filter(n => n.type === 'hub' || n.type === 'group').slice().sort((a,b) => a.label.localeCompare(b.label)).map(node => (
+                    <tr key={node.id} className="hover:bg-zinc-50/50">
+                      <td className="p-2 pl-3 font-bold text-zinc-900">{node.label}</td>
+                      <td className="p-2 uppercase text-zinc-500 text-[9px] font-mono">{node.type}</td>
+                      <td className="p-2 text-zinc-700 font-mono text-[9px] font-bold">{node.type === 'hub' ? (clientHubIp || '192.168.1.150') : 'Rede Mesh Local'}</td>
+                      <td className="p-2 text-zinc-500 italic max-w-xs truncate">{node.details || 'Frequência de comunicação exclusiva para automação.'}</td>
+                      <td className="p-2 text-right pr-3 font-mono font-bold text-[9px]">
+                        {node.status === 'active' ? (
+                          <span className="text-emerald-700 font-bold uppercase">[✓ OPERACIONAL]</span>
+                        ) : (
+                          <span className="text-rose-500 font-bold uppercase">[✗ DESCONECTADO]</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Other/Dangling devices whose parent isn't a room */}
+          {nodes.filter(n => n.type === 'device' && (!n.parentId || !roomNodes.some(r => r.id === n.parentId))).length > 0 && (
+            <div className="border border-zinc-200 rounded-lg overflow-hidden shrink-0 page-break-inside-avoid">
+              <div className="bg-zinc-100 p-2 font-black text-[10px] text-zinc-800 uppercase flex justify-between items-center border-b border-zinc-200">
+                <span className="flex items-center gap-1">⚙️ DISPOSITIVOS GLOBAIS / CONEXÕES AVULSAS</span>
+                <span className="text-[8px] text-zinc-500 font-mono italic">Acessórios de Rede</span>
+              </div>
+              <table className="w-full text-left text-[10px]">
+                <thead>
+                  <tr className="bg-zinc-50/50 text-[8px] uppercase font-bold text-zinc-500 border-b border-zinc-100">
+                    <th className="p-2 pl-3">Equipamento</th>
+                    <th className="p-2">Tipo</th>
+                    <th className="p-2">Protocolo</th>
+                    <th className="p-2">Observações</th>
+                    <th className="p-2 text-right pr-3">Integrado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {nodes.filter(n => n.type === 'device' && (!n.parentId || !roomNodes.some(r => r.id === n.parentId))).slice().sort((a,b) => a.label.localeCompare(b.label)).map(device => (
+                    <tr key={device.id} className="hover:bg-zinc-50/50">
+                      <td className="p-2 pl-3 font-bold text-zinc-900">{device.label}</td>
+                      <td className="p-2 uppercase text-zinc-500 text-[9px] font-mono">
+                        {device.deviceType ? DEVICE_ICONS[device.deviceType] + ' ' + device.deviceType : 'Outro'}
+                      </td>
+                      <td className="p-2 text-zinc-700 font-semibold text-[9px]">
+                        {device.protocol ? PROTOCOL_ICONS[device.protocol] + ' ' + device.protocol : 'N/A'}
+                      </td>
+                      <td className="p-2 text-zinc-500 italic max-w-xs truncate">{device.details || 'Conectado de acordo com as especificações técnicas da rede.'}</td>
+                      <td className="p-2 text-right pr-3 font-mono font-bold text-[9px]">
+                        {device.connectionDisabled ? (
+                          <span className="text-zinc-400 uppercase">[Desconectado]</span>
+                        ) : device.status === 'active' ? (
+                          <span className="text-emerald-700 font-bold uppercase">[✓ Ativo]</span>
+                        ) : (
+                          <span className="text-rose-500 font-bold uppercase">[✗ Inativo]</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* IMPLANTATION CHECKLIST STATUS (SITUAÇÃO DO CHECKLIST) */}
+        <div className="grid grid-cols-2 gap-4 border border-zinc-200 rounded-xl p-4 bg-zinc-50 mb-6 page-break-inside-avoid">
+          <div className="space-y-2">
+            <h4 className="text-[9px] uppercase font-extrabold text-zinc-500 tracking-wider">✓ Homologação das Fases do Projeto</h4>
+            <div className="space-y-1 text-[10px] font-medium text-zinc-700 leading-normal">
+              <p className="flex items-center gap-1.5">
+                <span className={checklist.survey ? "text-emerald-600 font-bold" : "text-zinc-300"}>
+                  {checklist.survey ? "☑" : "☒"}
+                </span> 
+                <span className={checklist.survey ? "" : "text-zinc-400 line-through"}>1. Estudo Técnico de Viabilidade Smart Home</span>
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className={checklist.wiring ? "text-emerald-600 font-bold" : "text-zinc-300"}>
+                  {checklist.wiring ? "☑" : "☒"}
+                </span> 
+                <span className={checklist.wiring ? "" : "text-zinc-400 line-through"}>2. Puxada de Neutro &amp; Cabeamentos Técnicos</span>
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className={checklist.hw_installation ? "text-emerald-600 font-bold" : "text-zinc-300"}>
+                  {checklist.hw_installation ? "☑" : "☒"}
+                </span> 
+                <span className={checklist.hw_installation ? "" : "text-zinc-400 line-through"}>3. Instalação Física de Placas &amp; Switches</span>
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className={checklist.pairing ? "text-emerald-600 font-bold" : "text-zinc-300"}>
+                  {checklist.pairing ? "☑" : "☒"}
+                </span> 
+                <span className={checklist.pairing ? "" : "text-zinc-400 line-through"}>4. Pareamento de Protocolos Integrados</span>
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className={checklist.scenes ? "text-emerald-600 font-bold" : "text-zinc-300"}>
+                  {checklist.scenes ? "☑" : "☒"}
+                </span> 
+                <span className={checklist.scenes ? "" : "text-zinc-400 line-through"}>5. Modelagem de Cenas de Conforto &amp; Rotinas</span>
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className={checklist.handover ? "text-emerald-600 font-bold" : "text-zinc-300"}>
+                  {checklist.handover ? "☑" : "☒"}
+                </span> 
+                <span className={checklist.handover ? "" : "text-zinc-400 line-through"}>6. Entrega Técnica do Sistemas e Aceite Completo</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2 pl-4 border-l border-zinc-200">
+            <h4 className="text-[9px] uppercase font-extrabold text-zinc-500 tracking-wider">📋 Memorial Descritivo do Projeto</h4>
+            <p className="text-[10px] text-zinc-650 leading-relaxed italic font-mono whitespace-pre-wrap">
+              {clientNotes || 'Nenhuma especificação ou nota complementar gravada para este memorial técnico.'}
+            </p>
+          </div>
+        </div>
+
+        {/* WARRANTY & SYSTEM VALIDATOR SLATE */}
+        <div className="border border-zinc-200 rounded-xl p-4 mb-8 bg-zinc-50/50 page-break-inside-avoid">
+          <h4 className="text-[9px] uppercase font-extrabold text-indigo-800 tracking-wider mb-2 font-sans">📋 TERMO DE GARANTIA, HOMOLOGAÇÃO E QUALIDADE GERAL</h4>
+          <p className="text-[9.5px] text-zinc-600 leading-relaxed">
+            Asseguramos que os gateways locais estão operando dentro dos limites de redundância estabelecidos pelo selo regulatório. Foram criados filtros DHCP associados diretamente ao endereço MAC dos principais transdutores de malha. A garantia para todos os barramentos Zigbee instalados é de 12 meses a partir do aceite assinado das partes abaixo descritas.
+          </p>
+        </div>
+
+        {/* SIGNATURE FIELDS */}
+        <div className="pt-8 grid grid-cols-2 gap-12 text-center text-[10px] font-sans page-break-inside-avoid">
+          <div className="space-y-2">
+            <div className="border-t border-zinc-400 w-4/5 mx-auto" />
+            <p className="font-bold text-zinc-800">Engenheiro Geral Integrador</p>
+            <p className="text-[8px] text-zinc-400">Selo Técnico de Qualidade Condfy</p>
+          </div>
+          <div className="space-y-2">
+            <div className="border-t border-zinc-400 w-4/5 mx-auto" />
+            <p className="font-bold text-zinc-800">Cliente Proprietário Integrado</p>
+            <p className="text-[8px] text-zinc-400">Aceite Técnico de Conformidade Smart Home</p>
+          </div>
+        </div>
       </div>
     </div>
   );
