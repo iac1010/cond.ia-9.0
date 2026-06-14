@@ -4226,14 +4226,76 @@ export const useStore = create<AppState>()(
       restoreData: async (data) => {
         // Restaurar tarefas do backup se estiverem disponíveis
         const rawData = data as any;
-        if (rawData && rawData.dailyTasks) {
-          try {
-            localStorage.setItem('condfy_daily_tasks', JSON.stringify(rawData.dailyTasks));
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new Event('condfy_daily_tasks_updated'));
+        if (rawData) {
+          if (rawData.dailyTasks) {
+            try {
+              localStorage.setItem('condfy_daily_tasks', JSON.stringify(rawData.dailyTasks));
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('condfy_daily_tasks_updated'));
+              }
+            } catch (e) {
+              console.warn('Erro ao restaurar condfy_daily_tasks:', e);
             }
-          } catch (e) {
-            console.error('Erro ao restaurar condfy_daily_tasks:', e);
+          }
+
+          if (rawData.iotDevices) {
+            try {
+              localStorage.setItem('condfy_iot_devices', JSON.stringify(rawData.iotDevices));
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('condfy_iot_devices_updated'));
+              }
+            } catch (e) {
+              console.warn('Erro ao restaurar condfy_iot_devices:', e);
+            }
+          }
+
+          if (rawData.keepNotes) {
+            try {
+              localStorage.setItem('execution_keep_notes', JSON.stringify(rawData.keepNotes));
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('execution_keep_notes_updated'));
+              }
+            } catch (e) {
+              console.warn('Erro ao restaurar execution_keep_notes:', e);
+            }
+          }
+
+          if (rawData.kanbanColumns) {
+            try {
+              localStorage.setItem('kanban_columns_list', JSON.stringify(rawData.kanbanColumns));
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('kanban_columns_list_updated'));
+              }
+            } catch (e) {
+              console.warn('Erro ao restaurar kanban_columns_list:', e);
+            }
+          }
+
+          if (rawData.pomodoroTime) {
+            try {
+              localStorage.setItem('condfy_pomodoro_time', String(rawData.pomodoroTime));
+            } catch (e) {
+              console.warn('Erro ao restaurar condfy_pomodoro_time:', e);
+            }
+          }
+
+          if (rawData.pomodoroMode) {
+            try {
+              localStorage.setItem('condfy_pomodoro_mode', String(rawData.pomodoroMode));
+            } catch (e) {
+              console.warn('Erro ao restaurar condfy_pomodoro_mode:', e);
+            }
+          }
+
+          if (rawData.installationMindmap) {
+            try {
+              localStorage.setItem('condfy_installation_mindmap', JSON.stringify(rawData.installationMindmap));
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('condfy_installation_mindmap_updated'));
+              }
+            } catch (e) {
+              console.warn('Erro ao restaurar condfy_installation_mindmap:', e);
+            }
           }
         }
 

@@ -166,6 +166,24 @@ export function DashboardIoTTile({
     }))));
   }, [devices]);
 
+  // Escuta alteração externa (ex: backup restaurado)
+  useEffect(() => {
+    const handleUpdated = () => {
+      const saved = localStorage.getItem('condfy_iot_devices');
+      if (saved) {
+        try {
+          setDevices(JSON.parse(saved));
+        } catch (e) {
+          console.warn('Erro ao atualizar condfy_iot_devices pelo evento:', e);
+        }
+      }
+    };
+    window.addEventListener('condfy_iot_devices_updated', handleUpdated);
+    return () => {
+      window.removeEventListener('condfy_iot_devices_updated', handleUpdated);
+    };
+  }, []);
+
   // Handle open Form for Add
   const handleOpenAdd = () => {
     if (isEditMode) return;

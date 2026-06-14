@@ -76,6 +76,22 @@ export default function KanbanBoard() {
     localStorage.setItem('kanban_columns_list', JSON.stringify(columns));
   }, [columns]);
 
+  // Escutar atualizações externas de backup
+  useEffect(() => {
+    const handleUpdated = () => {
+      const saved = localStorage.getItem('kanban_columns_list');
+      if (saved) {
+        try {
+          setColumns(JSON.parse(saved));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('kanban_columns_list_updated', handleUpdated);
+    return () => {
+      window.removeEventListener('kanban_columns_list_updated', handleUpdated);
+    };
+  }, []);
+
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [newColumnIcon, setNewColumnIcon] = useState('CheckCircle');

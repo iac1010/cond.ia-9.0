@@ -35,6 +35,7 @@ import GoogleCalendarWidget from '../components/GoogleCalendarWidget';
 import { DashboardGoogleMeetTile } from '../components/DashboardGoogleMeetTile';
 import { DashboardGoogleTranslateTile } from '../components/DashboardGoogleTranslateTile';
 import { DashboardIoTTile } from '../components/DashboardIoTTile';
+import { DashboardMindMapTile } from '../components/DashboardMindMapTile';
 import { Modal } from '../components/Modal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import toast from 'react-hot-toast';
@@ -1894,6 +1895,15 @@ export default function Dashboard() {
           isEditMode={isEditMode}
         />
       )
+    },
+    {
+      id: 'installation-mindmap',
+      type: 'wide',
+      component: (
+        <DashboardMindMapTile 
+          isEditMode={isEditMode}
+        />
+      )
     }
   ];
 
@@ -1968,13 +1978,53 @@ export default function Dashboard() {
 
   const handleExportBackup = () => {
     let tasks: any[] = [];
+    let iotDevices: any[] = [];
+    let keepNotes: any[] = [];
+    let kanbanColumns: any[] = [];
+    let pomodoroTime: string | null = null;
+    let pomodoroMode: string | null = null;
+    let installationMindmap: any[] = [];
+
     try {
       const savedTasks = localStorage.getItem('condfy_daily_tasks');
-      if (savedTasks) {
-        tasks = JSON.parse(savedTasks);
-      }
+      if (savedTasks) tasks = JSON.parse(savedTasks);
     } catch (e) {
-      console.error('Error reading daily tasks for backup:', e);
+      console.warn('Error reading daily tasks for backup:', e);
+    }
+
+    try {
+      const savedIot = localStorage.getItem('condfy_iot_devices');
+      if (savedIot) iotDevices = JSON.parse(savedIot);
+    } catch (e) {
+      console.warn('Error reading IoT devices for backup:', e);
+    }
+
+    try {
+      const savedNotes = localStorage.getItem('execution_keep_notes');
+      if (savedNotes) keepNotes = JSON.parse(savedNotes);
+    } catch (e) {
+      console.warn('Error reading execution keep notes for backup:', e);
+    }
+
+    try {
+      const savedKanban = localStorage.getItem('kanban_columns_list');
+      if (savedKanban) kanbanColumns = JSON.parse(savedKanban);
+    } catch (e) {
+      console.warn('Error reading kanban columns for backup:', e);
+    }
+
+    try {
+      const savedMindmap = localStorage.getItem('condfy_installation_mindmap');
+      if (savedMindmap) installationMindmap = JSON.parse(savedMindmap);
+    } catch (e) {
+      console.warn('Error reading installation mindmap for backup:', e);
+    }
+
+    try {
+      pomodoroTime = localStorage.getItem('condfy_pomodoro_time');
+      pomodoroMode = localStorage.getItem('condfy_pomodoro_mode');
+    } catch (e) {
+      console.warn('Error reading pomodoro config for backup:', e);
     }
 
     const backupData = {
@@ -1991,7 +2041,13 @@ export default function Dashboard() {
       companyData,
       hiddenTiles,
       dailyTasks: tasks,
-      version: '1.0',
+      iotDevices,
+      keepNotes,
+      kanbanColumns,
+      pomodoroTime,
+      pomodoroMode,
+      installationMindmap,
+      version: '1.3',
       exportDate: new Date().toISOString()
     };
 

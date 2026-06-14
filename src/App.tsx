@@ -117,7 +117,8 @@ function Layout({ children }: { children: React.ReactNode }) {
     '/document-management',
     '/presentation',
     '/budget-forecast',
-    '/financial-brain'
+    '/financial-brain',
+    '/installation-mindmap'
   ].some(path => location.pathname.startsWith(path));
 
   return (
@@ -248,6 +249,7 @@ import TechnicalReport from './pages/TechnicalReport';
 import SalesPlanning from './pages/SalesPlanning';
 import { CommercialCenter } from './pages/CommercialCenter';
 import TasksProductivity from './pages/TasksProductivity';
+import InstallationMindMapScreen from './pages/InstallationMindMapScreen';
 
 export default function App() {
   const { vivianEnabled } = useStore();
@@ -305,6 +307,7 @@ export default function App() {
           <Route path="/presentation" element={<SystemPresentation />} />
           <Route path="/sales-planning" element={<SalesPlanning />} />
           <Route path="/commercial" element={<CommercialCenter />} />
+          <Route path="/installation-mindmap" element={<InstallationMindMapScreen />} />
         </Routes>
       </Layout>
     </HashRouter>
