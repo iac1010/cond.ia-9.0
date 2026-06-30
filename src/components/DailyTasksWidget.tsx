@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   CheckCircle2, Circle, Plus, Trash2, Tag, 
   Calendar, CheckSquare, Sparkles, TrendingUp, Filter, AlertTriangle,
-  Play, Pause, RotateCcw, Coffee, Brain
+  Play, Pause, RotateCcw, Coffee, Brain, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../store';
 
 interface DailyTask {
   id: string;
@@ -14,7 +15,16 @@ interface DailyTask {
   completed: boolean;
   category: 'Trabalho' | 'Pessoal' | 'Fazer Diariamente' | 'Urgente';
   createdAt: string;
+  priority?: 'Alta' | 'Média' | 'Baixa';
+  difficulty?: 'Fácil' | 'Média' | 'Difícil';
+  estimatedMinutes?: number;
+  notes?: string;
   completedAt?: string;
+  starred?: boolean;
+  installationDetails?: string;
+  attachmentName?: string;
+  attachmentUrl?: string;
+  osNumber?: string;
 }
 
 const CATEGORY_STYLES = {
@@ -42,6 +52,7 @@ const CATEGORY_STYLES = {
 
 export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
   const navigate = useNavigate();
+  const { addTicket } = useStore();
   const [tasks, setTasks] = useState<DailyTask[]>(() => {
     const saved = localStorage.getItem('condfy_daily_tasks');
     if (saved) {
@@ -62,6 +73,7 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
   const [newTitle, setNewTitle] = useState('');
   const [category, setCategory] = useState<DailyTask['category']>('Trabalho');
   const [activeFilter, setActiveFilter] = useState<DailyTask['category'] | 'Todos'>('Todos');
+  const [showCompleted, setShowCompleted] = useState<boolean>(false);
 
   // Pomodoro States
   const [timeLeft, setTimeLeft] = useState(() => {
@@ -177,12 +189,26 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
     };
 
     setTasks(prev => [newTask, ...prev]);
+    
+    // Also add to Kanban board as a Ticket of type TAREFA
+    addTicket({
+      title: newTitle.trim(),
+      type: 'TAREFA',
+      status: 'APROVADO',
+      date: new Date().toISOString().split('T')[0],
+      technician: 'Administrador',
+      observations: `Tarefa criada via widget diário (${category})`,
+      maintenanceCategory: category,
+      color: category === 'Urgente' ? '#f43f5e' : category === 'Trabalho' ? '#3b82f6' : '#10b981'
+    });
+
     setNewTitle('');
     toast.success('Tarefa diária criada com sucesso! 🚀');
   };
 
-  const handleToggleTask = (id: string) => {
-    setTasks(prev => prev.map(t => {
+  const handleToggleTask = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const updated = tasks.map(t => {
       if (t.id === id) {
         const isNowCompleted = !t.completed;
         if (isNowCompleted) {
@@ -195,19 +221,66 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
         };
       }
       return t;
-    }));
+    });
+    setTasks(updated);
+    localStorage.setItem('condfy_daily_tasks', JSON.stringify(updated));
+    window.dispatchEvent(new Event('condfy_daily_tasks_updated'));
+  };
+
+  const handleToggleStar = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = tasks.map(t => {
+      if (t.id === id) {
+        const isStarred = !t.starred;
+        if (isStarred) {
+          toast.success('Tarefa em destaque! ⭐');
+        } else {
+          toast.success('Tarefa removida dos destaques');
+        }
+        return { ...t, starred: isStarred };
+      }
+      return t;
+    });
+    setTasks(updated);
+    localStorage.setItem('condfy_daily_tasks', JSON.stringify(updated));
+    window.dispatchEvent(new Event('condfy_daily_tasks_updated'));
   };
 
   const handleDeleteTask = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setTasks(prev => prev.filter(t => t.id !== id));
+    const updated = tasks.filter(t => t.id !== id);
+    setTasks(updated);
+    localStorage.setItem('condfy_daily_tasks', JSON.stringify(updated));
+    window.dispatchEvent(new Event('condfy_daily_tasks_updated'));
     toast.success('Tarefa excluída');
   };
 
   const filteredTasks = useMemo(() => {
-    if (activeFilter === 'Todos') return tasks;
-    return tasks.filter(t => t.category === activeFilter);
-  }, [tasks, activeFilter]);
+    let list = tasks;
+    if (!showCompleted) {
+      list = list.filter(t => !t.completed);
+    }
+    if (activeFilter !== 'Todos') {
+      list = list.filter(t => t.category === activeFilter);
+    }
+    
+    // Sort logic: Starred (destaque) tasks first, then Urgente, then by date (newest first)
+    return list.slice().sort((a, b) => {
+      const aStarred = a.starred ? 1 : 0;
+      const bStarred = b.starred ? 1 : 0;
+      if (aStarred !== bStarred) {
+        return bStarred - aStarred; // Starred tasks at the absolute top!
+      }
+      
+      const aUrgente = a.category === 'Urgente' ? 1 : 0;
+      const bUrgente = b.category === 'Urgente' ? 1 : 0;
+      if (aUrgente !== bUrgente) {
+        return bUrgente - aUrgente; // Urgente tasks immediately under starred
+      }
+      
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [tasks, activeFilter, showCompleted]);
 
   // Panorama calculations
   const stats = useMemo(() => {
@@ -339,79 +412,54 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
         </div>
 
         {/* Shorter Filters Row - Scrollbar Hidden */}
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 border-t border-white/5 pt-2">
-          {(['Todos', 'Trabalho', 'Pessoal', 'Fazer Diariamente', 'Urgente'] as const).map((filt) => (
-            <button
-              key={filt}
-              type="button"
-              onClick={() => setActiveFilter(filt)}
-              className={`text-[8.5px] font-extrabold uppercase px-2 py-0.5 rounded-lg border transition-all duration-200 shrink-0 ${
-                activeFilter === filt
-                  ? 'bg-white/10 border-white/30 text-white'
-                  : 'bg-white/1 border-transparent text-white/40 hover:text-white/80'
-              }`}
-            >
-              {filt === 'Fazer Diariamente' ? 'Diário' : filt}
-            </button>
-          ))}
+        <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-2 mt-1">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
+            {(['Todos', 'Trabalho', 'Pessoal', 'Fazer Diariamente', 'Urgente'] as const).map((filt) => (
+              <button
+                key={filt}
+                type="button"
+                onClick={() => setActiveFilter(filt)}
+                className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded transition-all duration-200 shrink-0 border ${
+                  activeFilter === filt
+                    ? 'bg-white/10 border-white/20 text-white'
+                    : 'bg-transparent border-transparent text-white/40 hover:text-white/80'
+                }`}
+              >
+                {filt === 'Fazer Diariamente' ? 'Diário' : filt}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowCompleted(!showCompleted)}
+            className={`text-[8px] font-black uppercase px-2 py-0.5 rounded transition-all shrink-0 border flex items-center gap-1 ${
+              showCompleted 
+                ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20' 
+                : 'bg-white/5 border-white/5 text-white/40 hover:text-white/80 hover:border-white/10'
+            }`}
+            title={showCompleted ? "Ocultar tarefas concluídas" : "Mostrar tarefas concluídas"}
+          >
+            {showCompleted ? 'Ver Pendentes' : 'Ver Concluídas'}
+          </button>
         </div>
       </div>
 
-      {/* Elegant Compact Form Creator */}
-      <form onSubmit={handleAddTask} className="mb-2.5 shrink-0 relative z-10">
-        <div className="flex flex-col gap-1.5 bg-white/5 p-1.5 rounded-xl border border-white/10 focus-within:border-white/20 transition-all focus-within:ring-1 focus-within:ring-[#39FF14]/30">
-          <input 
-            type="text"
-            required
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Nova tarefa ou rotina de hoje..."
-            className="w-full bg-transparent border-none placeholder-white/25 text-xs text-white uppercase font-bold tracking-tight outline-none focus:ring-0 px-1 py-1"
-          />
-
-          <div className="flex items-center justify-between border-t border-white/5 pt-1.5 px-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] font-black uppercase text-white/40 tracking-wider">Etiqueta:</span>
-              <div className="flex items-center gap-1">
-                {(['Trabalho', 'Pessoal', 'Fazer Diariamente', 'Urgente'] as const).map((catName) => {
-                  const isSelected = category === catName;
-                  const style = CATEGORY_STYLES[catName];
-                  return (
-                    <button
-                      key={catName}
-                      type="button"
-                      onClick={() => setCategory(catName)}
-                      title={catName === 'Fazer Diariamente' ? 'Rotina Diária' : catName}
-                      className={`w-3.5 h-3.5 rounded-full border transition-all flex items-center justify-center ${
-                        isSelected 
-                          ? 'ring-1 ring-[#39FF14] border-white scale-110' 
-                          : 'border-white/10 opacity-50 hover:opacity-100'
-                      }`}
-                      style={{ backgroundColor: catName === 'Trabalho' ? '#3b82f6' : catName === 'Pessoal' ? '#a855f7' : catName === 'Fazer Diariamente' ? '#10b981' : '#f43f5e' }}
-                    >
-                      {isSelected && <div className="w-1 h-1 bg-white rounded-full" />}
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-[8px] font-bold text-white/50 lowercase italic max-w-[50px] truncate">
-                {category === 'Fazer Diariamente' ? 'diária' : category.toLowerCase()}
-              </span>
-            </div>
-
-            <button 
-              type="submit"
-              className="px-2.5 py-1 bg-[#39FF14] hover:bg-[#34e012] text-black font-black uppercase text-[9px] rounded-lg tracking-wider transition-all active:scale-95 shadow-[0_0_8px_rgba(57,255,20,0.35)] flex items-center gap-0.5"
-            >
-              <Plus className="w-2.5 h-2.5 stroke-[3]" />
-              Criar
-            </button>
-          </div>
-        </div>
-      </form>
+      {/* Elegant Compact CTA to add tasks on the full screen */}
+      <button 
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate('/tasks?new=true');
+        }}
+        className="mb-3 shrink-0 relative z-10 w-full py-2.5 bg-gradient-to-r from-zinc-900 to-zinc-900/40 hover:from-[#39FF14]/10 hover:to-indigo-500/10 border border-white/10 hover:border-[#39FF14]/40 rounded-xl text-[9px] font-black uppercase tracking-wider text-zinc-300 hover:text-[#39FF14] transition-all duration-300 flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] group/btn"
+      >
+        <Plus className="w-3.5 h-3.5 text-[#39FF14] group-hover/btn:scale-110 transition-transform" />
+        <span>+ Adicionar Tarefa (Painel de Criação)</span>
+      </button>
 
       {/* Task List - Compact, Flex-grown height */}
-      <div className="flex-1 overflow-y-auto pr-0.5 space-y-1.5 relative z-10 scrollbar-thin max-h-[140px] mb-2.5 min-h-[90px]">
+      <div className="flex-1 overflow-y-auto pr-0.5 space-y-1.5 relative z-10 scrollbar-thin max-h-[240px] mb-2.5 min-h-[120px]">
         <AnimatePresence mode="popLayout">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task) => {
@@ -423,17 +471,20 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  onClick={() => handleToggleTask(task.id)}
-                  className={`flex items-center justify-between p-2 rounded-xl border transition-all duration-200 cursor-pointer group ${
+                  onClick={(e) => handleToggleTask(task.id, e)}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 cursor-pointer group ${
                     task.completed 
-                      ? 'bg-zinc-900/40 border-white/5 opacity-50 hover:opacity-80' 
-                      : 'bg-white/5 hover:bg-white/8 border-white/10 hover:border-white/15'
+                      ? 'bg-zinc-900/40 border-white/5 opacity-40 hover:opacity-80' 
+                      : task.starred
+                        ? 'bg-gradient-to-r from-amber-500/10 via-zinc-900/80 to-zinc-950/90 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.08)] hover:border-amber-400'
+                        : 'bg-white/5 hover:bg-white/8 border-white/10 hover:border-white/15'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-3">
                     <button
                       type="button"
-                      className="shrink-0 text-white/30 group-hover:text-[#39FF14] transition-colors"
+                      onClick={(e) => handleToggleTask(task.id, e)}
+                      className="shrink-0 text-white/30 group-hover:text-[#39FF14] transition-colors p-0.5 rounded hover:bg-white/5"
                     >
                       {task.completed ? (
                         <CheckCircle2 className="w-4 h-4 text-[#39FF14]" />
@@ -442,20 +493,44 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
                       )}
                     </button>
 
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleStar(task.id, e)}
+                      className="shrink-0 transition-all p-0.5 rounded hover:bg-white/5"
+                      title={task.starred ? "Remover dos Destaques" : "Destacar Tarefa"}
+                    >
+                      <Star 
+                        className={`w-3.5 h-3.5 transition-all ${
+                          task.starred 
+                            ? 'text-amber-400 fill-amber-400 scale-110 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
+                            : 'text-white/15 hover:text-amber-400 hover:scale-110'
+                        }`} 
+                      />
+                    </button>
+
                     <div className="min-w-0">
                       <p className={`text-xs font-black uppercase tracking-tight truncate leading-tight ${
-                        task.completed ? 'line-through text-white/40 italic font-bold' : 'text-white/90'
+                        task.completed 
+                          ? 'line-through text-white/30 italic font-bold' 
+                          : task.starred
+                            ? 'text-amber-300 font-extrabold'
+                            : 'text-white/90'
                       }`}>
                         {task.title}
                       </p>
                       
                       <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {task.starred && (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-px rounded bg-amber-500/20 border border-amber-500/30 text-[6.5px] font-black uppercase tracking-wider text-amber-400">
+                            ★ Destaque
+                          </span>
+                        )}
                         <span className={`inline-flex items-center gap-1 px-1.5 py-px rounded border text-[7px] font-black uppercase tracking-wider ${style.bg}`}>
                           <span className={`w-1 h-1 rounded-full ${style.dot}`} />
                           {task.category === 'Fazer Diariamente' ? 'Rotina' : task.category}
                         </span>
                         {task.createdAt && (
-                          <span className="text-[6.5px] font-extrabold text-white/30 uppercase">
+                          <span className="text-[6.5px] font-extrabold text-white/20 uppercase">
                             Criada: {new Date(task.createdAt).toLocaleDateString('pt-BR')} às {new Date(task.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}

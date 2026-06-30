@@ -14,9 +14,9 @@ import toast from 'react-hot-toast';
 export interface MindMapNode {
   id: string;
   label: string;
-  type: 'hub' | 'room' | 'device' | 'group';
-  protocol?: 'WiFi' | 'Zigbee' | 'ZWave' | 'Bluetooth' | 'IP' | 'N/A';
-  deviceType?: 'light' | 'switch' | 'sensor' | 'security' | 'climate' | 'media' | 'other';
+  type: 'hub' | 'room' | 'device' | 'group' | string;
+  protocol?: 'WiFi' | 'Zigbee' | 'ZWave' | 'Bluetooth' | 'IP' | 'N/A' | string;
+  deviceType?: 'light' | 'switch' | 'sensor' | 'security' | 'climate' | 'media' | 'other' | string;
   status?: 'active' | 'inactive';
   details?: string;
   parentId?: string | null;
@@ -81,10 +81,10 @@ const MEMORY_SEEDED_CLIENTS = [
 ];
 
 const ROOM_COLORS: Record<string, string> = {
-  hub: 'from-purple-600 to-indigo-600 border-purple-400 text-white',
-  room: 'from-sky-600 to-blue-600 border-sky-400 text-white',
-  group: 'from-amber-600 to-orange-600 border-amber-400 text-white',
-  device: 'from-zinc-800 to-zinc-950 border-zinc-700 text-zinc-100 dark:text-zinc-100'
+  hub: 'bg-gradient-to-r from-purple-700 to-indigo-700 border-purple-400/60 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)]',
+  room: 'bg-gradient-to-r from-sky-700 to-blue-700 border-sky-400/60 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]',
+  group: 'bg-gradient-to-r from-amber-700 to-orange-700 border-amber-400/60 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)]',
+  device: 'bg-zinc-900/95 backdrop-blur-md border-zinc-700/60 text-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.4)]'
 };
 
 const PROTOCOL_ICONS: Record<string, string> = {
@@ -103,6 +103,43 @@ const DEVICE_ICONS: Record<string, string> = {
   climate: '❄️',
   media: '📺',
   other: '⚙️'
+};
+
+// Premium Icon rendering helpers
+const renderDeviceIcon = (deviceType: string) => {
+  switch (deviceType) {
+    case 'light':
+      return <Lightbulb size={13} className="text-amber-400 shrink-0" />;
+    case 'switch':
+      return <Cpu size={13} className="text-sky-400 shrink-0" />;
+    case 'sensor':
+      return <Activity size={13} className="text-emerald-400 shrink-0" />;
+    case 'security':
+      return <Shield size={13} className="text-rose-400 shrink-0" />;
+    case 'climate':
+      return <Thermometer size={13} className="text-teal-400 shrink-0" />;
+    case 'media':
+      return <Smartphone size={13} className="text-purple-400 shrink-0" />;
+    default:
+      return <Sliders size={13} className="text-zinc-400 shrink-0" />;
+  }
+};
+
+const renderProtocolIcon = (protocol: string) => {
+  switch (protocol) {
+    case 'WiFi':
+      return <Wifi size={11} className="text-sky-400 shrink-0" />;
+    case 'Zigbee':
+      return <Radio size={11} className="text-amber-400 shrink-0" />;
+    case 'ZWave':
+      return <Layers size={11} className="text-violet-400 shrink-0" />;
+    case 'Bluetooth':
+      return <Link size={11} className="text-blue-400 shrink-0" />;
+    case 'IP':
+      return <Network size={11} className="text-emerald-400 shrink-0" />;
+    default:
+      return null;
+  }
 };
 
 export default function InstallationMindMapScreen() {
@@ -155,7 +192,12 @@ export default function InstallationMindMapScreen() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDraggingNode, setIsDraggingNode] = useState<string | null>(null);
+  const [isPanning, setIsPanning] = useState<boolean>(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const loadedClientIdRef = useRef<string | null>(null);
+  const [layoutType, setLayoutType] = useState<'free' | 'radial' | 'tree' | 'horizontal' | 'orbit'>('free');
+  const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [packetSpeed, setPacketSpeed] = useState<'normal' | 'fast' | 'off'>('normal');
 
   // Form states for node creator/editor
   const [formLabel, setFormLabel] = useState('');
@@ -165,6 +207,41 @@ export default function InstallationMindMapScreen() {
   const [formStatus, setFormStatus] = useState<'active' | 'inactive'>('active');
   const [formDetails, setFormDetails] = useState('');
   const [formParentId, setFormParentId] = useState<string>('');
+  const [customType, setCustomType] = useState('');
+  const [customProtocol, setCustomProtocol] = useState('');
+  const [customDeviceType, setCustomDeviceType] = useState('');
+
+  // Centers the nodes on the viewport container
+  const centerMap = (customNodes: MindMapNode[] = nodes) => {
+    if (!containerRef.current || customNodes.length === 0) return;
+    const containerWidth = containerRef.current.clientWidth || 800;
+    const containerHeight = containerRef.current.clientHeight || 500;
+
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+
+    customNodes.forEach(n => {
+      if (n.x < minX) minX = n.x;
+      if (n.x > maxX) maxX = n.x;
+      if (n.y < minY) minY = n.y;
+      if (n.y > maxY) maxY = n.y;
+    });
+
+    if (minX === Infinity) {
+      minX = 0; maxX = 400;
+      minY = 0; maxY = 300;
+    }
+
+    // Node width is ~170px, height is ~44px. Find center of bounding box:
+    const centerX = minX + (maxX - minX) / 2 + 85;
+    const centerY = minY + (maxY - minY) / 2 + 22;
+
+    // Center the map in the visible viewport
+    const newPanX = (containerWidth / 2) / zoom - centerX;
+    const newPanY = (containerHeight / 2) / zoom - centerY;
+
+    setPan({ x: Math.round(newPanX), y: Math.round(newPanY) });
+  };
 
   // Filtered client list helper
   const filteredClients = displayClients.filter(c => 
@@ -190,15 +267,20 @@ export default function InstallationMindMapScreen() {
     const savedChecklistString = localStorage.getItem(savedChecklistKey);
 
     // Node restoration
+    let restoredNodes: MindMapNode[] = [];
     if (savedNodes) {
       try {
-        setNodes(JSON.parse(savedNodes));
+        restoredNodes = JSON.parse(savedNodes);
       } catch (e) {
-        setNodes(getDefaultNodesForClient(activeClient.id));
+        restoredNodes = getDefaultNodesForClient(activeClient.id);
       }
     } else {
-      setNodes(getDefaultNodesForClient(activeClient.id));
+      restoredNodes = getDefaultNodesForClient(activeClient.id);
     }
+    
+    // Set the loaded client ID reference before setting nodes
+    loadedClientIdRef.current = activeClient.id;
+    setNodes(restoredNodes);
 
     // Load static inputs
     setClientNotes(savedNotes !== null ? savedNotes : activeClient.notes);
@@ -215,19 +297,45 @@ export default function InstallationMindMapScreen() {
       setChecklist(activeClient.checklist);
     }
 
+    // Load customized layout type if saved
+    const savedLayoutTypeKey = `condfy_installation_layout_type_${activeClient.id}`;
+    const savedLayoutType = localStorage.getItem(savedLayoutTypeKey);
+    if (savedLayoutType) {
+      setLayoutType(savedLayoutType as any);
+    } else {
+      setLayoutType('free');
+    }
+
     setSelectedNode(null);
     setMapViewMode('view');
     setZoom(1);
-    setPan({ x: 0, y: 0 });
+
+    // Centering the map in the middle of the viewport
+    setTimeout(() => {
+      centerMap(restoredNodes);
+    }, 150);
   }, [selectedClientId]);
 
   // Persists nodes & summaries on every state mutation
   useEffect(() => {
     if (!activeClient || nodes.length === 0) return;
+    
+    // Prevent overwriting client key with old client nodes during transitions
+    if (loadedClientIdRef.current !== activeClient.id) {
+      return;
+    }
+
     localStorage.setItem(`condfy_installation_mindmap_${activeClient.id}`, JSON.stringify(nodes));
     // Also backup to global key for backwards-compatibility with dashboard preview tile
     localStorage.setItem('condfy_installation_mindmap', JSON.stringify(nodes));
   }, [nodes, activeClient]);
+
+  // Persists layout type state when layout type changes for the active client
+  useEffect(() => {
+    if (!activeClient) return;
+    if (loadedClientIdRef.current !== activeClient.id) return;
+    localStorage.setItem(`condfy_installation_layout_type_${activeClient.id}`, layoutType);
+  }, [layoutType, activeClient]);
 
   const saveTechnicalSummaries = () => {
     if (!activeClient) return;
@@ -285,46 +393,249 @@ export default function InstallationMindMapScreen() {
     ];
   }
 
-  // Node layout automatically arranged via simple ring formula
-  const performRadialLayout = () => {
-    const parent = nodes.find(n => n.type === 'hub') || nodes[0];
-    if (!parent) return;
+  // Connection Line Color coded by communication protocol
+  const getConnectionColor = (node: MindMapNode) => {
+    if (node.connectionDisabled) return '#f43f5e'; // rose-500
+    if (node.status === 'inactive') return '#4b5563'; // zinc-600
+    
+    switch (node.protocol) {
+      case 'WiFi':
+        return '#0ea5e9'; // sky-500
+      case 'Zigbee':
+        return '#f59e0b'; // amber-500
+      case 'ZWave':
+        return '#a855f7'; // purple-500
+      case 'Bluetooth':
+        return '#3b82f6'; // blue-500
+      case 'IP':
+        return '#10b981'; // emerald-500
+      default:
+        return '#6366f1'; // default indigo-500
+    }
+  };
 
-    let updated = [...nodes];
-    const hubIndex = updated.findIndex(n => n.id === parent.id);
-    if (hubIndex !== -1) {
-      updated[hubIndex] = { ...parent, x: 200, y: 150 };
+  // Align nodes to a virtual 40px grid for clean schematic layouts
+  const snapToGrid = () => {
+    setNodes(prev => prev.map(n => ({
+      ...n,
+      x: Math.round(n.x / 40) * 40,
+      y: Math.round(n.y / 40) * 40
+    })));
+    toast.success('Pontos alinhados à grelha técnica de 40px!');
+  };
+
+  // Apply visual layouts to reorganize the installation map
+  const applyLayout = (type: 'free' | 'radial' | 'tree' | 'horizontal' | 'orbit') => {
+    if (nodes.length === 0) return;
+    setLayoutType(type);
+
+    if (type === 'free') {
+      toast.success('Modo de desenho livre ativado! Arraste os pontos à vontade.');
+      return;
     }
 
-    const rooms = updated.filter(n => n.parentId === parent.id && n.type === 'room');
-    rooms.forEach((room, roomIdx) => {
-      const angle = (roomIdx / rooms.length) * 2 * Math.PI;
-      const radius = 180;
-      const rx = 200 + radius * Math.cos(angle);
-      const ry = 150 + radius * Math.sin(angle);
+    const hub = nodes.find(n => n.type === 'hub') || nodes[0];
+    const updated = [...nodes];
+    const hubIdx = updated.findIndex(n => n.id === hub.id);
+
+    // Group elements
+    const rooms = nodes.filter(n => n.type === 'room');
+    const devices = nodes.filter(n => n.type === 'device');
+
+    if (type === 'radial') {
+      if (hubIdx !== -1) {
+        updated[hubIdx] = { ...hub, x: 250, y: 220 };
+      }
       
-      const rIdx = updated.findIndex(n => n.id === room.id);
-      if (rIdx !== -1) {
-        updated[rIdx] = { ...room, x: rx, y: ry };
+      const radialRooms = updated.filter(n => n.parentId === hub.id && n.type === 'room');
+      radialRooms.forEach((room, roomIdx) => {
+        const angle = (roomIdx / Math.max(1, radialRooms.length)) * 2 * Math.PI;
+        const radius = 200;
+        const rx = 250 + radius * Math.cos(angle);
+        const ry = 220 + radius * Math.sin(angle);
+        
+        const rIdx = updated.findIndex(n => n.id === room.id);
+        if (rIdx !== -1) {
+          updated[rIdx] = { ...room, x: Math.round(rx), y: Math.round(ry) };
+        }
+
+        const radialDevices = updated.filter(n => n.parentId === room.id && n.type === 'device');
+        radialDevices.forEach((dev, devIdx) => {
+          const dAngle = angle + ((devIdx - (radialDevices.length - 1) / 2) * 0.35);
+          const dRadius = 130;
+          const dx = rx + dRadius * Math.cos(dAngle);
+          const dy = ry + dRadius * Math.sin(dAngle);
+
+          const dIdx = updated.findIndex(n => n.id === dev.id);
+          if (dIdx !== -1) {
+            updated[dIdx] = { ...dev, x: Math.round(dx), y: Math.round(dy) };
+          }
+        });
+      });
+
+      // Position unparented nodes
+      const unparented = updated.filter(n => n.id !== hub.id && n.type !== 'room' && n.type !== 'device');
+      unparented.forEach((node, idx) => {
+        const angle = ((idx + 0.5) / Math.max(1, unparented.length)) * 2 * Math.PI;
+        updated[updated.findIndex(n => n.id === node.id)] = {
+          ...node,
+          x: Math.round(250 + 320 * Math.cos(angle)),
+          y: Math.round(220 + 320 * Math.sin(angle))
+        };
+      });
+
+      setNodes(updated);
+      toast.success('Formato de Rede Radial aplicado!');
+    } 
+    
+    else if (type === 'tree') {
+      const cx = 350;
+      const cy = 60;
+      if (hubIdx !== -1) {
+        updated[hubIdx] = { ...hub, x: cx, y: cy };
       }
 
-      const devices = updated.filter(n => n.parentId === room.id && n.type === 'device');
-      devices.forEach((dev, devIdx) => {
-        const dAngle = angle + ((devIdx - (devices.length - 1) / 2) * 0.3);
-        const dRadius = 140;
-        const dx = rx + dRadius * Math.cos(dAngle);
-        const dy = ry + dRadius * Math.sin(dAngle);
+      const roomsCount = rooms.length;
+      rooms.forEach((room, roomIdx) => {
+        const rx = roomsCount > 1 
+          ? cx + (roomIdx - (roomsCount - 1) / 2) * 220
+          : cx;
+        const ry = cy + 140;
 
-        const dIdx = updated.findIndex(n => n.id === dev.id);
-        if (dIdx !== -1) {
-          updated[dIdx] = { ...dev, x: dx, y: dy };
+        const rIdx = updated.findIndex(n => n.id === room.id);
+        if (rIdx !== -1) {
+          updated[rIdx] = { ...room, x: Math.round(rx), y: Math.round(ry) };
         }
-      });
-    });
 
-    setNodes(updated);
-    toast.success('Algoritmo de topologia radial redistribuído!');
+        const roomDevices = devices.filter(d => d.parentId === room.id);
+        const rdCount = roomDevices.length;
+        roomDevices.forEach((dev, devIdx) => {
+          const dx = rdCount > 1
+            ? rx + (devIdx - (rdCount - 1) / 2) * 110
+            : rx;
+          const dy = ry + 150;
+
+          const dIdx = updated.findIndex(n => n.id === dev.id);
+          if (dIdx !== -1) {
+            updated[dIdx] = { ...dev, x: Math.round(dx), y: Math.round(dy) };
+          }
+        });
+      });
+
+      const unparented = updated.filter(n => n.id !== hub.id && n.type !== 'room' && !n.parentId);
+      unparented.forEach((node, idx) => {
+        updated[updated.findIndex(n => n.id === node.id)] = {
+          ...node,
+          x: Math.round(50 + idx * 120),
+          y: Math.round(cy + (idx % 2 === 0 ? 50 : 100))
+        };
+      });
+
+      setNodes(updated);
+      toast.success('Formato de Árvore Hierárquica aplicado!');
+    } 
+    
+    else if (type === 'horizontal') {
+      const cx = 60;
+      const cy = 240;
+      if (hubIdx !== -1) {
+        updated[hubIdx] = { ...hub, x: cx, y: cy };
+      }
+
+      const roomsCount = rooms.length;
+      rooms.forEach((room, roomIdx) => {
+        const rx = cx + 220;
+        const ry = roomsCount > 1
+          ? cy + (roomIdx - (roomsCount - 1) / 2) * 150
+          : cy;
+
+        const rIdx = updated.findIndex(n => n.id === room.id);
+        if (rIdx !== -1) {
+          updated[rIdx] = { ...room, x: Math.round(rx), y: Math.round(ry) };
+        }
+
+        const roomDevices = devices.filter(d => d.parentId === room.id);
+        const rdCount = roomDevices.length;
+        roomDevices.forEach((dev, devIdx) => {
+          const dx = rx + 220;
+          const dy = rdCount > 1
+            ? ry + (devIdx - (rdCount - 1) / 2) * 75
+            : ry;
+
+          const dIdx = updated.findIndex(n => n.id === dev.id);
+          if (dIdx !== -1) {
+            updated[dIdx] = { ...dev, x: Math.round(dx), y: Math.round(dy) };
+          }
+        });
+      });
+
+      const unparented = updated.filter(n => n.id !== hub.id && n.type !== 'room' && !n.parentId);
+      unparented.forEach((node, idx) => {
+        updated[updated.findIndex(n => n.id === node.id)] = {
+          ...node,
+          x: Math.round(cx + 100),
+          y: Math.round(40 + idx * 80)
+        };
+      });
+
+      setNodes(updated);
+      toast.success('Formato de Fluxo Horizontal aplicado!');
+    } 
+    
+    else if (type === 'orbit') {
+      const cx = 350;
+      const cy = 250;
+      if (hubIdx !== -1) {
+        updated[hubIdx] = { ...hub, x: cx, y: cy };
+      }
+
+      const roomsCount = rooms.length;
+      rooms.forEach((room, roomIdx) => {
+        const angle = (roomIdx / Math.max(1, roomsCount)) * 2 * Math.PI;
+        const radius = 190;
+        const rx = cx + radius * Math.cos(angle);
+        const ry = cy + radius * Math.sin(angle);
+
+        const rIdx = updated.findIndex(n => n.id === room.id);
+        if (rIdx !== -1) {
+          updated[rIdx] = { ...room, x: Math.round(rx), y: Math.round(ry) };
+        }
+
+        const roomDevices = devices.filter(d => d.parentId === room.id);
+        const rdCount = roomDevices.length;
+        roomDevices.forEach((dev, devIdx) => {
+          const dAngle = (devIdx / Math.max(1, rdCount)) * 2 * Math.PI + angle;
+          const dRadius = 75;
+          const dx = rx + dRadius * Math.cos(dAngle);
+          const dy = ry + dRadius * Math.sin(dAngle);
+
+          const dIdx = updated.findIndex(n => n.id === dev.id);
+          if (dIdx !== -1) {
+            updated[dIdx] = { ...dev, x: Math.round(dx), y: Math.round(dy) };
+          }
+        });
+      });
+
+      const unparented = updated.filter(n => n.id !== hub.id && n.type !== 'room' && !n.parentId);
+      unparented.forEach((node, idx) => {
+        const angle = (idx / Math.max(1, unparented.length)) * 2 * Math.PI + Math.PI/4;
+        updated[updated.findIndex(n => n.id === node.id)] = {
+          ...node,
+          x: Math.round(cx + 320 * Math.cos(angle)),
+          y: Math.round(cy + 320 * Math.sin(angle))
+        };
+      });
+
+      setNodes(updated);
+      toast.success('Formato de Órbita Estelar aplicado!');
+    }
+
+    setTimeout(() => {
+      centerMap(updated);
+    }, 50);
   };
+
+  const performRadialLayout = () => applyLayout('radial');
 
   // Node manual reposition dragging handlers
   const handleNodeMouseDown = (nodeId: string, e: React.MouseEvent) => {
@@ -333,8 +644,17 @@ export default function InstallationMindMapScreen() {
     dragStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    setIsPanning(true);
+    setSelectedNode(null);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
   const handleGlobalMouseMove = (e: React.MouseEvent) => {
     if (isDraggingNode) {
+      if (layoutType !== 'free') {
+        setLayoutType('free');
+      }
       const dx = (e.clientX - dragStartRef.current.x) / zoom;
       const dy = (e.clientY - dragStartRef.current.y) / zoom;
       
@@ -345,20 +665,51 @@ export default function InstallationMindMapScreen() {
       } : n));
       
       dragStartRef.current = { x: e.clientX, y: e.clientY };
+    } else if (isPanning) {
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+      dragStartRef.current = { x: e.clientX, y: e.clientY };
     }
   };
 
   const handleGlobalMouseUp = () => {
     setIsDraggingNode(null);
+    setIsPanning(false);
   };
 
   // Node editing properties form openers
   const openEditNode = (node: MindMapNode) => {
     setSelectedNode(node);
     setFormLabel(node.label);
-    setFormType(node.type);
-    setFormProtocol(node.protocol || 'Zigbee');
-    setFormDeviceType(node.deviceType || 'light');
+    
+    const standardTypes = ['hub', 'room', 'device', 'group'];
+    if (!standardTypes.includes(node.type)) {
+      setFormType('custom' as any);
+      setCustomType(node.type);
+    } else {
+      setFormType(node.type as any);
+      setCustomType('');
+    }
+
+    const standardProtocols = ['WiFi', 'Zigbee', 'ZWave', 'Bluetooth', 'IP', 'N/A'];
+    if (node.protocol && !standardProtocols.includes(node.protocol)) {
+      setFormProtocol('custom' as any);
+      setCustomProtocol(node.protocol);
+    } else {
+      setFormProtocol((node.protocol as any) || 'Zigbee');
+      setCustomProtocol('');
+    }
+
+    const standardDeviceTypes = ['light', 'switch', 'sensor', 'security', 'climate', 'media', 'other'];
+    if (node.deviceType && !standardDeviceTypes.includes(node.deviceType)) {
+      setFormDeviceType('custom' as any);
+      setCustomDeviceType(node.deviceType);
+    } else {
+      setFormDeviceType((node.deviceType as any) || 'light');
+      setCustomDeviceType('');
+    }
+
     setFormStatus(node.status || 'active');
     setFormDetails(node.details || '');
     setFormParentId(node.parentId || '');
@@ -370,6 +721,9 @@ export default function InstallationMindMapScreen() {
     setFormType('device');
     setFormProtocol('Zigbee');
     setFormDeviceType('light');
+    setCustomType('');
+    setCustomProtocol('');
+    setCustomDeviceType('');
     setFormStatus('active');
     setFormDetails('');
     const defaultParent = selectedNode ? selectedNode.id : (nodes.find(n => n.type === 'hub')?.id || '');
@@ -383,6 +737,9 @@ export default function InstallationMindMapScreen() {
     setFormType('device');
     setFormProtocol('Zigbee');
     setFormDeviceType('light');
+    setCustomType('');
+    setCustomProtocol('');
+    setCustomDeviceType('');
     setFormStatus('active');
     setFormDetails('');
     setFormParentId(parentId);
@@ -429,12 +786,20 @@ export default function InstallationMindMapScreen() {
     e.preventDefault();
     if (!selectedNode) return;
 
+    const finalType = formType === ('custom' as any) ? (customType.trim() || 'Nossa Sessão') : formType;
+    const finalProtocol = (formType === 'device' || formType === 'hub' || formType === ('custom' as any))
+      ? (formProtocol === ('custom' as any) ? (customProtocol.trim() || 'Nossa Sessão') : formProtocol)
+      : undefined;
+    const finalDeviceType = (formType === 'device' || formType === ('custom' as any))
+      ? (formDeviceType === ('custom' as any) ? (customDeviceType.trim() || 'Nossa Sessão') : formDeviceType)
+      : undefined;
+
     setNodes(prev => prev.map(n => n.id === selectedNode.id ? {
       ...n,
       label: formLabel,
-      type: formType,
-      protocol: formType === 'device' || formType === 'hub' ? formProtocol : undefined,
-      deviceType: formType === 'device' ? formDeviceType : undefined,
+      type: finalType,
+      protocol: finalProtocol,
+      deviceType: finalDeviceType,
       status: formStatus,
       details: formDetails,
       parentId: formParentId || null,
@@ -449,12 +814,20 @@ export default function InstallationMindMapScreen() {
     e.preventDefault();
     if (!formLabel.trim()) return;
 
+    const finalType = formType === ('custom' as any) ? (customType.trim() || 'Nossa Sessão') : formType;
+    const finalProtocol = (formType === 'device' || formType === 'hub' || formType === ('custom' as any))
+      ? (formProtocol === ('custom' as any) ? (customProtocol.trim() || 'Nossa Sessão') : formProtocol)
+      : undefined;
+    const finalDeviceType = (formType === 'device' || formType === ('custom' as any))
+      ? (formDeviceType === ('custom' as any) ? (customDeviceType.trim() || 'Nossa Sessão') : formDeviceType)
+      : undefined;
+
     const newNode: MindMapNode = {
       id: 'node-' + Date.now(),
       label: formLabel.trim(),
-      type: formType,
-      protocol: formType === 'device' || formType === 'hub' ? formProtocol : undefined,
-      deviceType: formType === 'device' ? formDeviceType : undefined,
+      type: finalType,
+      protocol: finalProtocol,
+      deviceType: finalDeviceType,
       status: formStatus,
       details: formDetails,
       parentId: formParentId || null,
@@ -764,7 +1137,8 @@ export default function InstallationMindMapScreen() {
                   <div className="flex-1 relative overflow-hidden bg-zinc-950 flex flex-col justify-between" ref={containerRef}>
                     
                     {/* TOP MAP TOOLS OVERLAY */}
-                    <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 print:hidden select-none">
+                    <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 print:hidden select-none max-w-[210px]">
+                      {/* ZOOM PANEL */}
                       <div className="flex rounded-xl bg-black/80 p-1 border border-white/10 items-center backdrop-blur shadow-2xl">
                         <button
                           onClick={() => setZoom(z => Math.max(0.4, z - 0.15))}
@@ -783,21 +1157,120 @@ export default function InstallationMindMapScreen() {
                         >
                           <ZoomIn size={14} />
                         </button>
+                        <button
+                          onClick={() => {
+                            setZoom(1);
+                            centerMap();
+                          }}
+                          className="p-1.5 hover:bg-white/10 text-zinc-300 hover:text-white rounded transition-colors ml-1 border-l border-white/10 flex items-center gap-1"
+                          title="Centralizar Mapa"
+                        >
+                          <Maximize2 size={13} className="text-[#39FF14]" />
+                        </button>
                       </div>
 
-                      <button
-                        onClick={performRadialLayout}
-                        className="p-2 py-1.5 rounded-xl bg-black/80 hover:bg-white/10 border border-white/10 text-[9px] font-black uppercase text-left flex items-center gap-1.5 transition-all text-white backdrop-blur shadow-2xl"
-                        title="Auto Ordenação Radial de Nós"
-                      >
-                        <RefreshCw size={11} className="text-sky-400" /> Radial-Layout
-                      </button>
+                      {/* LAYOUT FORMAT SELECTOR */}
+                      <div className="p-3 bg-black/85 border border-white/10 backdrop-blur-md rounded-2xl shadow-2xl space-y-2">
+                        <span className="block text-[8px] uppercase font-black text-indigo-400 tracking-wider">Formato do Mapa</span>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            onClick={() => applyLayout('free')}
+                            className={`p-1.5 rounded-lg text-[9px] font-black uppercase transition-all border ${
+                              layoutType === 'free'
+                                ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-500/30'
+                                : 'bg-white/5 hover:bg-white/10 text-zinc-400 border-transparent'
+                            }`}
+                          >
+                            🎨 Livre
+                          </button>
+                          <button
+                            onClick={() => applyLayout('radial')}
+                            className={`p-1.5 rounded-lg text-[9px] font-black uppercase transition-all border ${
+                              layoutType === 'radial'
+                                ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-500/30'
+                                : 'bg-white/5 hover:bg-white/10 text-zinc-400 border-transparent'
+                            }`}
+                          >
+                            🌀 Radial
+                          </button>
+                          <button
+                            onClick={() => applyLayout('tree')}
+                            className={`p-1.5 rounded-lg text-[9px] font-black uppercase transition-all border ${
+                              layoutType === 'tree'
+                                ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-500/30'
+                                : 'bg-white/5 hover:bg-white/10 text-zinc-400 border-transparent'
+                            }`}
+                          >
+                            🌲 Árvore
+                          </button>
+                          <button
+                            onClick={() => applyLayout('horizontal')}
+                            className={`p-1.5 rounded-lg text-[9px] font-black uppercase transition-all border ${
+                              layoutType === 'horizontal'
+                                ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-500/30'
+                                : 'bg-white/5 hover:bg-white/10 text-zinc-400 border-transparent'
+                            }`}
+                          >
+                            ➡️ Fluxo
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => applyLayout('orbit')}
+                          className={`w-full p-1.5 rounded-lg text-[9px] font-black uppercase transition-all border flex items-center justify-center gap-1 ${
+                            layoutType === 'orbit'
+                              ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-500/30'
+                              : 'bg-white/5 hover:bg-white/10 text-zinc-400 border-transparent'
+                          }`}
+                        >
+                          🪐 Órbita Solar
+                        </button>
+                      </div>
 
-                      <div className="hidden md:block p-3 rounded-2xl bg-black/80 border border-white/5 backdrop-blur text-[8px] uppercase font-bold text-zinc-500 max-w-[170px] space-y-1">
-                        <span className="block text-zinc-400 font-extrabold mb-1">Dicas de Uso:</span>
-                        <span className="block">🖱️ Arraste os nós para desenhar a rede.</span>
-                        <span className="block">👆 Clique único para selecionar.</span>
-                        <span className="block">✌️ Clique duplo para editar/excluir.</span>
+                      {/* DRAWING TOOL OPTIONS */}
+                      <div className="p-3 bg-black/85 border border-white/10 backdrop-blur-md rounded-2xl shadow-2xl space-y-1.5">
+                        <span className="block text-[8px] uppercase font-black text-sky-400 tracking-wider">Grelha &amp; Sinais</span>
+                        
+                        <button
+                          onClick={snapToGrid}
+                          className="w-full p-1.5 rounded-lg bg-zinc-900 border border-white/5 hover:border-white/20 hover:bg-zinc-800 text-[9px] font-black uppercase text-left flex items-center gap-1.5 transition-all text-zinc-300"
+                          title="Alinhar pontos à grelha de 40px"
+                        >
+                          📐 Alinhar Grelha
+                        </button>
+                        
+                        <div className="flex items-center justify-between p-1 bg-zinc-900 border border-white/5 rounded-lg text-[8px] font-black uppercase text-zinc-400">
+                          <span className="pl-1">Grelha CAD</span>
+                          <button
+                            onClick={() => setShowGrid(!showGrid)}
+                            className={`p-0.5 px-2 rounded font-bold transition-all ${
+                              showGrid
+                                ? 'bg-emerald-500/20 text-[#39FF14]'
+                                : 'bg-white/5 text-zinc-500'
+                            }`}
+                          >
+                            {showGrid ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-1 bg-zinc-900 border border-white/5 rounded-lg text-[8px] font-black uppercase text-zinc-400">
+                          <span className="pl-1">Sinais</span>
+                          <select
+                            value={packetSpeed}
+                            onChange={(e: any) => setPacketSpeed(e.target.value)}
+                            className="bg-black border border-white/10 text-[8px] rounded px-1 text-white py-0.5"
+                          >
+                            <option value="normal">Normal</option>
+                            <option value="fast">Rápida ⚡</option>
+                            <option value="off">OFF</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="hidden md:block p-3 rounded-2xl bg-black/80 border border-white/5 backdrop-blur text-[8px] uppercase font-bold text-zinc-500 space-y-1">
+                        <span className="block text-zinc-400 font-extrabold mb-1">Guia Rápido:</span>
+                        <span className="block">🖱️ Arraste os nós para remodelar.</span>
+                        <span className="block">👆 Clique para selecionar.</span>
+                        <span className="block">✌️ Duplo clique para editar.</span>
                       </div>
                     </div>
 
@@ -823,14 +1296,20 @@ export default function InstallationMindMapScreen() {
                         const parent = nodes.find(n => n.id === node.parentId);
                         if (!parent) return null;
 
-                        const x1 = parent.x * zoom + pan.x;
-                        const y1 = parent.y * zoom + pan.y;
-                        const x2 = node.x * zoom + pan.x;
-                        const y2 = node.y * zoom + pan.y;
+                        // Center offsets of cards (~170px width / ~44px height)
+                        const offsetX = 85;
+                        const offsetY = 22;
+
+                        const x1 = (parent.x + offsetX + pan.x) * zoom;
+                        const y1 = (parent.y + offsetY + pan.y) * zoom;
+                        const x2 = (node.x + offsetX + pan.x) * zoom;
+                        const y2 = (node.y + offsetY + pan.y) * zoom;
 
                         const isDevice = node.type === 'device';
                         const isInactive = node.status === 'inactive';
                         const isConnDisabled = node.connectionDisabled === true;
+
+                        const linkColor = getConnectionColor(node);
 
                         return (
                           <g key={`screen-link-${node.id}`}>
@@ -838,22 +1317,22 @@ export default function InstallationMindMapScreen() {
                             <path
                               d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
                               fill="none"
-                              stroke={isConnDisabled ? '#ef4444' : (isDevice ? (isInactive ? '#a1a1aa' : '#6366f1') : '#0ea5e9')}
-                              strokeWidth={isConnDisabled ? 3.5 * zoom : 3 * zoom}
+                              stroke={linkColor}
+                              strokeWidth={isConnDisabled ? 3.5 * zoom : 2.5 * zoom}
                               strokeOpacity={isConnDisabled ? 0.9 : (isInactive ? 0.25 : 0.6)}
                               className="transition-colors duration-300"
                               strokeDasharray={isConnDisabled ? '3,3' : (isInactive ? '5,5' : undefined)}
                             />
                             {/* Speed packet simulator dot trail floating toward node direction */}
-                            {!isInactive && !isConnDisabled && (
+                            {packetSpeed !== 'off' && !isInactive && !isConnDisabled && (
                               <circle
-                                r={4 * zoom}
-                                fill="#39FF14"
-                                className="shadow-lg"
+                                r={3.5 * zoom}
+                                fill={linkColor}
+                                className="shadow-lg animate-pulse"
                               >
                                 <animateMotion
                                   path={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
-                                  dur={`${node.protocol === 'WiFi' ? 2 : 4}s`}
+                                  dur={`${(node.protocol === 'WiFi' ? 1.5 : 3) / (packetSpeed === 'fast' ? 2.5 : 1)}s`}
                                   repeatCount="indefinite"
                                 />
                               </circle>
@@ -866,26 +1345,31 @@ export default function InstallationMindMapScreen() {
                     {/* SCROLLABLE VIRTUAL ARENA FOR FLOATING GRAPH */}
                     <div 
                       className="absolute inset-0 select-none overflow-hidden"
-                      style={{ zIndex: 2 }}
-                      onMouseDown={() => setSelectedNode(null)}
+                      style={{ 
+                        zIndex: 2,
+                        backgroundImage: showGrid ? 'radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px)' : 'none',
+                        backgroundSize: showGrid ? '32px 32px' : 'none',
+                        backgroundPosition: `${pan.x * zoom}px ${pan.y * zoom}px`,
+                        cursor: isPanning ? 'grabbing' : 'grab'
+                      }}
+                      onMouseDown={handleCanvasMouseDown}
                     >
                       <div 
                         className="w-full h-full relative"
                         style={{
                           transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
-                          transformOrigin: 'top left'
+                          transformOrigin: 'top left',
+                          backgroundImage: showGrid ? 'radial-gradient(rgba(255, 255, 255, 0.06) 1.2px, transparent 1.2px)' : 'none',
+                          backgroundSize: showGrid ? '40px 40px' : 'none'
                         }}
                       >
                         {nodes.map(node => {
                           const isSelected = selectedNode?.id === node.id;
                           const isHub = node.type === 'hub';
                           const isRoom = node.type === 'room';
-                          const isDev = node.type === 'device';
+                          const isDev = node.type === 'device' || !['hub', 'room', 'group'].includes(node.type);
                           
                           const roomColorClass = ROOM_COLORS[node.type] || ROOM_COLORS.device;
-                          const protocolIcon = node.protocol ? PROTOCOL_ICONS[node.protocol] || '' : '';
-                          const deviceIcon = node.deviceType ? DEVICE_ICONS[node.deviceType] || '' : '';
-
                           const isInactive = node.status === 'inactive';
 
                           return (
@@ -904,46 +1388,47 @@ export default function InstallationMindMapScreen() {
                                 left: `${node.x}px`,
                                 top: `${node.y}px`,
                                 position: 'absolute',
-                                cursor: isDraggingNode === node.id ? 'grabbing' : 'grab'
+                                cursor: isDraggingNode === node.id ? 'grabbing' : 'grab',
+                                transition: isDraggingNode === node.id ? 'none' : 'left 0.7s cubic-bezier(0.16, 1, 0.3, 1), top 0.7s cubic-bezier(0.16, 1, 0.3, 1)'
                               }}
-                              className={`p-2.5 px-4 rounded-2xl border flex items-center gap-2.5 transition-all text-[11px] font-black uppercase shadow-2xl select-none max-w-[200px] ${roomColorClass} ${
+                              className={`p-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-[11px] font-black uppercase shadow-2xl select-none w-auto min-w-[180px] max-w-[320px] min-h-[44px] ${roomColorClass} ${
                                 isSelected 
-                                  ? 'ring-4 ring-[#39FF14] scale-105 border-white shadow-[0_0_20px_rgba(57,255,20,0.5)]' 
+                                  ? 'ring-4 ring-indigo-500 scale-105 border-white shadow-[0_0_20px_rgba(99,102,241,0.5)]' 
                                   : 'border-white/10 hover:border-white/30'
-                              } ${isInactive ? 'opacity-40 filter grayscale' : ''}`}
+                              } ${isInactive ? 'opacity-35 filter grayscale' : ''}`}
                             >
                               {/* Status blink sensor indicator */}
                               {isHub && <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-ping shrink-0" />}
-                              {isRoom && <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0 animate-pulse" />}
+                              {isRoom && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 animate-pulse" />}
                               {isDev && !isInactive && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />}
-
+                              
                               {/* Class Icons */}
-                              <span className="text-xs shrink-0 select-none">
-                                {isDev ? deviceIcon : isHub ? '🎛️' : '🏠'}
+                              <span className="shrink-0 select-none flex items-center justify-center p-1 rounded-lg bg-black/40 border border-white/5 shadow-inner">
+                                {isDev ? renderDeviceIcon(node.deviceType || 'other') : isHub ? <Cpu size={12} className="text-purple-300" /> : <Map size={12} className="text-sky-300" />}
                               </span>
 
-                              <div className="min-w-0 pr-1 leading-tight">
-                                <span className="block truncate text-[10px] tracking-wide">{node.label}</span>
+                              <div className="min-w-0 pr-1 leading-tight flex-1">
+                                <span className="block text-xs tracking-wide font-black text-white break-words">{node.label}</span>
                                 {node.details && (
-                                  <span className="block text-[7px] text-white/50 font-normal lowercase italic truncate">
+                                  <span className="block text-[8px] text-zinc-400 font-normal lowercase italic break-words mt-0.5">
                                     {node.details}
                                   </span>
                                 )}
                               </div>
 
-                              {protocolIcon && (
-                                <span className="text-[8px] bg-black/50 p-1 px-1.5 rounded-lg border border-white/5 font-black shrink-0 tracking-widest text-[8px]" title={node.protocol}>
-                                  {protocolIcon} {node.protocol}
+                              {node.protocol && (
+                                <span className="text-[7px] bg-black/60 p-1 px-1.5 rounded-lg border border-white/5 font-black shrink-0 flex items-center gap-0.5 text-zinc-300" title={node.protocol}>
+                                  {renderProtocolIcon(node.protocol)}
                                 </span>
                               )}
 
                               {node.parentId && node.connectionDisabled && (
                                 <span 
                                   onClick={(e) => toggleNodeConnection(node.id, e)}
-                                  className="text-[8px] bg-rose-500 text-white font-black p-1 px-2 rounded-lg hover:bg-rose-600 transition-all shrink-0 cursor-pointer animate-pulse" 
+                                  className="text-[7px] bg-rose-500 text-white font-black p-0.5 px-1 rounded hover:bg-rose-600 transition-all shrink-0 cursor-pointer animate-pulse" 
                                   title="Conexão Desligada! Clique para Ligar"
                                 >
-                                  🔌 DESLIGADO
+                                  OFF
                                 </span>
                               )}
 
@@ -952,7 +1437,7 @@ export default function InstallationMindMapScreen() {
                                 id={`add-child-btn-${node.id}`}
                                 onClick={(e) => openAddNodeWithParent(node.id, e)}
                                 onMouseDown={(e) => e.stopPropagation()}
-                                className="ml-1.5 p-1 px-2 rounded-lg bg-[#39FF14]/20 hover:bg-[#39FF14]/40 border border-[#39FF14]/30 hover:border-[#39FF14]/60 text-[#39FF14] font-black text-[12px] cursor-pointer hover:scale-110 active:scale-95 transition-all flex items-center justify-center shrink-0"
+                                className="ml-1 p-0.5 px-1 rounded bg-[#39FF14]/20 hover:bg-[#39FF14]/40 border border-[#39FF14]/30 hover:border-[#39FF14]/60 text-[#39FF14] font-black text-[10px] cursor-pointer hover:scale-110 active:scale-95 transition-all flex items-center justify-center shrink-0"
                                 title="Adicionar ponto conectado a este"
                               >
                                 +
@@ -1227,7 +1712,21 @@ export default function InstallationMindMapScreen() {
                               <option value="room">🏠 Área / Cômodo</option>
                               <option value="device">💡 Dispositivo / Hardware</option>
                               <option value="group">📦 Grupo de Dispositivos</option>
+                              <option value="custom">✨ Nossa Sessão (Personalizado)</option>
                             </select>
+                            {formType === ('custom' as any) && (
+                              <div className="mt-1 space-y-1">
+                                <label className="text-[7.5px] font-black uppercase text-zinc-400 block">Sua Categoria / Sessão Customizada</label>
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="Ex: Nossa Sessão, Infra Estrutura, Cabeamento..."
+                                  value={customType}
+                                  onChange={(e) => setCustomType(e.target.value)}
+                                  className="w-full bg-zinc-900 border border-white/15 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-[#39FF14]/50"
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {/* Connected node link parent */}
@@ -1246,7 +1745,7 @@ export default function InstallationMindMapScreen() {
                           </div>
 
                           {/* Dynamic fields */}
-                          {(formType === 'device' || formType === 'hub') && (
+                          {(formType === 'device' || formType === 'hub' || formType === ('custom' as any)) && (
                             <div className="p-2.5 bg-black/30 border border-white/5 rounded-xl space-y-2">
                               <div className="space-y-1">
                                 <label className="text-[7.5px] font-black uppercase text-zinc-400 block">Protocolo Sem Fio</label>
@@ -1261,10 +1760,24 @@ export default function InstallationMindMapScreen() {
                                   <option value="Bluetooth">Bluetooth BLE</option>
                                   <option value="IP">IP RJ45 / Cabo</option>
                                   <option value="N/A">Nenhum/Analógico</option>
+                                  <option value="custom">✨ Nossa Sessão (Personalizado)</option>
                                 </select>
+                                {formProtocol === ('custom' as any) && (
+                                  <div className="mt-1 space-y-1">
+                                    <label className="text-[7px] font-black uppercase text-zinc-400 block">Seu Protocolo Customizado</label>
+                                    <input
+                                      type="text"
+                                      required
+                                      placeholder="Ex: RF 433Mhz, LoRa, KNX Bus..."
+                                      value={customProtocol}
+                                      onChange={(e) => setCustomProtocol(e.target.value)}
+                                      className="w-full bg-zinc-950 border border-white/15 rounded px-2 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#39FF14]/50"
+                                    />
+                                  </div>
+                                )}
                               </div>
 
-                              {formType === 'device' && (
+                              {(formType === 'device' || formType === ('custom' as any)) && (
                                 <div className="space-y-1">
                                   <label className="text-[7.5px] font-black uppercase text-zinc-400 block">Tipo de Dispositivo</label>
                                   <select
@@ -1279,7 +1792,21 @@ export default function InstallationMindMapScreen() {
                                     <option value="climate">Ar Condicionado / Termo</option>
                                     <option value="media">Multimídia / TV</option>
                                     <option value="other">Outros/Atuadores</option>
+                                    <option value="custom">✨ Nossa Sessão (Personalizado)</option>
                                   </select>
+                                  {formDeviceType === ('custom' as any) && (
+                                    <div className="mt-1 space-y-1">
+                                      <label className="text-[7px] font-black uppercase text-zinc-400 block">Seu Tipo Customizado</label>
+                                      <input
+                                        type="text"
+                                        required
+                                        placeholder="Ex: Motor de Janela, Aspiração..."
+                                        value={customDeviceType}
+                                        onChange={(e) => setCustomDeviceType(e.target.value)}
+                                        className="w-full bg-zinc-950 border border-white/15 rounded px-2 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#39FF14]/50"
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

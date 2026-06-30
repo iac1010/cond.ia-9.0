@@ -200,6 +200,15 @@ export default function GoogleCalendarWidget({ isEditMode }: { isEditMode?: bool
         }
       });
 
+      if (res.status === 401 || res.status === 403) {
+        console.warn('Google Calendar API returned 401/403. Token expired. Logging out.');
+        await logout();
+        setUser(null);
+        setToken(null);
+        setEvents([]);
+        return;
+      }
+
       if (!res.ok) {
         throw new Error('Falha ao obter eventos.');
       }

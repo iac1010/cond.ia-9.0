@@ -3,7 +3,7 @@ import {
   CheckCircle2, Circle, Plus, Trash2, Tag, Edit2, CheckSquare, 
   TrendingUp, Play, Pause, RotateCcw, Brain, Award, Calendar, 
   Clock, BarChart3, PieChart as PieIcon, Layers, AlertCircle, Sparkles, Filter, Check, X,
-  FileText, Activity, Zap, ShieldAlert, ArrowLeftRight
+  FileText, Activity, Zap, ShieldAlert, ArrowLeftRight, Star, Paperclip, Eye, Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +26,11 @@ interface DailyTask {
   estimatedMinutes?: number;
   notes?: string;
   completedAt?: string;
+  starred?: boolean;
+  installationDetails?: string;
+  attachmentName?: string;
+  attachmentUrl?: string;
+  osNumber?: string;
 }
 
 const CATEGORIES = ['Trabalho', 'Pessoal', 'Fazer Diariamente', 'Urgente'] as const;
@@ -78,9 +83,13 @@ const DIFFICULTY_STYLES = {
 
 export default function TasksProductivity() {
   const navigate = useNavigate();
+  const { addTicket, companyData, companyLogo } = useStore();
   const [activeTab, setActiveTab] = useState<'tasks' | 'metrics'>('tasks');
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   
+  // State for document viewing modal
+  const [viewingTask, setViewingTask] = useState<DailyTask | null>(null);
+
   // States for filter and search
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('Todos');
@@ -95,6 +104,10 @@ export default function TasksProductivity() {
   const [formDifficulty, setFormDifficulty] = useState<DailyTask['difficulty']>('Média');
   const [formEstimatedMinutes, setFormEstimatedMinutes] = useState<number>(30);
   const [formNotes, setFormNotes] = useState('');
+  const [formInstallationDetails, setFormInstallationDetails] = useState('');
+  const [formAttachmentName, setFormAttachmentName] = useState('');
+  const [formAttachmentUrl, setFormAttachmentUrl] = useState('');
+  const [formOsNumber, setFormOsNumber] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   // Load and populate tasks
@@ -111,7 +124,11 @@ export default function TasksProductivity() {
           difficulty: t.difficulty || 'Média',
           estimatedMinutes: t.estimatedMinutes !== undefined ? t.estimatedMinutes : 30,
           notes: t.notes || '',
-          completedAt: t.completed && !t.completedAt ? t.createdAt || new Date().toISOString() : t.completedAt
+          completedAt: t.completed && !t.completedAt ? t.createdAt || new Date().toISOString() : t.completedAt,
+          installationDetails: t.installationDetails || '',
+          attachmentName: t.attachmentName || '',
+          attachmentUrl: t.attachmentUrl || '',
+          osNumber: t.osNumber || ''
         }));
         setTasks(filledTasks);
       } catch (e) {
@@ -195,10 +212,22 @@ export default function TasksProductivity() {
     };
   }, []);
 
+  // Auto-open form on parameter query (?new=true)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') === 'true') {
+      setIsFormOpen(true);
+      // Clean up parameter in URL
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
   // Save to LocalStorage whenever tasks update
   const saveTasks = (newTasks: DailyTask[]) => {
     setTasks(newTasks);
     localStorage.setItem('condfy_daily_tasks', JSON.stringify(newTasks));
+    window.dispatchEvent(new Event('condfy_daily_tasks_updated'));
   };
 
   // Create or Update task
@@ -217,7 +246,11 @@ export default function TasksProductivity() {
             priority: formPriority,
             difficulty: formDifficulty,
             estimatedMinutes: formEstimatedMinutes,
-            notes: formNotes
+            notes: formNotes,
+            installationDetails: formInstallationDetails,
+            attachmentName: formAttachmentName,
+            attachmentUrl: formAttachmentUrl,
+            osNumber: formOsNumber
           };
         }
         return t;
@@ -235,10 +268,34 @@ export default function TasksProductivity() {
         priority: formPriority,
         difficulty: formDifficulty,
         estimatedMinutes: formEstimatedMinutes,
-        notes: formNotes
+        notes: formNotes,
+        installationDetails: formInstallationDetails,
+        attachmentName: formAttachmentName,
+        attachmentUrl: formAttachmentUrl,
+        osNumber: formOsNumber
       };
       saveTasks([newTask, ...tasks]);
-      toast.success('Tarefa operacional criada!');
+      
+      // Also add to Kanban board as a Ticket of type TAREFA
+      const formattedObservations = [
+        formNotes || 'Sem observações.',
+        formInstallationDetails ? `Instalação: ${formInstallationDetails}` : '',
+        formOsNumber ? `OS Nº: ${formOsNumber}` : '',
+        formAttachmentName ? `Anexo: ${formAttachmentName}` : ''
+      ].filter(Boolean).join('\n');
+
+      addTicket({
+        title: formTitle,
+        type: 'TAREFA',
+        status: 'APROVADO',
+        date: new Date().toISOString().split('T')[0],
+        technician: 'Administrador',
+        observations: formattedObservations,
+        maintenanceCategory: formCategory,
+        color: formPriority === 'Alta' ? '#f43f5e' : formPriority === 'Média' ? '#f59e0b' : '#0ea5e9'
+      });
+
+      toast.success('Tarefa operacional criada e adicionada ao Kanban! 📋');
     }
 
     resetFormState();
@@ -251,6 +308,10 @@ export default function TasksProductivity() {
     setFormDifficulty('Média');
     setFormEstimatedMinutes(30);
     setFormNotes('');
+    setFormInstallationDetails('');
+    setFormAttachmentName('');
+    setFormAttachmentUrl('');
+    setFormOsNumber('');
     setEditingTask(null);
     setIsFormOpen(false);
   };
@@ -265,6 +326,10 @@ export default function TasksProductivity() {
     setFormDifficulty(task.difficulty || 'Média');
     setFormEstimatedMinutes(task.estimatedMinutes !== undefined ? task.estimatedMinutes : 30);
     setFormNotes(task.notes || '');
+    setFormInstallationDetails(task.installationDetails || '');
+    setFormAttachmentName(task.attachmentName || '');
+    setFormAttachmentUrl(task.attachmentUrl || '');
+    setFormOsNumber(task.osNumber || '');
     setIsFormOpen(true);
   };
 
@@ -295,9 +360,27 @@ export default function TasksProductivity() {
     toast.success('Tarefa removida!');
   };
 
+  // Toggle Star / Highlight state
+  const handleToggleStar = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = tasks.map(t => {
+      if (t.id === id) {
+        const isStarred = !t.starred;
+        if (isStarred) {
+          toast.success('Tarefa em destaque! ⭐');
+        } else {
+          toast.success('Tarefa removida dos destaques');
+        }
+        return { ...t, starred: isStarred };
+      }
+      return t;
+    });
+    saveTasks(updated);
+  };
+
   // Helper filters
   const filteredTasks = useMemo(() => {
-    return tasks.filter(t => {
+    const list = tasks.filter(t => {
       const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             (t.notes && t.notes.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesCategory = categoryFilter === 'Todos' || t.category === categoryFilter;
@@ -306,6 +389,16 @@ export default function TasksProductivity() {
                             (statusFilter === 'Completados' && t.completed) || 
                             (statusFilter === 'Pendentes' && !t.completed);
       return matchesSearch && matchesCategory && matchesPriority && matchesStatus;
+    });
+
+    // Sort logic: Starred (destaque) tasks first, then by date (newest first)
+    return list.slice().sort((a, b) => {
+      const aStarred = a.starred ? 1 : 0;
+      const bStarred = b.starred ? 1 : 0;
+      if (aStarred !== bStarred) {
+        return bStarred - aStarred; // Starred at the absolute top!
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [tasks, searchTerm, categoryFilter, priorityFilter, statusFilter]);
 
@@ -576,27 +669,51 @@ export default function TasksProductivity() {
                           className={`border rounded-3xl p-5 transition-all relative overflow-hidden group ${
                             task.completed 
                               ? 'bg-zinc-950/40 border-white/5 opacity-60 hover:opacity-100' 
-                              : 'bg-zinc-900/40 hover:bg-zinc-900/70 border-white/10 hover:border-[#39FF14]/40 hover:shadow-[0_0_20px_rgba(57,255,20,0.05)]'
+                              : task.starred
+                                ? 'bg-gradient-to-r from-amber-500/10 via-zinc-900/80 to-zinc-950/90 border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.08)] hover:border-amber-400'
+                                : 'bg-zinc-900/40 hover:bg-zinc-900/70 border-white/10 hover:border-[#39FF14]/40 hover:shadow-[0_0_20px_rgba(57,255,20,0.05)]'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex items-start gap-4 min-w-0 flex-1">
-                              {/* Large circular tick button */}
-                              <button
-                                type="button"
-                                onClick={() => handleToggleTask(task.id)}
-                                className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 ${
-                                  task.completed 
-                                    ? 'bg-[#39FF14] text-black border-[#39FF14]' 
-                                    : 'border-zinc-700 hover:border-[#39FF14] text-transparent hover:text-[#39FF14]/40 bg-black/30'
-                                }`}
-                              >
-                                <Check className="w-4 h-4 stroke-[3]" />
-                              </button>
+                              {/* circular tick button & star toggle stacked */}
+                              <div className="flex flex-col items-center gap-2.5 shrink-0 mt-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleTask(task.id)}
+                                  className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 transition-all duration-300 ${
+                                    task.completed 
+                                      ? 'bg-[#39FF14] text-black border-[#39FF14]' 
+                                      : 'border-zinc-700 hover:border-[#39FF14] text-transparent hover:text-[#39FF14]/40 bg-black/30'
+                                  }`}
+                                  title={task.completed ? "Reabrir" : "Concluir"}
+                                >
+                                  <Check className="w-4 h-4 stroke-[3]" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleToggleStar(task.id, e)}
+                                  className="p-1 rounded-xl bg-black/40 hover:bg-zinc-800 border border-white/5 hover:border-amber-500/40 text-zinc-500 hover:text-amber-400 transition"
+                                  title={task.starred ? "Remover Destaque" : "Destacar Tarefa"}
+                                >
+                                  <Star 
+                                    className={`w-4 h-4 transition-all ${
+                                      task.starred 
+                                        ? 'text-amber-400 fill-amber-400 scale-110 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
+                                        : 'text-zinc-500 hover:text-amber-400'
+                                    }`} 
+                                  />
+                                </button>
+                              </div>
 
                               <div className="min-w-0 flex-1">
                                 <h3 className={`text-base md:text-lg font-extrabold uppercase tracking-tight leading-snug ${
-                                  task.completed ? 'line-through text-zinc-500 font-bold italic' : 'text-white'
+                                  task.completed 
+                                    ? 'line-through text-zinc-500 font-bold italic' 
+                                    : task.starred
+                                      ? 'text-amber-300 font-black'
+                                      : 'text-white'
                                 }`}>
                                   {task.title}
                                 </h3>
@@ -607,8 +724,54 @@ export default function TasksProductivity() {
                                   </p>
                                 )}
 
+                                {/* Installation details, OS number, and file attachments */}
+                                {(task.installationDetails || task.osNumber || task.attachmentName) && (
+                                  <div className="mt-3 p-3 rounded-2xl bg-black/40 border border-white/5 space-y-2.5 max-w-xl">
+                                    {task.installationDetails && (
+                                      <div className="flex items-start gap-1.5 text-xs text-zinc-300">
+                                        <Activity className="w-3.5 h-3.5 mt-0.5 text-[#39FF14] shrink-0" />
+                                        <div>
+                                          <span className="font-extrabold uppercase text-[9px] text-[#39FF14] block tracking-wider">Dados da Instalação</span>
+                                          <p className="font-medium text-zinc-300 mt-0.5">{task.installationDetails}</p>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                                      {task.osNumber && (
+                                        <div className="flex items-center gap-1.5 text-zinc-300">
+                                          <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                          <span className="font-semibold text-zinc-400">OS / Ref:</span>
+                                          <span className="font-bold text-white font-mono bg-zinc-800/80 px-1.5 py-0.5 rounded border border-white/5">{task.osNumber}</span>
+                                        </div>
+                                      )}
+                                      {task.attachmentName && (
+                                        <div className="flex items-center gap-1.5 text-zinc-300">
+                                          <Paperclip className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                          <span className="font-semibold text-zinc-400">Anexo:</span>
+                                          <a 
+                                            href={task.attachmentUrl || "#"} 
+                                            download={task.attachmentName}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="font-bold text-amber-400 hover:text-amber-300 hover:underline inline-flex items-center gap-0.5"
+                                            title="Baixar ou abrir anexo"
+                                          >
+                                            {task.attachmentName}
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
                                 {/* Attribute badge rows */}
                                 <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                                  {/* Star / Destaque Badge */}
+                                  {task.starred && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/20 text-amber-400 text-[8px] font-black uppercase tracking-wider">
+                                      ★ Destaque
+                                    </span>
+                                  )}
+
                                   {/* Category Badge */}
                                   <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${catStyle.bg} ${catStyle.badge}`}>
                                     <span className={`w-1 h-1 rounded-full ${catStyle.dot}`} />
@@ -653,8 +816,20 @@ export default function TasksProductivity() {
                             <div className="flex items-center gap-1.5 z-20 shrink-0">
                               <button
                                 type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setViewingTask(task);
+                                }}
+                                className="p-2 bg-black/40 hover:bg-[#39FF14]/25 text-[#39FF14] border border-[#39FF14]/30 hover:border-[#39FF14]/60 rounded-xl transition flex items-center gap-1 font-black text-[9px] uppercase tracking-wider px-2 h-8"
+                                title="Visualizar Detalhes"
+                              >
+                                <Eye className="w-3.5 h-3.5 shrink-0" />
+                                <span className="hidden sm:inline">Visualizar</span>
+                              </button>
+                              <button
+                                type="button"
                                 onClick={(e) => handleStartEdit(task, e)}
-                                className="p-2 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/5 rounded-xl transition"
+                                className="p-2 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/5 rounded-xl transition h-8 w-8 flex items-center justify-center"
                                 title="Editar Tarefa"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
@@ -662,7 +837,7 @@ export default function TasksProductivity() {
                               <button
                                 type="button"
                                 onClick={(e) => handleDeleteTask(task.id, e)}
-                                className="p-2 bg-rose-500/10 hover:bg-rose-600 text-rose-500 hover:text-white border border-rose-500/10 rounded-xl transition"
+                                className="p-2 bg-rose-500/10 hover:bg-rose-600 text-rose-500 hover:text-white border border-rose-500/10 rounded-xl transition h-8 w-8 flex items-center justify-center"
                                 title="Remover"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -778,6 +953,90 @@ export default function TasksProductivity() {
                         rows={3}
                         className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]/50 font-medium resize-none"
                       />
+                    </div>
+
+                    {/* DADOS DA INSTALAÇÃO & ORÇAMENTO / OS */}
+                    <div className="border-t border-white/5 pt-3 space-y-3">
+                      <h4 className="text-[10px] font-black uppercase text-[#39FF14] tracking-widest flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-[#39FF14]" />
+                        Dados da Instalação & Orçamento / OS
+                      </h4>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[8px] font-black uppercase text-zinc-400 tracking-wider mb-1">Número da OS / Ref</label>
+                          <input 
+                            type="text"
+                            value={formOsNumber}
+                            onChange={(e) => setFormOsNumber(e.target.value)}
+                            placeholder="Ex: OS-2026-004"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]/50 font-bold uppercase h-9"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[8px] font-black uppercase text-zinc-400 tracking-wider mb-1">Identificação da Instalação</label>
+                          <input 
+                            type="text"
+                            value={formInstallationDetails}
+                            onChange={(e) => setFormInstallationDetails(e.target.value)}
+                            placeholder="Ex: Sala de Bombas / Bloco B"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]/50 font-semibold h-9"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[8px] font-black uppercase text-zinc-400 tracking-wider mb-1">Anexar Orçamento ou OS (PDF, Imagem)</label>
+                        <div className="relative group">
+                          {formAttachmentName ? (
+                            <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-950 border border-amber-500/30 text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Paperclip className="w-4 h-4 text-amber-400 shrink-0" />
+                                <span className="font-bold text-zinc-200 truncate">{formAttachmentName}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormAttachmentName('');
+                                  setFormAttachmentUrl('');
+                                }}
+                                className="p-1 hover:bg-white/10 text-zinc-400 hover:text-rose-400 rounded-lg transition"
+                                title="Remover anexo"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center p-4 border border-dashed border-white/10 hover:border-[#39FF14]/30 rounded-xl bg-black/20 cursor-pointer hover:bg-black/40 transition-all text-center relative">
+                              <input 
+                                type="file"
+                                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    if (file.size > 3 * 1024 * 1024) {
+                                      toast.error("O arquivo é muito grande! Escolha um arquivo de até 3MB.");
+                                      return;
+                                    }
+                                    setFormAttachmentName(file.name);
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                      setFormAttachmentUrl(event.target?.result as string || '');
+                                      toast.success(`Arquivo "${file.name}" anexado!`);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                              <Paperclip className="w-5 h-5 text-zinc-500 mb-1 group-hover:text-[#39FF14] transition-colors" />
+                              <span className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-wider group-hover:text-white">Clique para anexar orçamento/OS</span>
+                              <span className="text-[8px] text-zinc-500 mt-0.5">PDF ou Imagem até 3MB</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex gap-2.5 pt-2">
@@ -1065,6 +1324,242 @@ export default function TasksProductivity() {
         )}
 
       </div>
+
+      {/* Task detail document viewer modal */}
+      <AnimatePresence>
+        {viewingTask && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+            {/* Custom print styles to ensure only the report prints perfectly on A4 paper */}
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #printable-task-doc, #printable-task-doc * {
+                  visibility: visible !important;
+                }
+                #printable-task-doc {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  color: #000000 !important;
+                  background-color: #ffffff !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+            `}</style>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="w-full max-w-3xl bg-zinc-950 border border-zinc-800/80 rounded-3xl shadow-2xl overflow-hidden relative my-8"
+            >
+              {/* Top controls toolbar */}
+              <div className="no-print flex items-center justify-between px-6 py-4 bg-zinc-900/60 border-b border-white/5">
+                <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-[#39FF14]" />
+                  Visualizador de Documentos Operacionais
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 hover:border-zinc-500 rounded-xl text-xs font-bold text-zinc-100 transition"
+                    title="Imprimir Relatório"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#39FF14]" />
+                    <span>Imprimir OS</span>
+                  </button>
+                  <button
+                    onClick={() => setViewingTask(null)}
+                    className="p-1.5 bg-zinc-800 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 rounded-xl border border-white/5 transition"
+                    title="Fechar"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Document Container */}
+              <div 
+                id="printable-task-doc" 
+                className="p-8 md:p-12 space-y-8 bg-zinc-950 text-white print:text-black print:bg-white"
+              >
+                {/* Document Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-dashed border-zinc-800 print:border-zinc-300">
+                  <div className="flex items-center gap-3">
+                    {companyLogo ? (
+                      <img 
+                        src={companyLogo} 
+                        alt="Logo" 
+                        className="w-12 h-12 object-contain print:invert" 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-2xl flex items-center justify-center text-[#39FF14] font-black text-lg print:border-zinc-400 print:text-black">
+                        CF
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-sm font-black uppercase tracking-wider text-white print:text-black leading-tight">
+                        {companyData?.name || 'CONDFY.IA SISTEMAS'}
+                      </h2>
+                      <p className="text-[9px] font-semibold text-zinc-500 uppercase tracking-widest mt-0.5 print:text-zinc-600">
+                        CNPJ: {companyData?.document || '---'} • {companyData?.phone || '---'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-left sm:text-right">
+                    <span className="text-[10px] font-black uppercase text-[#39FF14] tracking-widest bg-[#39FF14]/5 border border-[#39FF14]/20 px-3 py-1 rounded-full print:text-black print:border-zinc-400">
+                      Ordem de Trabalho Interna
+                    </span>
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider mt-2 font-mono print:text-zinc-600">
+                      ID: #{viewingTask.id.slice(0, 8).toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Main Task Title & Badges */}
+                <div className="space-y-4">
+                  <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest block">Título da Atividade Operacional</span>
+                  <h1 className="text-2xl md:text-3xl font-black text-white print:text-black tracking-tight leading-tight uppercase">
+                    {viewingTask.title}
+                  </h1>
+
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <span className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-[9px] font-black uppercase tracking-wider text-zinc-300 print:border-zinc-300 print:text-black">
+                      CATEGORIA: {viewingTask.category === 'Fazer Diariamente' ? 'Rotina' : viewingTask.category.toUpperCase()}
+                    </span>
+                    <span className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-[9px] font-black uppercase tracking-wider text-zinc-300 print:border-zinc-300 print:text-black">
+                      PRIORIDADE: {viewingTask.priority?.toUpperCase() || 'MÉDIA'}
+                    </span>
+                    <span className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-[9px] font-black uppercase tracking-wider text-zinc-300 print:border-zinc-300 print:text-black">
+                      ESFORÇO: {viewingTask.difficulty?.toUpperCase() || 'MÉDIA'}
+                    </span>
+                    <span className="px-3 py-1 bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-full text-[9px] font-black uppercase tracking-wider text-[#39FF14] print:text-black print:border-zinc-400">
+                      {viewingTask.completed ? 'STATUS: CONCLUÍDO ✓' : 'STATUS: PENDENTE ⌛'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Metadata Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800/80 print:bg-transparent print:border-zinc-300">
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest block mb-1">Localização / Instalação</span>
+                      <p className="text-sm font-bold text-zinc-200 print:text-black">
+                        {viewingTask.installationDetails || 'Não informada / Geral'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest block mb-1">Número de OS / Código</span>
+                      <p className="text-sm font-mono font-bold text-[#39FF14] print:text-black">
+                        {viewingTask.osNumber || 'S/N (Sem Número)'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest block mb-1">Anexo Técnico Registrado</span>
+                      <p className="text-xs font-bold text-zinc-300 print:text-black">
+                        {viewingTask.attachmentName ? (
+                          <span className="flex items-center gap-1 text-amber-400 print:text-black">
+                            <Paperclip className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            {viewingTask.attachmentName}
+                          </span>
+                        ) : 'Nenhum documento ou orçamento em anexo.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest block mb-1">Tempo Estimado de Execução</span>
+                      <p className="text-sm font-bold text-zinc-200 print:text-black">
+                        {viewingTask.estimatedMinutes !== undefined ? viewingTask.estimatedMinutes : 30} minutos planejados
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest block mb-1">Data de Criação</span>
+                      <p className="text-sm font-bold text-zinc-200 print:text-black">
+                        {viewingTask.createdAt 
+                          ? `${new Date(viewingTask.createdAt).toLocaleDateString('pt-BR')} às ${new Date(viewingTask.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                          : 'Não especificada'
+                        }
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest block mb-1">Data de Encerramento</span>
+                      <p className="text-sm font-bold text-[#39FF14] print:text-black">
+                        {viewingTask.completed && viewingTask.completedAt ? (
+                          <span>Concluído em {new Date(viewingTask.completedAt).toLocaleDateString('pt-BR')} às {new Date(viewingTask.completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        ) : (
+                          <span className="text-rose-400 print:text-zinc-600">Atividade operacional em andamento</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes & Instructions */}
+                <div className="space-y-3">
+                  <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest block">Notas, Escopo & Instruções de Segurança</span>
+                  <div className="p-6 rounded-2xl bg-black/40 border border-zinc-800/60 text-sm text-zinc-300 leading-relaxed font-medium whitespace-pre-wrap print:bg-transparent print:border-zinc-300 print:text-black">
+                    {viewingTask.notes || 'Nenhuma instrução ou detalhe adicional foi anexado a esta atividade operacional.'}
+                  </div>
+                </div>
+
+                {/* Signature placeholders */}
+                <div className="grid grid-cols-2 gap-8 pt-12 text-center no-print print:flex print:flex-row print:justify-between print:gap-12">
+                  <div className="border-t border-dashed border-zinc-800 pt-3 print:border-zinc-400 print:flex-1">
+                    <p className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Responsável Técnico</p>
+                    <p className="text-xs font-bold text-zinc-200 mt-1 print:text-black">Administrador</p>
+                  </div>
+                  <div className="border-t border-dashed border-zinc-800 pt-3 print:border-zinc-400 print:flex-1">
+                    <p className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Aprovação / Visto do Gestor</p>
+                    <p className="text-xs font-bold text-zinc-400 mt-1 print:text-black">__________________________</p>
+                  </div>
+                </div>
+
+                {/* Footer system details */}
+                <div className="pt-6 border-t border-dashed border-zinc-900 flex justify-between items-center text-[8px] text-zinc-600 font-black uppercase tracking-wider print:border-zinc-300 print:text-zinc-500">
+                  <span>Gerado via Condfy.IA • Operações e Produtividade</span>
+                  <span>UTC: {new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              </div>
+
+              {/* No-print Close overlay footer button */}
+              <div className="no-print p-6 bg-zinc-900/40 border-t border-white/5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setViewingTask(null)}
+                  className="px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl border border-white/5 transition"
+                >
+                  Fechar Documento
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-6 py-2.5 bg-[#39FF14] hover:bg-[#32dd10] text-black font-black text-xs uppercase tracking-widest rounded-2xl transition"
+                >
+                  Imprimir Documento
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

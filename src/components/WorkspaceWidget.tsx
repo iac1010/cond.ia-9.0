@@ -67,6 +67,14 @@ export default function WorkspaceWidget({ isEditMode }: { isEditMode?: boolean }
           'Accept': 'application/json'
         }
       });
+      if (res.status === 401 || res.status === 403) {
+        console.warn('Google Calendar API returned 401/403 in WorkspaceWidget. Token expired. Logging out.');
+        await logout();
+        setUser(null);
+        setToken(null);
+        setEvents([]);
+        return;
+      }
       if (!res.ok) {
         throw new Error('Falha ao buscar calendário');
       }

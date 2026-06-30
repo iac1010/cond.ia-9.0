@@ -11,9 +11,9 @@ import toast from 'react-hot-toast';
 export interface MindMapNode {
   id: string;
   label: string;
-  type: 'hub' | 'room' | 'device' | 'group';
-  protocol?: 'WiFi' | 'Zigbee' | 'ZWave' | 'Bluetooth' | 'IP' | 'N/A';
-  deviceType?: 'light' | 'switch' | 'sensor' | 'security' | 'climate' | 'media' | 'other';
+  type: 'hub' | 'room' | 'device' | 'group' | string;
+  protocol?: 'WiFi' | 'Zigbee' | 'ZWave' | 'Bluetooth' | 'IP' | 'N/A' | string;
+  deviceType?: 'light' | 'switch' | 'sensor' | 'security' | 'climate' | 'media' | 'other' | string;
   status?: 'active' | 'inactive';
   details?: string;
   parentId?: string | null;
@@ -102,12 +102,15 @@ export function DashboardMindMapTile({
 
   // Form states
   const [formLabel, setFormLabel] = useState('');
-  const [formType, setFormType] = useState<'hub' | 'room' | 'device' | 'group'>('device');
-  const [formProtocol, setFormProtocol] = useState<'WiFi' | 'Zigbee' | 'ZWave' | 'Bluetooth' | 'IP' | 'N/A'>('Zigbee');
-  const [formDeviceType, setFormDeviceType] = useState<'light' | 'switch' | 'sensor' | 'security' | 'climate' | 'media' | 'other'>('light');
+  const [formType, setFormType] = useState<'hub' | 'room' | 'device' | 'group' | 'custom'>('device');
+  const [formProtocol, setFormProtocol] = useState<'WiFi' | 'Zigbee' | 'ZWave' | 'Bluetooth' | 'IP' | 'N/A' | 'custom'>('Zigbee');
+  const [formDeviceType, setFormDeviceType] = useState<'light' | 'switch' | 'sensor' | 'security' | 'climate' | 'media' | 'other' | 'custom'>('light');
   const [formStatus, setFormStatus] = useState<'active' | 'inactive'>('active');
   const [formDetails, setFormDetails] = useState('');
   const [formParentId, setFormParentId] = useState<string>('');
+  const [customType, setCustomType] = useState('');
+  const [customProtocol, setCustomProtocol] = useState('');
+  const [customDeviceType, setCustomDeviceType] = useState('');
 
   // Persists the custom map structure to localStorage
   useEffect(() => {
@@ -250,9 +253,34 @@ export function DashboardMindMapTile({
   const openEditNode = (node: MindMapNode) => {
     setSelectedNode(node);
     setFormLabel(node.label);
-    setFormType(node.type);
-    setFormProtocol(node.protocol || 'Zigbee');
-    setFormDeviceType(node.deviceType || 'light');
+
+    const standardTypes = ['hub', 'room', 'device', 'group'];
+    if (!standardTypes.includes(node.type)) {
+      setFormType('custom');
+      setCustomType(node.type);
+    } else {
+      setFormType(node.type as any);
+      setCustomType('');
+    }
+
+    const standardProtocols = ['WiFi', 'Zigbee', 'ZWave', 'Bluetooth', 'IP', 'N/A'];
+    if (node.protocol && !standardProtocols.includes(node.protocol)) {
+      setFormProtocol('custom');
+      setCustomProtocol(node.protocol);
+    } else {
+      setFormProtocol((node.protocol as any) || 'Zigbee');
+      setCustomProtocol('');
+    }
+
+    const standardDeviceTypes = ['light', 'switch', 'sensor', 'security', 'climate', 'media', 'other'];
+    if (node.deviceType && !standardDeviceTypes.includes(node.deviceType)) {
+      setFormDeviceType('custom');
+      setCustomDeviceType(node.deviceType);
+    } else {
+      setFormDeviceType((node.deviceType as any) || 'light');
+      setCustomDeviceType('');
+    }
+
     setFormStatus(node.status || 'active');
     setFormDetails(node.details || '');
     setFormParentId(node.parentId || '');
@@ -264,6 +292,9 @@ export function DashboardMindMapTile({
     setFormType('device');
     setFormProtocol('Zigbee');
     setFormDeviceType('light');
+    setCustomType('');
+    setCustomProtocol('');
+    setCustomDeviceType('');
     setFormStatus('active');
     setFormDetails('');
     // Try to pre-fill parent node as the currently selected or primary hub
@@ -278,6 +309,9 @@ export function DashboardMindMapTile({
     setFormType('device');
     setFormProtocol('Zigbee');
     setFormDeviceType('light');
+    setCustomType('');
+    setCustomProtocol('');
+    setCustomDeviceType('');
     setFormStatus('active');
     setFormDetails('');
     setFormParentId(parentId);
@@ -324,12 +358,20 @@ export function DashboardMindMapTile({
     e.preventDefault();
     if (!selectedNode) return;
 
+    const finalType = formType === 'custom' ? (customType.trim() || 'Nossa Sessão') : formType;
+    const finalProtocol = (formType === 'device' || formType === 'hub' || formType === 'custom')
+      ? (formProtocol === 'custom' ? (customProtocol.trim() || 'Nossa Sessão') : formProtocol)
+      : undefined;
+    const finalDeviceType = (formType === 'device' || formType === 'custom')
+      ? (formDeviceType === 'custom' ? (customDeviceType.trim() || 'Nossa Sessão') : formDeviceType)
+      : undefined;
+
     setNodes(prev => prev.map(n => n.id === selectedNode.id ? {
       ...n,
       label: formLabel,
-      type: formType,
-      protocol: formType === 'device' || formType === 'hub' ? formProtocol : undefined,
-      deviceType: formType === 'device' ? formDeviceType : undefined,
+      type: finalType,
+      protocol: finalProtocol,
+      deviceType: finalDeviceType,
       status: formStatus,
       details: formDetails,
       parentId: formParentId || null,
@@ -347,12 +389,20 @@ export function DashboardMindMapTile({
       return;
     }
 
+    const finalType = formType === 'custom' ? (customType.trim() || 'Nossa Sessão') : formType;
+    const finalProtocol = (formType === 'device' || formType === 'hub' || formType === 'custom')
+      ? (formProtocol === 'custom' ? (customProtocol.trim() || 'Nossa Sessão') : formProtocol)
+      : undefined;
+    const finalDeviceType = (formType === 'device' || formType === 'custom')
+      ? (formDeviceType === 'custom' ? (customDeviceType.trim() || 'Nossa Sessão') : formDeviceType)
+      : undefined;
+
     const newNode: MindMapNode = {
       id: 'node-' + Date.now(),
       label: formLabel.trim(),
-      type: formType,
-      protocol: formType === 'device' || formType === 'hub' ? formProtocol : undefined,
-      deviceType: formType === 'device' ? formDeviceType : undefined,
+      type: finalType,
+      protocol: finalProtocol,
+      deviceType: finalDeviceType,
       status: formStatus,
       details: formDetails,
       parentId: formParentId || null,
@@ -489,7 +539,7 @@ export function DashboardMindMapTile({
                       <path
                         d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
                         fill="none"
-                        stroke={node.connectionDisabled ? '#ef4444' : (node.type === 'device' ? '#6366f1' : '#38bdf8')}
+                        stroke={node.connectionDisabled ? '#ef4444' : ((node.type === 'device' || !['hub', 'room', 'group'].includes(node.type)) ? '#6366f1' : '#38bdf8')}
                         strokeWidth={node.connectionDisabled ? 2.5 * zoom : 2 * zoom}
                         strokeOpacity={node.connectionDisabled ? 0.8 : 0.4}
                         strokeDasharray={node.connectionDisabled ? '3,3' : (node.status === 'inactive' ? '4,4' : undefined)}
@@ -531,7 +581,7 @@ export function DashboardMindMapTile({
                     const isSelected = selectedNode?.id === node.id;
                     const isHub = node.type === 'hub';
                     const isRoom = node.type === 'room';
-                    const isDev = node.type === 'device';
+                    const isDev = node.type === 'device' || !['hub', 'room', 'group'].includes(node.type);
                     
                     const roomColorClass = ROOM_COLORS[node.type] || ROOM_COLORS.device;
                     const protocolIcon = node.protocol ? PROTOCOL_ICONS[node.protocol] || '' : '';
@@ -555,7 +605,7 @@ export function DashboardMindMapTile({
                           position: 'absolute',
                           cursor: isDraggingNode === node.id ? 'grabbing' : 'grab'
                         }}
-                        className={`p-1.5 px-2.5 rounded-xl border flex items-center gap-1.5 transition-all text-[9px] font-bold uppercase shadow-lg select-none ${roomColorClass} ${
+                        className={`p-1.5 px-2.5 rounded-xl border flex items-center gap-1.5 transition-all text-[10px] font-bold uppercase shadow-lg select-none w-auto min-w-[130px] max-w-[240px] ${roomColorClass} ${
                           isSelected 
                             ? 'ring-2 ring-[#39FF14] scale-105 border-white shadow-[0_0_15px_rgba(57,255,20,0.4)]' 
                             : 'border-white/10 hover:border-white/30'
@@ -570,10 +620,10 @@ export function DashboardMindMapTile({
                           {isDev ? deviceIcon : isHub ? '🎛️' : '🏠'}
                         </span>
 
-                        <div className="max-w-[100px] truncate leading-tight">
-                          <span className="block truncate">{node.label}</span>
+                        <div className="min-w-0 flex-1 leading-tight">
+                          <span className="block text-[11px] font-black text-white break-words">{node.label}</span>
                           {node.details && (
-                            <span className="block text-[6px] text-white/50 lowercase italic max-w-full truncate">
+                            <span className="block text-[7px] text-white/50 lowercase italic break-words mt-0.5">
                               {node.details}
                             </span>
                           )}
@@ -783,7 +833,20 @@ export function DashboardMindMapTile({
                     <option value="room">🏠 Cômodo / Área</option>
                     <option value="device">💡 Dispositivo / atuador</option>
                     <option value="group">📦 Grupo de Dispositivos</option>
+                    <option value="custom">✨ Nossa Sessão (Personalizado)</option>
                   </select>
+                  {formType === 'custom' && (
+                    <div className="mt-1">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Categoria customizada..."
+                        value={customType}
+                        onChange={(e) => setCustomType(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded px-2 py-0.5 text-[9px] text-white focus:outline-none focus:border-[#39FF14]/50"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -802,7 +865,7 @@ export function DashboardMindMapTile({
               </div>
 
               {/* Protocol & Device properties (visible if device or hub is chosen) */}
-              {(formType === 'device' || formType === 'hub') && (
+              {(formType === 'device' || formType === 'hub' || formType === 'custom') && (
                 <div className="grid grid-cols-2 gap-2 p-2 bg-white/5 border border-white/5 rounded-2xl">
                   <div>
                     <label className="text-[7px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Protocolo Sem Fio</label>
@@ -817,10 +880,23 @@ export function DashboardMindMapTile({
                       <option value="Bluetooth">Bluetooth (BLE)</option>
                       <option value="IP">IP / Rede Cabeada</option>
                       <option value="N/A">Nenhum/Outro</option>
+                      <option value="custom">✨ Nossa Sessão (Personalizado)</option>
                     </select>
+                    {formProtocol === 'custom' && (
+                      <div className="mt-1">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: RF 433Mhz, LoRa, KNX..."
+                          value={customProtocol}
+                          onChange={(e) => setCustomProtocol(e.target.value)}
+                          className="w-full bg-black/45 border border-white/10 rounded px-1.5 py-0.5 text-[8px] text-white focus:outline-none focus:border-[#39FF14]/50"
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  {formType === 'device' && (
+                  {(formType === 'device' || formType === 'custom') && (
                     <div>
                       <label className="text-[7px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Tipo de Hardware</label>
                       <select
@@ -835,7 +911,20 @@ export function DashboardMindMapTile({
                         <option value="climate">Termostato/Ar</option>
                         <option value="media">Multimídia/Televisão</option>
                         <option value="other">Outros Acessórios</option>
+                        <option value="custom">✨ Nossa Sessão (Personalizado)</option>
                       </select>
+                      {formDeviceType === 'custom' && (
+                        <div className="mt-1">
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: Aspiração, Motor..."
+                            value={customDeviceType}
+                            onChange={(e) => setCustomDeviceType(e.target.value)}
+                            className="w-full bg-black/45 border border-white/10 rounded px-1.5 py-0.5 text-[8px] text-white focus:outline-none focus:border-[#39FF14]/50"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

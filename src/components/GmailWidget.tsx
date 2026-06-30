@@ -119,6 +119,15 @@ export default function GmailWidget({ isEditMode }: { isEditMode?: boolean }) {
         }
       });
 
+      if (res.status === 401 || res.status === 403) {
+        console.warn('Gmail API returned 401/403. Token expired. Logging out.');
+        await logout();
+        setUser(null);
+        setToken(null);
+        setMessages([]);
+        return;
+      }
+
       if (!res.ok) {
         throw new Error('Falha ao listar e-mails');
       }
