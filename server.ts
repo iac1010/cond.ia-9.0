@@ -3,6 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
@@ -27,6 +28,26 @@ const supabase = createClient(
 
 let lastWebhookReceived: string | null = null;
 let lastMessageExtracted: string | null = null;
+
+let aiInstance: GoogleGenAI | null = null;
+
+function getGeminiClient(): GoogleGenAI {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured on the server.');
+    }
+    aiInstance = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+  }
+  return aiInstance;
+}
 
 async function startServer() {
   const app = express();
@@ -141,6 +162,109 @@ async function startServer() {
       res.status(500).json({
         error: 'Proxy execution failed',
         details: error?.message || String(error)
+      });
+    }
+  });
+
+  // Gemini Priority Suggestion API based on NBR 5674 failure history
+  apiRouter.post('/gemini/suggest-priority', async (req, res) => {
+    try {
+      const { activeTickets = [], failureHistory = [] } = req.body;
+      
+      if (activeTickets.length === 0) {
+        return res.json({
+          suggestions: [],
+          generalAnalysis: "Nenhuma ordem de serviço ativa encontrada para priorização."
+        });
+      }
+
+      const ai = getGeminiClient();
+
+      const systemInstruction = `Você é um Engenheiro de Manutenção Predial e Especialista em NBR 5674 (Manutenção de Edificações).
+Sua tarefa é analisar ordens de serviço ativas e sugerir a prioridade delas (CRITICAL, HIGH, MEDIUM, LOW) com base no histórico de falhas dos ativos e sistemas do condomínio.
+
+Diretrizes de Prioridade:
+- CRITICAL (Crítica): Falha ativa ou risco iminente de paralisação de sistemas vitais (Abastecimento de água, Elevadores, Segurança de Incêndio, Disjuntor Geral, SPDA), ou risco à integridade física dos ocupantes.
+- HIGH (Alta): Sistemas importantes que impactam múltiplos usuários ou cuja falha pode escalar rapidamente se não contida (Ex: Interfone geral, vazamento de água moderado, portão de veículos quebrado).
+- MEDIUM (Média): Manutenções preventivas de rotina programadas ou pequenos reparos estéticos/funcionais que não impedem a operação diária.
+- LOW (Baixa): Melhorias estéticas, retoques de pintura, pequenos ajustes de mobília ou tarefas sem impacto operacional.
+
+A análise deve correlacionar com o histórico de falhas fornecido. Se uma categoria ou ativo específico apresenta falhas repetitivas no histórico (ex: "bomba", "vazamento"), as ordens de serviço relacionadas a esse ativo ou categoria devem receber maior prioridade.
+
+Responda rigorosamente no formato JSON de acordo com o esquema solicitado. Todo o texto das justificativas e ações recomendadas deve ser em Português do Brasil (pt-BR).`;
+
+      const userPrompt = `Histórico de Falhas/Manutenções Anteriores:
+${JSON.stringify(failureHistory.map((h: any) => ({
+  title: h.title,
+  category: h.maintenanceCategory,
+  subcategory: h.maintenanceSubcategory,
+  problem: h.reportedProblem || h.observations,
+  status: h.status,
+  date: h.date
+})), null, 2)}
+
+Ordens de Serviço Ativas a serem Priorizadas:
+${JSON.stringify(activeTickets.map((t: any) => ({
+  id: t.id,
+  osNumber: t.osNumber,
+  title: t.title,
+  type: t.type,
+  category: t.maintenanceCategory,
+  subcategory: t.maintenanceSubcategory,
+  problem: t.reportedProblem || t.observations,
+  date: t.date
+})), null, 2)}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              suggestions: {
+                type: Type.ARRAY,
+                description: "Lista de sugestões de prioridade para cada Ordem de Serviço ativa analisada.",
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    ticketId: { type: Type.STRING, description: "ID exato da ordem de serviço analisada." },
+                    suggestedPriority: { 
+                      type: Type.STRING, 
+                      description: "Prioridade recomendada: CRITICAL, HIGH, MEDIUM ou LOW." 
+                    },
+                    justification: { 
+                      type: Type.STRING, 
+                      description: "Justificativa detalhada em português, citando o histórico de falhas anterior ou riscos operacionais." 
+                    },
+                    recommendedAction: { 
+                      type: Type.STRING, 
+                      description: "Ação prática recomendada para o técnico executor em português." 
+                    }
+                  },
+                  required: ["ticketId", "suggestedPriority", "justification", "recommendedAction"]
+                }
+              },
+              generalAnalysis: {
+                type: Type.STRING,
+                description: "Um resumo executivo sobre a saúde dos ativos do condomínio, os maiores riscos atuais e recomendações de planejamento predial."
+              }
+            },
+            required: ["suggestions", "generalAnalysis"]
+          }
+        }
+      });
+
+      const resultText = response.text || "{}";
+      const data = JSON.parse(resultText);
+      res.json(data);
+    } catch (error: any) {
+      console.error('Erro na API do Gemini para priorização:', error);
+      res.status(500).json({ 
+        error: 'Falha ao processar sugestões de prioridade com o Gemini',
+        details: error.message || String(error)
       });
     }
   });

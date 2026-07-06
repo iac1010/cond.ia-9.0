@@ -5,7 +5,7 @@ import {
   Calendar, CheckCircle2, AlertTriangle, Clock, Plus, RefreshCw, 
   Building2, Bell, Check, Download, FileText, Home, DollarSign, 
   MessageSquare, Settings, Users, Wrench, Activity, AlertCircle, Zap, Droplets, Menu, Share2, MapPin,
-  Search, Trash2, Edit2, Shield
+  Search, Trash2, Edit2, Shield, Camera, Image as ImageIcon
 } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { format, isAfter, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns';
@@ -170,7 +170,7 @@ export default function IntelligentChecklist() {
   };
 
   // Dashboard Control Center States
-  const [activeTab, setActiveTab] = useState<'activities' | 'schedule' | 'iot-alerts'>('activities');
+  const [activeTab, setActiveTab] = useState<'activities' | 'schedule' | 'iot-alerts' | 'visit-reports'>('activities');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'DONE' | 'OVERDUE'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -182,6 +182,58 @@ export default function IntelligentChecklist() {
     { id: 'alert-3', title: 'Tensão Anômala SPDA', subtitle: 'Aterramento Central Para-Raios', severity: 'INFO', system: 'Elétrica', timestamp: 'Hoje, 09:30' },
     { id: 'alert-4', title: 'Bateria Fraca no No-Break', subtitle: 'Controle de Acesso Portaria Principal', severity: 'WARNING', system: 'Segurança', timestamp: 'Ontem' },
   ]);
+
+  // Visit Reports States
+  const [visitReports, setVisitReports] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem(`visitReports_${selectedClientId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Whenever selectedClientId or visitReports changes, update localStorage
+  useEffect(() => {
+    if (selectedClientId) {
+      localStorage.setItem(`visitReports_${selectedClientId}`, JSON.stringify(visitReports));
+    }
+  }, [visitReports, selectedClientId]);
+
+  // Load visit reports when selectedClientId changes
+  useEffect(() => {
+    if (selectedClientId) {
+      try {
+        const saved = localStorage.getItem(`visitReports_${selectedClientId}`);
+        setVisitReports(saved ? JSON.parse(saved) : []);
+      } catch (e) {
+        setVisitReports([]);
+      }
+    }
+  }, [selectedClientId]);
+
+  // Form states for creating a new visit report
+  const [showVisitReportModal, setShowVisitReportModal] = useState(false);
+  const [selectedMaintTaskId, setSelectedMaintTaskId] = useState('');
+  const [reportTechnician, setReportTechnician] = useState('');
+  const [reportStatus, setReportStatus] = useState<'CONFORME' | 'RESSALVA' | 'CRITICO'>('CONFORME');
+  const [reportObservations, setReportObservations] = useState('');
+  const [reportPhotos, setReportPhotos] = useState<string[]>([]);
+  const [reportDate, setReportDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [photoZoomUrl, setPhotoZoomUrl] = useState<string | null>(null);
+  const [autoCompleteTask, setAutoCompleteTask] = useState(true);
+
+  const reportPrintRef = useRef<HTMLDivElement>(null);
+
+  // Preset inspection photos for quick testing
+  const PRESET_INSPECTION_PHOTOS = [
+    { name: 'Quadro Elétrico', url: 'https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&w=600&q=80' },
+    { name: 'Bomba d\'Água', url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80' },
+    { name: 'Elevador', url: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=600&q=80' },
+    { name: 'Gerador', url: 'https://images.unsplash.com/photo-1597491833453-7a9763241511?auto=format&fit=crop&w=600&q=80' },
+    { name: 'Incêndio', url: 'https://images.unsplash.com/photo-1606206591513-bc15147b69cd?auto=format&fit=crop&w=600&q=80' },
+    { name: 'Infiltração', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80' }
+  ];
 
   // Task Editing & Rescheduling States
   const [editingTask, setEditingTask] = useState<any | null>(null);
@@ -328,6 +380,86 @@ export default function IntelligentChecklist() {
       message: `Manutenção registrada. Próxima data: ${format(nextDateObj, 'dd/MM/yyyy')}`,
       type: 'INFO'
     });
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      filesArray.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            setReportPhotos(prev => [...prev, reader.result as string]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleAddVisitReport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClientId) return;
+
+    const matchedTask = clientSchedules.find(s => s.id === selectedMaintTaskId);
+
+    const newReport = {
+      id: 'report-' + Date.now(),
+      clientId: selectedClientId,
+      clientName: selectedClient?.name || 'Condomínio',
+      date: reportDate,
+      technician: reportTechnician || 'Técnico Especialista',
+      status: reportStatus,
+      taskId: selectedMaintTaskId || undefined,
+      taskName: matchedTask ? matchedTask.item : 'Visita de Inspeção Geral',
+      observations: reportObservations,
+      photos: reportPhotos
+    };
+
+    setVisitReports(prev => [newReport, ...prev]);
+
+    // If autocomplete is on and a task is selected, mark it as done
+    if (selectedMaintTaskId && autoCompleteTask && matchedTask) {
+      handleMarkAsDone(selectedMaintTaskId, matchedTask.frequency);
+    }
+
+    toast.success('Relatório de Visita salvo!');
+    setShowVisitReportModal(false);
+
+    // Reset Form
+    setSelectedMaintTaskId('');
+    setReportTechnician('');
+    setReportStatus('CONFORME');
+    setReportObservations('');
+    setReportPhotos([]);
+    setReportDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const handleDeleteVisitReport = (id: string) => {
+    if (window.confirm('Tem certeza de que deseja excluir este relatório de visita?')) {
+      setVisitReports(prev => prev.filter(r => r.id !== id));
+      toast.success('Relatório de visita excluído!');
+    }
+  };
+
+  const handleExportReportPDF = async (reportItem: any) => {
+    if (!selectedClient) return;
+    
+    toast.loading('Gerando laudo técnico da visita em PDF...', { id: 'pdf-report' });
+    
+    try {
+      const printContainer = document.getElementById(`print-report-container-${reportItem.id}`);
+      if (printContainer) {
+        window.scrollTo(0, 0);
+        await generatePdf(printContainer, `Laudo_Vistoria_${selectedClient.name.replace(/\s+/g, '_')}_${reportItem.date.replace(/-/g, '_')}.pdf`);
+        toast.success('Laudo PDF gerado com sucesso!', { id: 'pdf-report' });
+      } else {
+        throw new Error('Container de impressão não encontrado');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar PDF do relatório:', error);
+      toast.error('Erro ao gerar PDF do relatório', { id: 'pdf-report' });
+    }
   };
 
   const handleDeleteTask = (id: string) => {
@@ -578,16 +710,17 @@ export default function IntelligentChecklist() {
         </section>
 
         {/* Tab Selection */}
-        <div className="flex border-b border-white/10">
+        <div className="flex border-b border-white/10 overflow-x-auto whitespace-nowrap scrollbar-none">
           {[
-            { id: 'activities', label: '📋 Atividades Preventivas', icon: Wrench },
+            { id: 'activities', label: '📋 Atividades', icon: Wrench },
             { id: 'schedule', label: '📅 Agenda Semanal', icon: Calendar },
-            { id: 'iot-alerts', label: `🚨 Alertas de Sensores (${iotAlerts.length})`, icon: Activity },
+            { id: 'visit-reports', label: '📸 Relatório de Visita', icon: Camera },
+            { id: 'iot-alerts', label: `🚨 Alertas (${iotAlerts.length})`, icon: Activity },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-6 py-3 text-xs uppercase tracking-widest font-black border-b-2 transition-all ${
+              className={`flex items-center gap-2 px-6 py-3 text-xs uppercase tracking-widest font-black border-b-2 transition-all shrink-0 ${
                 activeTab === tab.id 
                   ? 'border-yellow-500 text-yellow-500 bg-white/5' 
                   : 'border-transparent text-white/50 hover:text-white hover:bg-white/5'
@@ -742,13 +875,26 @@ export default function IntelligentChecklist() {
                             <td className="py-4 px-4 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1.5">
                                 {!isDone && (
-                                  <button
-                                    onClick={() => handleMarkAsDone(task.id, task.frequency)}
-                                    className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-all"
-                                    title="Marcar como Concluído"
-                                  >
-                                    <Check className="w-4 h-4" />
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedMaintTaskId(task.id);
+                                        setReportObservations(`Vistoria preventiva realizada com sucesso para o item "${task.item}". Equipamento inspecionado e testado em conformidade com as normas técnicas vigentes.`);
+                                        setShowVisitReportModal(true);
+                                      }}
+                                      className="p-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition-all"
+                                      title="Fazer Relatório de Visita"
+                                    >
+                                      <Camera className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleMarkAsDone(task.id, task.frequency)}
+                                      className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-all"
+                                      title="Marcar como Concluído"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                  </>
                                 )}
                                 <button
                                   onClick={() => {
@@ -959,6 +1105,229 @@ export default function IntelligentChecklist() {
               </div>
             )}
 
+            {/* TAB 4: VISIT TECHNICAL REPORTS & PHOTOS */}
+            {activeTab === 'visit-reports' && (
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col shadow-lg backdrop-blur-md">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <Camera className="w-5 h-5 text-cyan-400" /> Relatórios de Visita Técnica
+                    </h3>
+                    <p className="text-xs text-white/40 mt-1">
+                      Registro de vistorias preventivas com fotos, observações e laudo técnico para exportação.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedMaintTaskId('');
+                      setReportObservations('');
+                      setShowVisitReportModal(true);
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-cyan-500/10 transition-all transform hover:-translate-y-0.5"
+                  >
+                    <Plus className="w-4 h-4" /> Registrar Visita
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {visitReports.length > 0 ? (
+                    visitReports.map((report) => {
+                      const statusStyles = {
+                        CONFORME: { bg: 'bg-emerald-500/15 border-emerald-500/25 text-emerald-400', label: 'Conforme' },
+                        RESSALVA: { bg: 'bg-yellow-500/15 border-yellow-500/25 text-yellow-400', label: 'Com Ressalva' },
+                        CRITICO: { bg: 'bg-red-500/15 border-red-500/25 text-red-400', label: 'Crítico / Atenção' }
+                      };
+
+                      const currentStatus = statusStyles[report.status as keyof typeof statusStyles] || statusStyles.CONFORME;
+
+                      return (
+                        <div 
+                          key={report.id} 
+                          className="bg-white/[0.02] border border-white/5 hover:border-white/10 rounded-2xl p-5 transition-all"
+                        >
+                          {/* Hidden print container with a gorgeous, high-fidelity technical layout */}
+                          <div 
+                            id={`print-report-container-${report.id}`} 
+                            style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '210mm', minHeight: '297mm', background: '#ffffff', color: '#1e293b' }}
+                          >
+                            <div className="p-12 bg-white text-slate-800 font-sans min-h-[297mm] flex flex-col justify-between">
+                              <div>
+                                {/* Header */}
+                                <div className="flex justify-between items-start border-b-2 border-slate-200 pb-6 mb-8">
+                                  <div>
+                                    <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Laudo Técnico de Vistoria</h1>
+                                    <p className="text-xs text-slate-500 font-medium mt-1">Sistema Integrado de Manutenção Predial • {selectedClient?.name}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="inline-block px-3 py-1 bg-slate-100 text-slate-800 border border-slate-300 rounded font-mono text-xs font-bold">
+                                      ID: #{report.id.split('-')[1] || report.id}
+                                    </span>
+                                    <p className="text-[10px] text-slate-400 mt-1 font-mono">{format(parseISO(report.date), 'dd/MM/yyyy')}</p>
+                                  </div>
+                                </div>
+
+                                {/* Metadata Grid */}
+                                <div style={{ display: 'flex', gap: '16px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '32px', width: '100%' }}>
+                                  <div style={{ flex: '1' }}>
+                                    <p className="text-slate-400 font-bold uppercase text-[9px]">Cliente / Condomínio</p>
+                                    <p className="font-bold text-slate-800 text-sm mt-0.5">{selectedClient?.name}</p>
+                                    <p className="text-slate-500 mt-1">{selectedClient?.address || 'Endereço não cadastrado'}</p>
+                                  </div>
+                                  <div style={{ flex: '1' }}>
+                                    <p className="text-slate-400 font-bold uppercase text-[9px]">Responsável Técnico</p>
+                                    <p className="font-bold text-slate-800 text-sm mt-0.5">{report.technician}</p>
+                                    <p className="text-slate-500 mt-1">CREA/CFT registrado</p>
+                                  </div>
+                                </div>
+
+                                {/* Task Details & Assessment */}
+                                <div className="mb-8">
+                                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1 mb-3">Escopo e Avaliação</h3>
+                                  <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                      <p className="text-slate-500 text-xs">Atividade Relacionada:</p>
+                                      <p className="font-bold text-slate-800 text-sm">{report.taskName}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-slate-500 text-xs mb-1">Status de Conformidade:</p>
+                                      <span className={`inline-block px-3 py-1 rounded text-xs font-black uppercase tracking-wider ${
+                                        report.status === 'CONFORME' 
+                                          ? 'bg-emerald-100 border border-emerald-300 text-emerald-800' 
+                                          : report.status === 'RESSALVA'
+                                          ? 'bg-yellow-100 border border-yellow-300 text-yellow-800'
+                                          : 'bg-red-100 border border-red-300 text-red-800'
+                                      }`}>
+                                        {report.status}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Observations / Findings */}
+                                <div className="mb-8 bg-slate-50/50 p-5 rounded-xl border border-slate-100">
+                                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1 mb-3">Observações e Recomendações Técnicas</h3>
+                                  <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">{report.observations}</p>
+                                </div>
+
+                                {/* Inspection Photos Grid */}
+                                {report.photos && report.photos.length > 0 && (
+                                  <div>
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1 mb-4">Registro Fotográfico de Evidências</h3>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', width: '100%' }}>
+                                      {report.photos.map((photo: string, idx: number) => (
+                                        <div key={idx} style={{ width: 'calc(50% - 8px)', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', backgroundColor: '#f8fafc', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                          <div className="h-44 w-full flex items-center justify-center overflow-hidden rounded bg-black">
+                                            <img src={photo} alt={`Evidência ${idx + 1}`} className="max-h-full max-w-full object-contain text-slate-400" />
+                                          </div>
+                                          <p className="text-[9px] text-slate-400 font-bold uppercase mt-2 font-mono">Evidência #{idx + 1} - Registro de Campo</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Technical Signatures */}
+                              <div className="border-t border-slate-200 pt-8 mt-12 text-center text-[10px]" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '32px', marginTop: '48px', display: 'flex', justifyContent: 'space-between', width: '100%', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '45%' }}>
+                                  <div style={{ width: '100%', maxWidth: '192px', borderBottom: '1px solid #94a3b8', height: '40px', marginBottom: '8px' }}></div>
+                                  <p style={{ fontWeight: '700', color: '#334155', margin: '0' }}>{report.technician}</p>
+                                  <p style={{ color: '#94a3b8', fontWeight: '500', margin: '0', fontSize: '10px' }}>Responsável Técnico</p>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '45%' }}>
+                                  <div style={{ width: '100%', maxWidth: '192px', borderBottom: '1px solid #94a3b8', height: '40px', marginBottom: '8px' }}></div>
+                                  <p style={{ fontWeight: '700', color: '#334155', margin: '0' }}>Responsável Administrativo</p>
+                                  <p style={{ color: '#94a3b8', fontWeight: '500', margin: '0', fontSize: '10px' }}>{selectedClient?.name}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Interactive Display card */}
+                          <div className="flex flex-col md:flex-row justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-3">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider border ${currentStatus.bg}`}>
+                                  {currentStatus.label}
+                                </span>
+                                <span className="text-[10px] text-white/40 flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5 text-white/30" /> {format(parseISO(report.date), 'dd/MM/yyyy')}
+                                </span>
+                                <span className="text-white/20">•</span>
+                                <span className="text-[10px] text-white/50 font-medium text-white/60">
+                                  Técnico: <strong className="text-white/80">{report.technician}</strong>
+                                </span>
+                              </div>
+
+                              <h4 className="text-sm font-bold text-white mb-2">
+                                {report.taskName}
+                              </h4>
+
+                              <p className="text-xs text-white/60 leading-relaxed whitespace-pre-line bg-white/[0.01] border border-white/5 rounded-xl p-3 mb-4">
+                                {report.observations}
+                              </p>
+
+                              {/* Horizontal scroll of photos */}
+                              {report.photos && report.photos.length > 0 && (
+                                <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+                                  {report.photos.map((photo: string, index: number) => (
+                                    <div 
+                                      key={index} 
+                                      onClick={() => setPhotoZoomUrl(photo)}
+                                      className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-white/10 hover:border-cyan-400/50 cursor-zoom-in transition-all group"
+                                    >
+                                      <img src={photo} alt="Inspeção" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                        <Camera className="w-4 h-4 text-white" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions Column */}
+                            <div className="flex md:flex-col justify-end md:justify-start gap-2 self-end md:self-stretch shrink-0">
+                              <button
+                                onClick={() => handleExportReportPDF(report)}
+                                className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                              >
+                                <Download className="w-3.5 h-3.5" /> Laudo PDF
+                              </button>
+                              <button
+                                onClick={() => handleDeleteVisitReport(report.id)}
+                                className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Excluir
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-12 text-white/50 text-sm bg-white/5 rounded-2xl border border-dashed border-white/10">
+                      <Camera className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                      <p className="font-bold text-white text-base">Nenhum Relatório de Visita</p>
+                      <p className="text-xs text-white/40 mt-1 max-w-sm mx-auto">
+                        Registre a vistoria técnica da sua atividade preventiva para gerar relatórios detalhados com anexos fotográficos.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setSelectedMaintTaskId('');
+                          setReportObservations('');
+                          setShowVisitReportModal(true);
+                        }}
+                        className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" /> Registrar Primeira Visita
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* RIGHT COLUMN: Quick Action Hub & Performance Panel */}
@@ -1154,91 +1523,89 @@ export default function IntelligentChecklist() {
         </div>
       )}
 
-      {/* PDF Template (Hidden) */}
-      <div className="hidden">
+      {/* PDF Template (Hidden off-screen to allow proper style calculation) */}
+      <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '210mm', minHeight: '297mm', background: '#ffffff' }}>
         <div 
           ref={printRef} 
           ref-name="printRef"
           className="bg-white text-zinc-900 font-sans pdf-content relative overflow-hidden"
-          style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', padding: '0' }}
+          style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', padding: '0', boxSizing: 'border-box' }}
         >
           {/* Top Accent Line */}
           <div className="h-2 w-full bg-blue-600 mb-0"></div>
 
           <div className="p-12">
             {/* Header Section */}
-            <div className="grid grid-cols-12 gap-8 mb-10 pb-8 border-b border-zinc-200 items-start break-inside-avoid">
-              <div className="col-span-7 flex gap-6 items-center">
+            <div className="flex justify-between items-start mb-8 pb-8 border-b border-zinc-200 break-inside-avoid w-full" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', borderBottom: '1px solid #e4e4e7', paddingBottom: '32px', marginBottom: '40px' }}>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'center', width: '60%' }}>
                 {companyLogo ? (
-                  <div className="bg-zinc-50 p-3 rounded-2xl border border-zinc-100 flex items-center justify-center">
-                    <img src={companyLogo} alt="Logo" className="h-16 w-auto object-contain" />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px', border: '1px solid #f4f4f5', borderRadius: '16px', backgroundColor: '#fafafa', width: '70px', height: '70px', flexShrink: 0 }}>
+                    <img src={companyLogo} alt="Logo" className="max-h-full max-w-full object-contain" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
                   </div>
                 ) : (
-                  <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
-                    <Wrench className="w-8 h-8 text-white" />
+                  <div style={{ width: '64px', height: '64px', backgroundColor: '#2563eb', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Wrench style={{ width: '32px', height: '32px', color: '#ffffff' }} />
                   </div>
                 )}
-                <div className="flex flex-col">
-                  <h2 className="text-2xl font-black text-black uppercase tracking-tight leading-none mb-2">
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#000000', textTransform: 'uppercase', marginBottom: '4px', lineHeight: '1.1' }}>
                     {companyData?.name || 'IA COMPANY'}
                   </h2>
-                  <div className="space-y-0.5">
-                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-zinc-300"></div> CNPJ: {companyData?.document || '---'}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: '700', color: '#71717a', margin: '0' }}>
+                      CNPJ: {companyData?.document || '---'}
                     </p>
-                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-zinc-300"></div> {companyData?.email || 'contato@empresa.com'}
+                    <p style={{ fontSize: '10px', fontWeight: '700', color: '#71717a', margin: '0' }}>
+                      {companyData?.email || 'contato@empresa.com'}
                     </p>
-                    <p className="text-[10px] font-bold text-zinc-500 flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-zinc-300"></div> {companyData?.phone || '(00) 0000-0000'}
+                    <p style={{ fontSize: '10px', fontWeight: '700', color: '#71717a', margin: '0' }}>
+                      {companyData?.phone || '(00) 0000-0000'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="col-span-5 text-right flex flex-col justify-between h-full">
-                <div>
-                  <div className="inline-block px-3 py-1 bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-3 rounded">
-                    ENGENHARIA E MANUTENÇÃO
-                  </div>
-                  <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">
-                    RELATÓRIO TÉCNICO
-                  </h1>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '40%', textAlign: 'right' }}>
+                <div style={{ display: 'inline-block', backgroundColor: '#2563eb', color: '#ffffff', padding: '4px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                  ENGENHARIA E MANUTENÇÃO
                 </div>
-                <div className="mt-4 flex flex-col gap-1 items-end">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right whitespace-nowrap">Data Referência</span>
-                    <span className="text-sm font-black text-black">{format(new Date(), 'dd/MM/yyyy')}</span>
+                <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#000000', textTransform: 'uppercase', lineHeight: '1', margin: '0' }}>
+                  RELATÓRIO TÉCNICO
+                </h1>
+                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: '900', color: '#a1a1aa', textTransform: 'uppercase' }}>Data Referência:</span>
+                    <span style={{ fontSize: '12px', fontWeight: '900', color: '#000000' }}>{format(new Date(), 'dd/MM/yyyy')}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right whitespace-nowrap">Protocolo</span>
-                    <span className="text-sm font-black text-black">#{selectedClient?.id.substring(0, 8).toUpperCase() || '---'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: '900', color: '#a1a1aa', textTransform: 'uppercase' }}>Protocolo:</span>
+                    <span style={{ fontSize: '12px', fontWeight: '900', color: '#000000' }}>#{selectedClient?.id.substring(0, 8).toUpperCase() || '---'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Client Card */}
-            <div className="mb-10 bg-zinc-50 p-8 rounded-3xl border border-zinc-100 flex flex-col relative overflow-hidden break-inside-avoid">
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-5 ml-2">Unidade / Edificação Monitorada</h3>
-              <div className="ml-2">
-                <p className="text-3xl font-black text-black leading-tight mb-6">
+            <div className="mb-10 bg-zinc-50 p-8 rounded-3xl border border-zinc-100 flex flex-col relative overflow-hidden break-inside-avoid" style={{ padding: '32px', borderRadius: '24px', border: '1px solid #f4f4f5', backgroundColor: '#fafafa', position: 'relative', overflow: 'hidden', marginBottom: '40px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'absolute', top: '0', left: '0', width: '6px', height: '100%', backgroundColor: '#2563eb' }}></div>
+              <h3 style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', color: '#a1a1aa', marginBottom: '16px', marginLeft: '8px', marginTop: '0' }}>Unidade / Edificação Monitorada</h3>
+              <div style={{ marginLeft: '8px' }}>
+                <p style={{ fontSize: '24px', fontWeight: '900', color: '#000000', lineHeight: '1.2', marginBottom: '24px', marginTop: '0' }}>
                   {selectedClient?.name || '________________________________'}
                 </p>
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="pt-4 border-t border-zinc-200/50">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Endereço de Atendimento</p>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-zinc-300 mt-0.5" />
-                      <p className="text-xs font-bold text-black leading-relaxed">{selectedClient?.address || '---'}</p>
+                <div style={{ display: 'flex', gap: '32px', width: '100%' }}>
+                  <div style={{ flex: '1', paddingTop: '16px', borderTop: '1px solid #e4e4e7' }}>
+                    <p style={{ fontSize: '9px', fontWeight: '900', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '4px', marginTop: '0' }}>Endereço de Atendimento</p>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <MapPin style={{ width: '14px', height: '14px', color: '#d4d4d8', flexShrink: 0, marginTop: '2px' }} />
+                      <p style={{ fontSize: '12px', fontWeight: '700', color: '#000000', margin: '0', lineHeight: '1.4' }}>{selectedClient?.address || '---'}</p>
                     </div>
                   </div>
-                  <div className="pt-4 border-t border-zinc-200/50">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Responsável Técnico</p>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5" />
-                      <p className="text-xs font-bold text-black leading-relaxed">Engenheiro / Técnico Responsável</p>
+                  <div style={{ flex: '1', paddingTop: '16px', borderTop: '1px solid #e4e4e7' }}>
+                    <p style={{ fontSize: '9px', fontWeight: '900', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '4px', marginTop: '0' }}>Responsável Técnico</p>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <CheckCircle2 style={{ width: '14px', height: '14px', color: '#10b981', flexShrink: 0, marginTop: '2px' }} />
+                      <p style={{ fontSize: '12px', fontWeight: '700', color: '#000000', margin: '0', lineHeight: '1.4' }}>Engenheiro / Técnico Responsável</p>
                     </div>
                   </div>
                 </div>
@@ -1308,38 +1675,39 @@ export default function IntelligentChecklist() {
             </div>
 
             {/* Signature Section */}
-            <div className="mt-16 grid grid-cols-2 gap-20 break-inside-avoid pt-12 border-t border-zinc-100">
-              <div className="text-center flex flex-col items-center">
-                <div className="h-20 flex items-end justify-center mb-2 w-full">
+            <div className="mt-16 break-inside-avoid pt-12 border-t border-zinc-100" style={{ marginTop: '64px', paddingTop: '48px', borderTop: '1px solid #e4e4e7', display: 'flex', justifyContent: 'space-between', gap: '40px', width: '100%', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '45%' }}>
+                <div style={{ height: '80px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '8px', width: '100%' }}>
                   {companySignature && (
                     <img 
                       src={companySignature} 
                       alt="Assinatura" 
                       className="max-h-full max-w-[200px] object-contain opacity-90" 
+                      style={{ maxHeight: '100%', maxWidth: '200px', objectFit: 'contain', opacity: '0.9' }}
                     />
                   )}
                 </div>
-                <div className="w-full border-t border-zinc-300 pt-4">
-                  <p className="text-lg font-black text-black leading-none mb-1">{companyData?.name || 'IA COMPANY'}</p>
-                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Responsável Técnico</p>
+                <div style={{ width: '100%', borderTop: '1px solid #d4d4d8', paddingTop: '16px' }}>
+                  <p style={{ fontSize: '18px', fontWeight: '900', color: '#000000', margin: '0', marginBottom: '4px', lineHeight: '1' }}>{companyData?.name || 'IA COMPANY'}</p>
+                  <p style={{ fontSize: '9px', fontWeight: '900', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '2px', margin: '0' }}>Responsável Técnico</p>
                 </div>
               </div>
-              <div className="text-center flex flex-col items-center">
-                <div className="h-20 mb-2 w-full"></div>
-                <div className="w-full border-t border-zinc-300 pt-4">
-                  <p className="text-lg font-black text-black leading-none mb-1">{selectedClient?.name.substring(0, 30)}</p>
-                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Ciente do Gestor / Síndico</p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '45%' }}>
+                <div style={{ height: '80px', marginBottom: '8px', width: '100%' }}></div>
+                <div style={{ width: '100%', borderTop: '1px solid #d4d4d8', paddingTop: '16px' }}>
+                  <p style={{ fontSize: '18px', fontWeight: '900', color: '#000000', margin: '0', marginBottom: '4px', lineHeight: '1' }}>{selectedClient?.name.substring(0, 30)}</p>
+                  <p style={{ fontSize: '9px', fontWeight: '900', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '2px', margin: '0' }}>Ciente do Gestor / Síndico</p>
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="mt-20 pt-10 border-t border-zinc-100 flex justify-between items-center break-inside-avoid">
-              <p className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest italic">
+            <div className="mt-20 pt-10 border-t border-zinc-100 break-inside-avoid" style={{ marginTop: '80px', paddingTop: '40px', borderTop: '1px solid #e4e4e7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              <p style={{ fontSize: '9px', fontWeight: '700', color: '#d4d4d8', textTransform: 'uppercase', letterSpacing: '1px', fontStyle: 'italic', margin: '0', width: '75%' }}>
                 Este relatório atesta a realização das inspeções documentadas. Não substitui ensaios laboratoriais ou laudos específicos de engenharia.
               </p>
-              <div className="flex items-center gap-4">
-                <p className="text-[9px] font-black text-zinc-900 uppercase tracking-widest">
+              <div style={{ display: 'flex', alignItems: 'center', width: '25%', justifyContent: 'flex-end' }}>
+                <p style={{ fontSize: '9px', fontWeight: '900', color: '#18181b', textTransform: 'uppercase', letterSpacing: '1px', margin: '0' }}>
                    NBR 5674 • PG 01/01
                 </p>
               </div>
@@ -1437,6 +1805,221 @@ export default function IntelligentChecklist() {
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Visit Report Modal */}
+      {showVisitReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+          <div className="bg-[#1e293b] border border-white/10 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl shadow-2xl my-8">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
+              <Camera className="text-cyan-400" /> Registrar Relatório de Visita
+            </h2>
+            <p className="text-xs text-white/50 mb-6">
+              Registre observações técnicas e anexe imagens para comprovação e geração de laudos em PDF.
+            </p>
+            
+            <form onSubmit={handleAddVisitReport} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Atividade Preventiva Relacionada</label>
+                  <select
+                    value={selectedMaintTaskId}
+                    onChange={(e) => {
+                      setSelectedMaintTaskId(e.target.value);
+                      const matched = clientSchedules.find(s => s.id === e.target.value);
+                      if (matched) {
+                        setReportObservations(`Vistoria preventiva realizada com sucesso para o item "${matched.item}". Equipamento inspecionado e testado em conformidade com as normas técnicas vigentes.`);
+                      } else {
+                        setReportObservations('');
+                      }
+                    }}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white text-xs"
+                  >
+                    <option value="" className="bg-[#1e293b]">Visita de Inspeção Geral (Nenhuma atividade específica)</option>
+                    {clientSchedules.map(task => (
+                      <option key={task.id} value={task.id} className="bg-[#1e293b]">
+                        {task.status === 'DONE' ? '✅' : '⏳'} {task.item} ({task.category || 'Geral'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Data da Visita</label>
+                  <input 
+                    type="date"
+                    required
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Técnico Responsável</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="Ex: Carlos Silva (Técnico Residente)"
+                    value={reportTechnician}
+                    onChange={(e) => setReportTechnician(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Status da Avaliação</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'CONFORME', label: 'Conforme', color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10' },
+                      { id: 'RESSALVA', label: 'Ressalva', color: 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500/10' },
+                      { id: 'CRITICO', label: 'Crítico', color: 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10' },
+                    ].map(status => (
+                      <button
+                        type="button"
+                        key={status.id}
+                        onClick={() => setReportStatus(status.id as any)}
+                        className={`py-2 px-1 border rounded-xl text-center text-xs font-black transition-all ${
+                          reportStatus === status.id
+                            ? 'bg-white text-black border-white shadow-md'
+                            : status.color
+                        }`}
+                      >
+                        {status.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Parecer Técnico / Observações</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Descreva as condições técnicas encontradas, ações tomadas e recomendações..."
+                  value={reportObservations}
+                  onChange={(e) => setReportObservations(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white text-xs resize-none"
+                />
+              </div>
+
+              {/* Photos Attachment and Presets */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-1">Fotos da Vistoria (Anexos de Evidência)</label>
+                <p className="text-[10px] text-white/40 mb-3">Selecione fotos reais do seu dispositivo ou use fotos de exemplo pré-configuradas para demonstração rápida.</p>
+                
+                {/* Sample Presets */}
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <span className="text-[9px] uppercase tracking-wider text-white/40 font-bold flex items-center">Fotos Rápidas:</span>
+                  {PRESET_INSPECTION_PHOTOS.map((preset, index) => (
+                    <button
+                      type="button"
+                      key={index}
+                      onClick={() => {
+                        if (reportPhotos.includes(preset.url)) {
+                          setReportPhotos(prev => prev.filter(u => u !== preset.url));
+                        } else {
+                          setReportPhotos(prev => [...prev, preset.url]);
+                        }
+                      }}
+                      className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+                        reportPhotos.includes(preset.url)
+                          ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-sm shadow-cyan-500/15'
+                          : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      + {preset.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* File Upload zone */}
+                <div className="relative border border-dashed border-white/10 rounded-xl p-4 text-center hover:bg-white/[0.02] hover:border-white/20 transition-all group">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  <ImageIcon className="w-8 h-8 text-white/20 mx-auto mb-1.5 group-hover:text-cyan-400 transition-colors" />
+                  <p className="text-xs text-white/60 font-bold">Arraste ou clique para enviar fotos do dispositivo</p>
+                  <p className="text-[10px] text-white/30 mt-0.5">Suporta formatos de imagem padrão (PNG, JPG, HEIC)</p>
+                </div>
+
+                {/* Preview Gallery */}
+                {reportPhotos.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2 max-h-36 overflow-y-auto bg-black/30 p-2.5 rounded-xl border border-white/5">
+                    {reportPhotos.map((photo, index) => (
+                      <div key={index} className="relative w-14 h-14 rounded-lg overflow-hidden border border-white/10 group">
+                        <img src={photo} alt="Anexo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <button
+                          type="button"
+                          onClick={() => setReportPhotos(prev => prev.filter((_, i) => i !== index))}
+                          className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedMaintTaskId && (
+                <div className="flex items-center gap-2 bg-emerald-500/5 border border-emerald-500/20 p-3 rounded-xl">
+                  <input 
+                    type="checkbox" 
+                    id="autoCompleteTask"
+                    checked={autoCompleteTask}
+                    onChange={(e) => setAutoCompleteTask(e.target.checked)}
+                    className="rounded border-white/10 bg-white/5 text-emerald-500 focus:ring-0 focus:ring-offset-0"
+                  />
+                  <label htmlFor="autoCompleteTask" className="text-xs text-emerald-400 font-semibold cursor-pointer select-none">
+                    Marcar a atividade preventiva relacionada como Concluída automaticamente
+                  </label>
+                </div>
+              )}
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setShowVisitReportModal(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all text-white text-xs uppercase tracking-widest cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 py-3 bg-cyan-500 hover:bg-cyan-600 rounded-xl font-bold transition-all text-white text-xs uppercase tracking-widest shadow-lg shadow-cyan-500/20 cursor-pointer"
+                >
+                  Salvar Relatório
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Lightbox Modal */}
+      {photoZoomUrl && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 cursor-zoom-out"
+          onClick={() => setPhotoZoomUrl(null)}
+        >
+          <div className="relative max-w-4xl max-h-[85vh] flex items-center justify-center">
+            <img src={photoZoomUrl} alt="Visualização em Alta Resolução" className="max-w-full max-h-full rounded-xl object-contain shadow-2xl border border-white/10" referrerPolicy="no-referrer" />
+            <button
+              onClick={() => setPhotoZoomUrl(null)}
+              className="absolute -top-10 right-0 text-white hover:text-cyan-400 font-black text-sm tracking-wider uppercase bg-black/50 px-3 py-1.5 rounded-lg border border-white/10 cursor-pointer"
+            >
+              Fechar X
+            </button>
+          </div>
         </div>
       )}
     </>

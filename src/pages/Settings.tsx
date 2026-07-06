@@ -2,11 +2,46 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { CompanyData } from '../types';
 import { toast } from 'react-hot-toast';
-import { Upload, Trash2, Image as ImageIcon, Save, Download, Database, FileUp, Layout as LayoutIcon, Settings as SettingsIcon, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { 
+  Upload, Trash2, Image as ImageIcon, Save, Download, Database, FileUp, 
+  Layout as LayoutIcon, Settings as SettingsIcon, Eye, EyeOff, MessageSquare,
+  Palette, Check, RotateCcw, FileImage, Paintbrush, X
+} from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { ConfirmationModal } from '../components/ConfirmationModal';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
+
+const BG_SOLID_COLORS = [
+  { id: 'ocean_trello', name: 'Azul Trello', value: 'bg-[#0079bf]' },
+  { id: 'ocean', name: 'Azul Oceano', value: 'bg-[#004a7c]' },
+  { id: 'green', name: 'Verde Trello', value: 'bg-[#519839]' },
+  { id: 'orange', name: 'Laranja Trello', value: 'bg-[#d29034]' },
+  { id: 'red', name: 'Vermelho Trello', value: 'bg-[#b04632]' },
+  { id: 'purple', name: 'Roxo Trello', value: 'bg-[#89609e]' },
+  { id: 'pink', name: 'Rosa Trello', value: 'bg-[#cd5a91]' },
+  { id: 'slate', name: 'Slate Profundo', value: 'bg-slate-900' },
+  { id: 'zinc', name: 'Preto Carbono', value: 'bg-zinc-950' },
+];
+
+const BG_GRADIENTS = [
+  { id: 'grad_aurora', name: 'Aurora Ciano', value: 'bg-gradient-to-tr from-teal-950 via-emerald-900 to-cyan-900' },
+  { id: 'grad_sunset', name: 'Sunset Glow', value: 'bg-gradient-to-tr from-orange-600 to-rose-600' },
+  { id: 'grad_cosmic', name: 'Espaço Cósmico', value: 'bg-gradient-to-tr from-slate-900 via-purple-950 to-zinc-950' },
+  { id: 'grad_electric', name: 'Azul Elétrico', value: 'bg-gradient-to-tr from-blue-900 via-indigo-950 to-slate-950' },
+  { id: 'grad_twilight', name: 'Vinho do Crepúsculo', value: 'bg-gradient-to-tr from-rose-950 via-pink-900 to-violet-950' },
+];
+
+const BG_PHOTOS = [
+  { id: 'photo_mountain', name: 'Montanhas', value: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80' },
+  { id: 'photo_forest', name: 'Floresta', value: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80' },
+  { id: 'photo_ocean', name: 'Oceano', value: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=1200&q=80' },
+  { id: 'photo_desert', name: 'Saara', value: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80' },
+  { id: 'photo_stars', name: 'Estrelas', value: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80' },
+  { id: 'photo_aurora', name: 'Aurora', value: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=1200&q=80' },
+  { id: 'photo_city', name: 'Metrópole', value: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1200&q=80' },
+  { id: 'photo_lake', name: 'Lago Alpino', value: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80' },
+];
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -32,6 +67,8 @@ export default function Settings() {
   const signatureInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
+
+  const [isBgPanelOpen, setIsBgPanelOpen] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -455,7 +492,11 @@ export default function Settings() {
             <div className="w-72 h-40 bg-white rounded-2xl border-2 border-dashed border-zinc-200 flex items-center justify-center overflow-hidden shrink-0 group relative">
               {backgroundImage ? (
                 <>
-                  <img src={backgroundImage} alt="Fundo do Sistema" className="w-full h-full object-cover" />
+                  {backgroundImage.startsWith('bg-') ? (
+                    <div className={`w-full h-full ${backgroundImage}`} />
+                  ) : (
+                    <img src={backgroundImage} alt="Fundo do Sistema" className="w-full h-full object-cover" />
+                  )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button onClick={() => setBackgroundImage(null)} className="p-3 bg-red-500 rounded-full text-white shadow-lg">
                       <Trash2 className="w-6 h-6" />
@@ -472,27 +513,21 @@ export default function Settings() {
             
             <div className="flex-1 space-y-6">
               <p className="text-lg text-zinc-500 font-light leading-relaxed">
-                Personalize a aparência do sistema adicionando uma imagem de fundo para as telas principais.
+                Personalize a aparência do sistema adicionando uma imagem de fundo, cores sólidas ou degradês para as telas principais.
               </p>
               <div className="p-4 bg-zinc-100 rounded-xl border border-zinc-200">
                 <p className="text-sm text-zinc-400 font-medium">
-                  Recomendamos imagens em alta resolução (1920x1080 ou superior).
+                  Recomendamos imagens em alta resolução (1920x1080 ou superior) ou nossos degradês modernos.
                 </p>
               </div>
               
               <div className="flex flex-wrap gap-4 pt-4">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  ref={backgroundInputRef}
-                  onChange={handleBackgroundChange}
-                />
                 <button 
-                  onClick={() => backgroundInputRef.current?.click()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold border border-blue-700 transition-all flex items-center gap-3 shadow-lg"
+                  type="button"
+                  onClick={() => setIsBgPanelOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold border border-blue-700 transition-all flex items-center gap-3 shadow-lg hover:scale-[1.01] active:scale-[0.99]"
                 >
-                  <Upload className="w-5 h-5" /> ESCOLHER FUNDO
+                  <Palette className="w-5 h-5 text-indigo-200" /> ESCOLHER FUNDO
                 </button>
               </div>
             </div>
@@ -777,6 +812,220 @@ export default function Settings() {
         message={confirmModal.message}
         type={confirmModal.type}
       />
+
+      {/* Trello-Style System Background Customization Drawer */}
+      <AnimatePresence>
+        {isBgPanelOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs cursor-pointer"
+              onClick={() => setIsBgPanelOpen(false)}
+            />
+            
+            {/* Sliding Panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+              className="fixed top-0 right-0 bottom-0 w-full max-w-sm sm:max-w-md bg-slate-900 border-l border-white/10 p-6 z-50 text-white flex flex-col overflow-y-auto shadow-2xl"
+            >
+              <div className="flex justify-between items-center pb-4 border-b border-white/10 mb-6">
+                <div className="flex items-center gap-2.5">
+                  <Palette className="w-5 h-5 text-indigo-400" />
+                  <h3 className="text-lg font-black uppercase tracking-wider text-slate-100">Fundo do Sistema</h3>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsBgPanelOpen(false)}
+                  className="p-1.5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5 text-white/60 hover:text-white" />
+                </button>
+              </div>
+
+              <div className="space-y-6 flex-1 pr-1 overflow-x-hidden">
+                {/* Custom Upload Section */}
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5 text-blue-400" />
+                    Enviar sua Imagem
+                  </label>
+                  <div className="relative group border-2 border-dashed border-white/10 hover:border-blue-500/50 bg-white/5 hover:bg-white/10 transition-all rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer">
+                    <input 
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!file.type.startsWith('image/')) {
+                          toast.error('Por favor, envie um arquivo de imagem.');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const img = new Image();
+                          img.onload = () => {
+                            const maxDim = 1200;
+                            let width = img.width;
+                            let height = img.height;
+                            if (width > maxDim || height > maxDim) {
+                              if (width > height) {
+                                height = Math.round((height * maxDim) / width);
+                                width = maxDim;
+                              } else {
+                                width = Math.round((width * maxDim) / height);
+                                height = maxDim;
+                              }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                              ctx.drawImage(img, 0, 0, width, height);
+                              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                              setBackgroundImage(compressedBase64);
+                              toast.success('Fundo personalizado aplicado com sucesso!');
+                            }
+                          };
+                          img.src = event.target?.result as string;
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    <FileImage className="w-8 h-8 text-slate-400 group-hover:text-blue-400 group-hover:scale-110 transition-all mb-2" />
+                    <span className="text-sm font-bold text-slate-200">Arraste ou clique para enviar</span>
+                    <span className="text-[10px] text-slate-400 mt-1">Otimizado no mesmo estilo do Trello</span>
+                  </div>
+                </div>
+
+                {/* Scenic Photos Section */}
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
+                    Fotos de Paisagem (Unsplash)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {BG_PHOTOS.map((photo) => (
+                      <button
+                        type="button"
+                        key={photo.id}
+                        onClick={() => {
+                          setBackgroundImage(photo.value);
+                          toast.success(`Fundo alterado para ${photo.name}!`);
+                        }}
+                        className={`group relative h-20 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
+                          backgroundImage === photo.value 
+                            ? 'border-blue-500 scale-[1.03] shadow-lg shadow-black/50' 
+                            : 'border-transparent hover:border-white/30'
+                        }`}
+                      >
+                        <img 
+                          src={photo.value} 
+                          alt={photo.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/35 group-hover:bg-black/20 transition-colors flex items-end p-2">
+                          <span className="text-[10px] font-black tracking-wide text-white drop-shadow-sm uppercase">{photo.name}</span>
+                        </div>
+                        {backgroundImage === photo.value && (
+                          <div className="absolute top-1.5 right-1.5 bg-blue-500 rounded-full p-0.5">
+                            <Check className="w-3.5 h-3.5 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Solid Colors Section */}
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    <Paintbrush className="w-3.5 h-3.5 text-blue-400" />
+                    Cores Sólidas
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {BG_SOLID_COLORS.map((color) => (
+                      <button
+                        type="button"
+                        key={color.id}
+                        onClick={() => {
+                          setBackgroundImage(color.value);
+                          toast.success(`Fundo alterado para ${color.name}!`);
+                        }}
+                        className={`h-11 rounded-xl transition-all relative cursor-pointer border-2 ${color.value} ${
+                          backgroundImage === color.value 
+                            ? 'border-white scale-105 shadow-md ring-2 ring-blue-500/40' 
+                            : 'border-white/10 hover:border-white/40'
+                        }`}
+                        title={color.name}
+                      >
+                        {backgroundImage === color.value && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-xl">
+                            <Check className="w-4 h-4 text-white drop-shadow-sm" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Gradients Section */}
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-blue-400" />
+                    Degradês Modernos
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {BG_GRADIENTS.map((gradient) => (
+                      <button
+                        type="button"
+                        key={gradient.id}
+                        onClick={() => {
+                          setBackgroundImage(gradient.value);
+                          toast.success(`Fundo alterado para ${gradient.name}!`);
+                        }}
+                        className={`h-12 rounded-xl transition-all relative cursor-pointer border-2 ${gradient.value} ${
+                          backgroundImage === gradient.value 
+                            ? 'border-white scale-[1.02] shadow-md' 
+                            : 'border-white/10 hover:border-white/40'
+                        }`}
+                      >
+                        <div className="absolute inset-0 flex items-end p-2 bg-black/10 rounded-xl">
+                          <span className="text-[9px] font-black tracking-wider text-white drop-shadow-sm uppercase">{gradient.name}</span>
+                        </div>
+                        {backgroundImage === gradient.value && (
+                          <div className="absolute top-1.5 right-1.5 bg-white text-slate-900 rounded-full p-0.5">
+                            <Check className="w-3 h-3 font-bold" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-white/10 mt-6 flex justify-between shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBackgroundImage(null);
+                    toast.success('Fundo removido com sucesso!');
+                  }}
+                  className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Remover Fundo
+                </button>
+                <span className="text-[10px] text-white/40 self-center font-bold">Estilo Trello ✨</span>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

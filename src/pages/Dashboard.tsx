@@ -462,28 +462,93 @@ export default function Dashboard() {
     }).length;
   }, [scheduledMaintenances]);
 
-  // Check for overdue maintenances and notify
-  useEffect(() => {
-    const overdueItems = scheduledMaintenances.filter(m => {
-      if (!m.nextDate) return false;
-      const isOverdue = new Date(m.nextDate) < new Date();
-      return isOverdue;
+  const nextUpcomingClients = useMemo(() => {
+    const pendingOrOverdue = scheduledMaintenances.filter(m => m.status === 'PENDING' || m.status === 'OVERDUE');
+    
+    const sorted = [...pendingOrOverdue].sort((a, b) => {
+      if (!a.nextDate) return 1;
+      if (!b.nextDate) return -1;
+      return a.nextDate.localeCompare(b.nextDate);
     });
 
-    overdueItems.forEach(item => {
-      const client = clients.find(c => c.id === item.clientId);
-      const notificationId = `overdue-${item.id}-${item.nextDate}`;
+    const uniqueClientsMap = new Map<string, typeof sorted[0]>();
+    for (const maint of sorted) {
+      if (!uniqueClientsMap.has(maint.clientId)) {
+        uniqueClientsMap.set(maint.clientId, maint);
+      }
+    }
+
+    return Array.from(uniqueClientsMap.values()).map(maint => {
+      const client = clients.find(c => c.id === maint.clientId);
       
-      // Only add if not already notified for this specific item/date
-      if (!notifications.some(n => n.message.includes(item.item) && n.message.includes(client?.name || ''))) {
-        addNotification({
-          title: 'Manutenção Atrasada!',
-          message: `${item.item} em ${client?.name} venceu em ${safeFormatDate(item.nextDate)}`,
-          type: 'WARNING'
-        });
+      let formattedDate = '';
+      if (maint.nextDate) {
+        const parts = maint.nextDate.split('-');
+        if (parts.length === 3) {
+          formattedDate = `${parts[2]}/${parts[1]}`;
+        } else {
+          formattedDate = maint.nextDate;
+        }
+      }
+
+      return {
+        clientId: maint.clientId,
+        clientName: client?.name || 'Condomínio',
+        itemName: maint.item,
+        nextDate: maint.nextDate,
+        formattedDate,
+        status: maint.status,
+      };
+    });
+  }, [scheduledMaintenances, clients]);
+
+  // Check for overdue and nearing expiration (NBR 5674) maintenances and notify
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    scheduledMaintenances.forEach(item => {
+      if (!item.nextDate || item.status === 'DONE') return;
+
+      const nextDate = new Date(item.nextDate);
+      nextDate.setHours(0, 0, 0, 0);
+
+      const diffTime = nextDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const client = clients.find(c => c.id === item.clientId);
+      const clientName = client?.name || 'Geral';
+
+      if (diffDays < 0) {
+        // Overdue Maintenance Notification
+        const overdueMessage = `A manutenção de ${item.item} (${item.category}) em ${clientName} venceu em ${safeFormatDate(item.nextDate)}`;
+        if (!notifications.some(n => n.message === overdueMessage)) {
+          addNotification({
+            title: 'Inspeção NBR 5674 Atrasada!',
+            message: overdueMessage,
+            type: 'WARNING'
+          });
+        }
+      } else {
+        // Nearing Expiration Notification based on NBR 5674 guidelines
+        let threshold = 7; // Default 7 days
+        if (item.frequency === 'Mensal') threshold = 5;
+        else if (item.frequency === 'Trimestral') threshold = 10;
+        else if (item.frequency === 'Semestral') threshold = 15;
+        else if (item.frequency === 'Anual') threshold = 30;
+
+        if (diffDays <= threshold) {
+          const warningMessage = `Inspeção NBR 5674 de ${item.item} em ${clientName} está próxima do vencimento (${diffDays} ${diffDays === 1 ? 'dia restante' : 'dias restantes'}).`;
+          if (!notifications.some(n => n.message === warningMessage)) {
+            addNotification({
+              title: `Alerta Preventiva NBR 5674`,
+              message: warningMessage,
+              type: 'WARNING'
+            });
+          }
+        }
       }
     });
-  }, [scheduledMaintenances, clients, addNotification]);
+  }, [scheduledMaintenances, clients, addNotification, notifications]);
 
   const totalReceitas = receipts.reduce((acc, curr) => acc + curr.value, 0);
   const totalDespesas = costs.reduce((acc, curr) => acc + curr.value, 0);
@@ -1168,29 +1233,51 @@ export default function Dashboard() {
           className="w-full h-full bg-gradient-to-br from-[#004a7c] to-[#002a4c] hover:brightness-110 transition-all p-4 flex flex-col justify-between group relative overflow-hidden border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-95 text-white"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 pointer-events-none" />
-          <div className="flex items-start gap-2 md:gap-4 h-full relative z-10">
-            <div className="p-1.5 md:p-3 bg-white/10 rounded-xl md:rounded-2xl border border-white/20 shadow-sm group-hover:scale-110 transition-transform duration-500 shrink-0">
-              <ClipboardCheck className="w-6 h-6 md:w-10 md:h-10 text-white" />
-            </div>
-            <div className="overflow-hidden flex-1">
-              <p className="text-[8px] md:text-[10px] font-black uppercase text-white/70 mb-0.5 md:mb-1 tracking-[0.2em] truncate">Manutenção Preventiva</p>
-              <div className="space-y-0.5 md:space-y-1">
-                <p className="font-black text-xs md:text-xl truncate text-white leading-tight">Manutenção preventiva</p>
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <div className="flex-1 h-1 md:h-1.5 bg-white/20 rounded-full overflow-hidden max-w-[60px] md:max-w-[100px]">
-                    <div 
-                      className={`h-full transition-all duration-1000 ${overdueMaintenances > 0 ? 'bg-amber-400' : 'bg-white'}`}
-                      style={{ width: overdueMaintenances > 0 ? '40%' : '100%' }}
-                    />
+          <div className="flex flex-col gap-2 relative z-10 w-full overflow-hidden">
+            <div className="flex items-start gap-2 md:gap-4">
+              <div className="p-1.5 md:p-3 bg-white/10 rounded-xl md:rounded-2xl border border-white/20 shadow-sm group-hover:scale-110 transition-transform duration-500 shrink-0">
+                <ClipboardCheck className="w-6 h-6 md:w-10 md:h-10 text-white" />
+              </div>
+              <div className="overflow-hidden flex-1">
+                <p className="text-[8px] md:text-[10px] font-black uppercase text-white/70 mb-0.5 tracking-[0.2em] truncate">Manutenção Preventiva</p>
+                <div className="space-y-0.5">
+                  <p className="font-black text-xs md:text-xl truncate text-white leading-tight">Manutenção preventiva</p>
+                  <div className="flex items-center gap-1.5 md:gap-2">
+                    <div className="flex-1 h-1 md:h-1.5 bg-white/20 rounded-full overflow-hidden max-w-[60px] md:max-w-[100px]">
+                      <div 
+                        className={`h-full transition-all duration-1000 ${overdueMaintenances > 0 ? 'bg-amber-400' : 'bg-white'}`}
+                        style={{ width: overdueMaintenances > 0 ? '40%' : '100%' }}
+                      />
+                    </div>
+                    <p className={`text-[8px] md:text-xs font-bold ${overdueMaintenances > 0 ? 'text-amber-400' : 'text-white'} truncate`}>
+                      {overdueMaintenances > 0 ? `${overdueMaintenances} pendentes` : '100% em dia'}
+                    </p>
                   </div>
-                  <p className={`text-[8px] md:text-xs font-bold ${overdueMaintenances > 0 ? 'text-amber-400' : 'text-white'} truncate`}>
-                    {overdueMaintenances > 0 ? `${overdueMaintenances} pendentes` : '100% em dia'}
-                  </p>
                 </div>
               </div>
             </div>
+
+            {/* List of upcoming clients in the agenda */}
+            {nextUpcomingClients.length > 0 && (
+              <div className="mt-1 pt-1.5 border-t border-white/10 flex flex-col gap-1 text-left w-full overflow-hidden">
+                <p className="text-[7px] md:text-[8px] font-bold uppercase tracking-wider text-white/50">Próximos Clientes na Agenda:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {nextUpcomingClients.slice(0, 2).map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-[8px] md:text-[10px] text-white/95 bg-white/5 px-2 py-1 rounded-lg border border-white/5 hover:bg-white/10 transition-colors">
+                      <div className="flex flex-col truncate pr-1">
+                        <span className="font-bold truncate text-white leading-tight">{item.clientName}</span>
+                        <span className="text-[7px] md:text-[8px] text-white/50 truncate font-light leading-tight">{item.itemName}</span>
+                      </div>
+                      <span className="text-yellow-400 font-mono font-bold text-[7px] md:text-[9px] shrink-0 bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20 leading-none">
+                        {item.formattedDate}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex justify-between items-end relative z-10">
+          <div className="flex justify-between items-end relative z-10 pt-2">
             <span className="hidden md:block text-[11px] font-black uppercase tracking-[0.2em] text-white/70">Manutenção Preventiva</span>
             <div className="flex items-center gap-1 md:gap-2 bg-white/10 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg border border-white/10 shrink-0">
               <ShieldCheck className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" />
@@ -2104,8 +2191,12 @@ export default function Dashboard() {
 
   return (
     <div 
-      className="min-h-screen -m-6 md:-m-8 p-3 sm:p-8 md:p-12 bg-[#004a7c] text-white overflow-x-hidden relative transition-all duration-700"
-      style={backgroundImage ? {
+      className={`min-h-screen -m-6 md:-m-8 p-3 sm:p-8 md:p-12 ${
+        backgroundImage && backgroundImage.startsWith('bg-') 
+          ? backgroundImage 
+          : 'bg-[#004a7c]'
+      } text-white overflow-x-hidden relative transition-all duration-700`}
+      style={backgroundImage && !backgroundImage.startsWith('bg-') ? {
         backgroundImage: `linear-gradient(rgba(0, 74, 124, 0.7), rgba(0, 74, 124, 0.7)), url(${backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',

@@ -108,6 +108,9 @@ export type Ticket = {
   reportedBy?: string;
   location?: string;
   photoBefore?: string;
+  priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  priorityJustification?: string;
+  priorityRecommendedAction?: string;
   budgetAmount?: number;
   budgetApproved?: boolean;
   reportedProblem?: string;
@@ -125,6 +128,14 @@ export type Ticket = {
     price?: number;
   }[];
   images?: string[];
+  attachments?: {
+    id: string;
+    name: string;
+    url: string; // Base64 or URL
+    size?: string;
+    type?: string;
+    date?: string;
+  }[];
   history?: {
     id: string;
     date: string;

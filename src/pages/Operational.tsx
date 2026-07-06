@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
+import { toast } from 'react-hot-toast';
 import { 
   Users, Key, Settings, Plus, Edit2, Trash2, 
   Search, Shield, Clock, Phone, Mail, MapPin,
@@ -32,13 +33,87 @@ export default function Operational() {
     staff, addStaff, updateStaff, deleteStaff,
     keys, addKey, updateKey, deleteKey,
     scheduledMaintenances, addScheduledMaintenance, updateScheduledMaintenance, deleteScheduledMaintenance,
-    criticalEvents, clients
+    generateSchedulesForClient, criticalEvents, clients
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<Tab>('STAFF');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // NBR 5674 custom alert thresholds (lead time in days)
+  const [thresholds, setThresholds] = useState(() => {
+    const saved = localStorage.getItem('nbr5674_thresholds');
+    return saved ? JSON.parse(saved) : {
+      'Mensal': 5,
+      'Trimestral': 10,
+      'Semestral': 15,
+      'Anual': 30
+    };
+  });
+
+  const handleThresholdChange = (freq: string, val: number) => {
+    const updated = { ...thresholds, [freq]: val };
+    setThresholds(updated);
+    localStorage.setItem('nbr5674_thresholds', JSON.stringify(updated));
+    toast.success(`Alerta de inspeção ${freq} configurado para ${val} dias de antecedência!`);
+  };
+
+  const getAlertDetails = (m: any) => {
+    if (!m.nextDate || m.status === 'DONE') return { isNearing: false, daysRemaining: 0, label: 'Regular' };
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextDate = new Date(m.nextDate);
+    nextDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = nextDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { isNearing: false, daysRemaining: diffDays, label: 'Atrasado' };
+    }
+    
+    const limit = thresholds[m.frequency] || 7;
+    const isNearing = diffDays <= limit;
+    
+    return {
+      isNearing,
+      daysRemaining: diffDays,
+      label: isNearing ? `A vencer em ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}` : 'Regular'
+    };
+  };
+
+  const simulateExpiration = () => {
+    if (scheduledMaintenances.length === 0) {
+      // Create a dummy maintenance if none exist
+      addScheduledMaintenance({
+        clientId: clients[0]?.id || '',
+        standardId: 'spda',
+        item: 'Para-raios (SPDA) de Teste',
+        frequency: 'Anual',
+        category: 'Manutenção Elétrica',
+        nextDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 days from now
+        status: 'PENDING'
+      });
+    } else {
+      // Update the first pending maintenance to expire in 3 days
+      const firstPending = scheduledMaintenances.find(m => m.status === 'PENDING');
+      if (firstPending) {
+        updateScheduledMaintenance(firstPending.id, {
+          nextDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'PENDING'
+        });
+      } else {
+        // Fallback to update first one
+        updateScheduledMaintenance(scheduledMaintenances[0].id, {
+          nextDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'PENDING'
+        });
+      }
+    }
+    toast.success('Simulação de vencimento NBR 5674 ativada! Inspeção programada para vencer em 3 dias.');
+  };
 
   // Staff Form State
   const [staffForm, setStaffForm] = useState({
@@ -328,6 +403,157 @@ export default function Operational() {
       
       {activeTab === 'MAINTENANCE' && (
         <div className="space-y-8">
+          {/* NBR 5674 Alert & Compliance Center */}
+          <div className="bg-gradient-to-br from-zinc-950 to-zinc-900 border border-white/10 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-2xl">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Shield className="w-48 h-48 text-white" />
+            </div>
+            
+            <div className="flex flex-col lg:flex-row gap-8 justify-between items-stretch">
+              {/* Compliance Score */}
+              <div className="flex flex-col justify-between space-y-4 lg:w-4/12 border-b lg:border-b-0 lg:border-r border-white/5 pb-6 lg:pb-0 lg:pr-8">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black tracking-widest text-blue-400 uppercase mb-3">
+                    <Shield className="w-3.5 h-3.5" /> NBR 5674 Compliance
+                  </div>
+                  <h3 className="text-2xl font-black text-white leading-tight">Painel de Alertas de Manutenção</h3>
+                  <p className="text-xs text-white/40 mt-1.5 leading-relaxed">
+                    Monitoramento contínuo dos sistemas prediais e conformidade legal com a NBR 5674.
+                  </p>
+                </div>
+                
+                {(() => {
+                  const totalCount = scheduledMaintenances.length;
+                  const overdueCount = scheduledMaintenances.filter(m => {
+                    if (!m.nextDate || m.status === 'DONE') return false;
+                    return new Date(m.nextDate) < new Date();
+                  }).length;
+                  const complianceScore = totalCount > 0 
+                    ? Math.round(((totalCount - overdueCount) / totalCount) * 100) 
+                    : 100;
+
+                  return (
+                    <div className="flex items-center gap-4 pt-4">
+                      <div className="relative flex items-center justify-center shrink-0 w-20 h-20 rounded-full border-4" style={{
+                        borderColor: complianceScore < 75 ? '#ef4444' : complianceScore < 90 ? '#f59e0b' : '#10b981'
+                      }}>
+                        <span className="text-lg font-mono font-black text-white">{complianceScore}%</span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white/30 font-sans">Índice de Conformidade</p>
+                        <p className="text-xs font-bold text-white/80 mt-1">
+                          {complianceScore === 100 ? '✅ 100% Regularizado' : complianceScore >= 80 ? '⚠️ Atenção aos prazos' : '🚨 Risco Crítico de Falhas'}
+                        </p>
+                        <p className="text-[10px] text-white/40 mt-0.5">Sistemas prediais inspecionados</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+              
+              {/* Threshold Lead Times Controls */}
+              <div className="flex flex-col justify-between space-y-4 lg:w-4/12 border-b lg:border-b-0 lg:border-r border-white/5 pb-6 lg:pb-0 lg:pr-8">
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-white/30 flex items-center gap-1.5 mb-3">
+                    <Clock className="w-4 h-4 text-white/50" /> Lead Times de Alerta (Dias de antecedência)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { key: 'Mensal' as const },
+                      { key: 'Trimestral' as const },
+                      { key: 'Semestral' as const },
+                      { key: 'Anual' as const }
+                    ].map(f => (
+                      <div key={f.key} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex flex-col justify-between">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] font-black uppercase text-white/40">{f.key}</span>
+                          <span className="text-xs font-bold font-mono text-blue-400">{thresholds[f.key]}d</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            type="button"
+                            onClick={() => handleThresholdChange(f.key, Math.max(1, thresholds[f.key] - 1))}
+                            className="w-5 h-5 bg-zinc-800 hover:bg-zinc-700 text-white font-black text-xs rounded-md flex items-center justify-center transition-colors select-none"
+                          >
+                            -
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => handleThresholdChange(f.key, Math.min(60, thresholds[f.key] + 1))}
+                            className="w-5 h-5 bg-zinc-800 hover:bg-zinc-700 text-white font-black text-xs rounded-md flex items-center justify-center transition-colors select-none"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Dynamic Action Center */}
+              {(() => {
+                const totalMaintenances = scheduledMaintenances.length;
+                const overdueMaintenances = scheduledMaintenances.filter(m => {
+                  if (!m.nextDate || m.status === 'DONE') return false;
+                  return new Date(m.nextDate) < new Date();
+                }).length;
+                const nearingMaintenances = scheduledMaintenances.filter(m => {
+                  const alert = getAlertDetails(m);
+                  return alert.isNearing;
+                }).length;
+
+                return (
+                  <div className="flex flex-col justify-between space-y-4 lg:w-4/12">
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-widest text-white/30 flex items-center gap-1.5 mb-3">
+                        <Activity className="w-4 h-4 text-white/50" /> Diagnóstico do Sistema
+                      </h4>
+                      <div className="space-y-2 text-xs font-medium">
+                        <div className="flex justify-between items-center py-1 border-b border-white/5">
+                          <span className="text-white/40">Total de Inspeções</span>
+                          <span className="text-white font-mono">{totalMaintenances}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1 border-b border-white/5">
+                          <span className="text-white/40">Em Atraso (🚨)</span>
+                          <span className="text-red-400 font-mono font-bold">{overdueMaintenances}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1 border-b border-white/5">
+                          <span className="text-white/40">Próximos Vencimentos (⚠️)</span>
+                          <span className="text-yellow-400 font-mono font-bold">{nearingMaintenances}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button 
+                        type="button"
+                        onClick={simulateExpiration}
+                        className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 hover:border-white/20 text-[10px] font-black uppercase tracking-widest text-white rounded-xl transition-all"
+                      >
+                        ⚡ Simular Vencimento
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (clients.length > 0) {
+                            generateSchedulesForClient(clients[0].id);
+                            toast.success(`Plano NBR 5674 gerado para ${clients[0].name}!`);
+                          } else {
+                            toast.error('Nenhum cliente cadastrado para associar o plano.');
+                          }
+                        }}
+                        className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase tracking-widest text-white rounded-xl transition-all shadow-lg"
+                      >
+                        📂 Gerar Plano NBR
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8">
               <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Preventivas Pendentes</h4>
@@ -335,53 +561,133 @@ export default function Operational() {
             </div>
             <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8">
               <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Atrasadas</h4>
-              <p className="text-5xl font-light text-red-400">{scheduledMaintenances.filter(m => m.status === 'OVERDUE').length}</p>
+              <p className="text-5xl font-light text-red-400">
+                {scheduledMaintenances.filter(m => {
+                  if (!m.nextDate || m.status === 'DONE') return false;
+                  return new Date(m.nextDate) < new Date();
+                }).length}
+              </p>
             </div>
             <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8">
               <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Eventos Críticos</h4>
               <p className="text-5xl font-light text-amber-400">{criticalEvents.filter(e => e.status !== 'NORMAL').length}</p>
             </div>
           </div>
+
+          {/* Active Alerts Nearing Expiration Panel */}
+          {(() => {
+            const activeAlerts = scheduledMaintenances.filter(m => {
+              const alert = getAlertDetails(m);
+              return alert.isNearing;
+            });
+
+            if (activeAlerts.length === 0) return null;
+
+            return (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6">
+                <h4 className="text-xs font-black uppercase tracking-widest text-amber-400 flex items-center gap-2 mb-3">
+                  <AlertTriangle className="w-4 h-4" /> Alertas Ativos (NBR 5674 — Prazos Próximos do Vencimento)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {activeAlerts.map(m => {
+                    const alert = getAlertDetails(m);
+                    const client = clients.find(c => c.id === m.clientId);
+                    return (
+                      <div key={m.id} className="bg-black/40 border border-amber-500/20 rounded-xl p-4 flex items-center justify-between gap-4">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                            Vence em {alert.daysRemaining} {alert.daysRemaining === 1 ? 'dia' : 'dias'}
+                          </span>
+                          <h5 className="text-sm font-bold text-white mt-1.5">{m.item}</h5>
+                          <p className="text-xs text-white/40 mt-0.5">{client?.name || 'Geral'} • {m.category} ({m.frequency})</p>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            updateScheduledMaintenance(m.id, { status: 'DONE', lastDone: new Date().toISOString().split('T')[0] });
+                            toast.success(`Inspeção de ${m.item} concluída!`);
+                          }}
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-black text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors shrink-0"
+                        >
+                          Concluir
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
           
           <div className="grid grid-cols-1 gap-4">
-            {scheduledMaintenances.map((m, idx) => (
-              <motion.div
-                key={m.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 group"
-              >
-                <div className="flex items-center gap-6 flex-1">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    m.status === 'OVERDUE' ? 'bg-red-500/20 text-red-400' : 
-                    m.status === 'DONE' ? 'bg-white/10 text-white' : 
-                    'bg-white/10 text-white/60'
-                  }`}>
-                    <Settings className="w-6 h-6" />
+            {scheduledMaintenances.map((m, idx) => {
+              const alert = getAlertDetails(m);
+              const isOverdue = m.status === 'OVERDUE' || (m.nextDate && new Date(m.nextDate) < new Date() && m.status !== 'DONE');
+              return (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 group"
+                >
+                  <div className="flex items-center gap-6 flex-1">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      isOverdue ? 'bg-red-500/20 text-red-400' : 
+                      m.status === 'DONE' ? 'bg-emerald-500/20 text-emerald-400' : 
+                      alert.isNearing ? 'bg-amber-500/20 text-amber-400 animate-pulse' :
+                      'bg-white/10 text-white/60'
+                    }`}>
+                      <Settings className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-lg font-bold">{m.item}</h4>
+                        {isOverdue ? (
+                          <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px] font-black uppercase text-red-400">Em Atraso</span>
+                        ) : m.status === 'DONE' ? (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black uppercase text-emerald-400">Regularizado</span>
+                        ) : alert.isNearing ? (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[9px] font-black uppercase text-amber-400">Próximo do Vencimento</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[9px] font-black uppercase text-blue-400">No Prazo</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-white/40">{m.category} • {m.frequency}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-lg font-bold">{m.item}</h4>
-                    <p className="text-sm text-white/40">{m.category} • {m.frequency}</p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-12">
-                  <div className="text-right">
-                    <p className="text-[10px] uppercase font-black tracking-widest text-white/30 mb-1">Próxima Data</p>
-                    <p className="text-sm font-medium">{safeFormatDate(m.nextDate, { day: '2-digit', month: 'long' })}</p>
+                  <div className="flex items-center gap-12">
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase font-black tracking-widest text-white/30 mb-1">Próxima Data</p>
+                      <p className={`text-sm font-medium ${isOverdue ? 'text-red-400 font-bold' : alert.isNearing ? 'text-amber-400 font-bold' : 'text-white/80'}`}>
+                        {safeFormatDate(m.nextDate, { day: '2-digit', month: 'long' })}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {m.status !== 'DONE' && (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            updateScheduledMaintenance(m.id, { status: 'DONE', lastDone: new Date().toISOString().split('T')[0] });
+                            toast.success(`Inspeção de ${m.item} registrada como concluída!`);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors"
+                        >
+                          Concluir
+                        </button>
+                      )}
+                      <button type="button" onClick={() => openModal(m)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button type="button" onClick={() => deleteScheduledMaintenance(m.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openModal(m)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => deleteScheduledMaintenance(m.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       )}

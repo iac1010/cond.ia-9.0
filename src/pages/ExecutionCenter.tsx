@@ -6,7 +6,8 @@ import {
   Play, CheckCircle2, Clock, MapPin, 
   ChevronRight, Package, DollarSign, 
   Plus, Minus, X, AlertTriangle,
-  ArrowRight, Info, Pin, Trash2, Search, Palette, Check, Edit2
+  ArrowRight, Info, Pin, Trash2, Search, Palette, Check, Edit2,
+  Sparkles, Brain, CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -54,7 +55,7 @@ function ExecutionTimer({ startedAt }: { startedAt?: string }) {
 
 export default function ExecutionCenter() {
   const { 
-    tickets, clients, supplyItems, checklistItems, updateTicket, 
+    tickets, clients, supplyItems, checklistItems, updateTicket, addTicket,
     addReceipt, addCost, updateStock, addChecklistItem, costCategories
   } = useStore();
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -65,6 +66,176 @@ export default function ExecutionCenter() {
   const [checklistProgress, setChecklistProgress] = useState<{ [taskId: string]: boolean }>({});
   const [searchParams, setSearchParams] = useSearchParams();
   const playId = searchParams.get('play');
+
+  // Gemini AI state variables
+  const [isAnalyzingPriorities, setIsAnalyzingPriorities] = useState(false);
+  const [analysisError, setAnalysisError] = useState('');
+  const [appliedSuggestions, setAppliedSuggestions] = useState<string[]>([]);
+  const [prioritySuggestions, setPrioritySuggestions] = useState<{
+    suggestions: {
+      ticketId: string;
+      suggestedPriority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+      justification: string;
+      recommendedAction: string;
+    }[];
+    generalAnalysis: string;
+  } | null>(null);
+
+  const handleAnalyzePriorities = async () => {
+    setIsAnalyzingPriorities(true);
+    setAnalysisError('');
+    
+    // Fetch active tickets
+    const activeStatuses: TicketStatus[] = ['PENDENTE_APROVACAO', 'APROVADO', 'EM_ROTA', 'AGUARDANDO_MATERIAL', 'REALIZANDO'];
+    const active = tickets.filter(t => t.status && activeStatuses.includes(t.status));
+    
+    // Fetch failure history (completed corrective tickets)
+    const failures = tickets.filter(t => t.status === 'CONCLUIDO' && t.type === 'CORRETIVA');
+
+    if (active.length === 0) {
+      setAnalysisError('Nenhuma ordem de serviço ativa encontrada para priorização. Gere dados de simulação ou crie ordens de serviço primeiro!');
+      setIsAnalyzingPriorities(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/gemini/suggest-priority', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activeTickets: active, failureHistory: failures }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha na comunicação com o servidor de inteligência artificial.');
+      }
+
+      const data = await response.json();
+      setPrioritySuggestions(data);
+      setAppliedSuggestions([]);
+      toast.success('Prioridades analisadas com sucesso usando Gemini AI!');
+    } catch (err: any) {
+      console.error(err);
+      setAnalysisError(err.message || 'Erro inesperado na análise de priorização.');
+      toast.error('Erro ao analisar prioridades.');
+    } finally {
+      setIsAnalyzingPriorities(false);
+    }
+  };
+
+  const handleApplySingleSuggestion = (ticketId: string, priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW', justification: string, recommendedAction: string) => {
+    const ticket = tickets.find(t => t.id === ticketId);
+    if (ticket) {
+      updateTicket(ticketId, {
+        ...ticket,
+        priority,
+        priorityJustification: justification,
+        priorityRecommendedAction: recommendedAction
+      });
+      setAppliedSuggestions(prev => [...prev, ticketId]);
+      toast.success(`Prioridade ${priority} aplicada à ordem de serviço ${ticket.osNumber || ''}!`);
+    }
+  };
+
+  const handleApplyAllSuggestions = () => {
+    if (!prioritySuggestions) return;
+    
+    let appliedCount = 0;
+    prioritySuggestions.suggestions.forEach(s => {
+      const ticket = tickets.find(t => t.id === s.ticketId);
+      if (ticket && !appliedSuggestions.includes(s.ticketId)) {
+        updateTicket(s.ticketId, {
+          ...ticket,
+          priority: s.suggestedPriority,
+          priorityJustification: s.justification,
+          priorityRecommendedAction: s.recommendedAction
+        });
+        appliedCount++;
+      }
+    });
+
+    setAppliedSuggestions(prioritySuggestions.suggestions.map(s => s.ticketId));
+    toast.success(`Todas as ${appliedCount} sugestões de prioridade foram aplicadas com sucesso!`);
+  };
+
+  const handleCreateSimulationTickets = async () => {
+    const mockClientId = clients[0]?.id || 'client-1';
+    
+    const historicalFailures = [
+      {
+        title: 'Vazamento Crítico na Bomba de Recalque - Torre Principal',
+        type: 'CORRETIVA' as const,
+        status: 'CONCLUIDO' as const,
+        maintenanceCategory: 'Hidráulica',
+        maintenanceSubcategory: 'Bomba d\'Água',
+        clientId: mockClientId,
+        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        technician: 'Carlos Silva',
+        observations: 'Parada súbita do motor devido a superaquecimento e vazamento massivo de água inundando a casa de máquinas.',
+        reportedProblem: 'Falta d\'água generalizada na Torre A e vazamento visível no subsolo.',
+      },
+      {
+        title: 'Queima de Placa Controladora do Elevador Social 2',
+        type: 'CORRETIVA' as const,
+        status: 'CONCLUIDO' as const,
+        maintenanceCategory: 'Elevador',
+        maintenanceSubcategory: 'Painel de Controle',
+        clientId: mockClientId,
+        date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        technician: 'Elevadores Alfa Ltda',
+        observations: 'Substituição da placa queimada por curto-circuito na rede elétrica secundária.',
+        reportedProblem: 'Elevador social parado no 5º andar com porta travada.',
+      }
+    ];
+
+    const activeTicketsToCreate = [
+      {
+        title: 'Manutenção Preventiva - Revisão da Bomba de Recalque Torre Principal',
+        type: 'PREVENTIVA' as const,
+        status: 'APROVADO' as const,
+        maintenanceCategory: 'Hidráulica',
+        maintenanceSubcategory: 'Bomba d\'Água',
+        clientId: mockClientId,
+        date: new Date().toISOString().split('T')[0],
+        technician: 'Carlos Silva',
+        observations: 'Fazer alinhamento de eixo, conferir gaxetas e medir amperagem do motor.',
+        reportedProblem: 'Revisão periódica preventiva recomendada pela NBR 5674.',
+      },
+      {
+        title: 'Inspeção Anual de Para-raios (SPDA)',
+        type: 'PREVENTIVA' as const,
+        status: 'APROVADO' as const,
+        maintenanceCategory: 'Elétrica',
+        maintenanceSubcategory: 'SPDA',
+        clientId: mockClientId,
+        date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        technician: 'Ricardo Mendes',
+        observations: 'Medição da resistência de aterramento e inspeção física das malhas de captação.',
+        reportedProblem: 'Renovação do laudo técnico de SPDA exigido pelo Corpo de Bombeiros.',
+      },
+      {
+        title: 'Pintura do Corredor do 3º Andar - Bloco B',
+        type: 'TAREFA' as const,
+        status: 'APROVADO' as const,
+        maintenanceCategory: 'Pintura',
+        maintenanceSubcategory: 'Paredes',
+        clientId: mockClientId,
+        date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        technician: 'José Pintor',
+        observations: 'Retocar pintura próximo ao elevador que sofreu riscos durante mudanças.',
+        reportedProblem: 'Paredes manchadas e riscadas.',
+      }
+    ];
+
+    try {
+      for (const ticket of [...historicalFailures, ...activeTicketsToCreate]) {
+        await addTicket(ticket);
+      }
+      toast.success('Histórico de falhas e O.S. ativas de simulação gerados com sucesso!');
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao gerar simulação de dados.');
+    }
+  };
 
   // Google Keep Notes Interface and State
   const keepColors = useMemo(() => [
@@ -671,6 +842,185 @@ export default function ExecutionCenter() {
         </div>
       </div>
 
+      {/* Gemini AI Priority Assistant Section */}
+      <div className="bg-gradient-to-br from-zinc-950 to-zinc-900 border border-white/10 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-2xl mb-8">
+        <div className="absolute top-0 right-0 p-8 opacity-5">
+          <Brain className="w-48 h-48 text-white" />
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-6 mb-6">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black tracking-widest text-blue-400 uppercase mb-3">
+                <Sparkles className="w-3.5 h-3.5 animate-pulse" /> IA GEMINI DE PRIORIZAÇÃO
+              </div>
+              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Priorização Baseada em Histórico de Falhas</h2>
+              <p className="text-xs text-white/50 mt-1">
+                Sugere automaticamente a criticidade de ordens de serviço ativas com base no histórico anterior de falhas dos ativos (NBR 5674).
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleCreateSimulationTickets}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-[11px] font-black uppercase tracking-wider text-white rounded-xl transition-all border border-white/5 cursor-pointer"
+              >
+                ⚡ Simular Histórico e O.S.
+              </button>
+              <button
+                type="button"
+                disabled={isAnalyzingPriorities}
+                onClick={handleAnalyzePriorities}
+                className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-[11px] font-black uppercase tracking-wider text-white rounded-xl transition-all shadow-lg shadow-blue-500/15 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isAnalyzingPriorities ? (
+                  <>
+                    <Clock className="w-3.5 h-3.5 animate-spin" /> Analisando...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-3.5 h-3.5" /> Analisar Prioridades
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {analysisError && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-xs text-red-400 mb-6 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Não foi possível realizar a análise</p>
+                <p className="mt-1 opacity-80">{analysisError}</p>
+              </div>
+            </div>
+          )}
+
+          {isAnalyzingPriorities && (
+            <div className="bg-white/5 border border-white/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-12 h-12 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
+              <div>
+                <p className="text-sm font-bold text-white">Analisando dados do condomínio com Gemini...</p>
+                <p className="text-xs text-white/40 mt-1 max-w-md animate-pulse">
+                  Correlacionando histórico de corretivas de ativos com as ordens de serviço pendentes de acordo com a NBR 5674.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {prioritySuggestions && !isAnalyzingPriorities && (
+            <div className="space-y-6">
+              {/* Executive Analysis Callout */}
+              <div className="bg-gradient-to-br from-blue-950/20 to-indigo-950/20 border border-blue-500/20 rounded-2xl p-5 md:p-6 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                  <Sparkles className="w-24 h-24 text-blue-400" />
+                </div>
+                <div className="flex gap-3 items-start relative z-10">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-blue-400 mb-1">Análise Executiva de Riscos de Ativos</h4>
+                    <p className="text-xs text-white/80 leading-relaxed font-medium">
+                      {prioritySuggestions.generalAnalysis}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Suggestions list */}
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-widest text-white/30 mb-4 flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-white/40" /> Sugestões de Prioridade por O.S.
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {prioritySuggestions.suggestions.map((s) => {
+                    const ticket = tickets.find(t => t.id === s.ticketId);
+                    if (!ticket) return null;
+
+                    const isApplied = appliedSuggestions.includes(s.ticketId) || ticket.priority === s.suggestedPriority;
+                    
+                    const priorityStyles = {
+                      CRITICAL: {
+                        bg: 'bg-red-500/10 border-red-500/20 text-red-400',
+                        label: 'Crítica 🚨'
+                      },
+                      HIGH: {
+                        bg: 'bg-orange-500/10 border-orange-500/20 text-orange-400',
+                        label: 'Alta ⚠️'
+                      },
+                      MEDIUM: {
+                        bg: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+                        label: 'Média 🔹'
+                      },
+                      LOW: {
+                        bg: 'bg-zinc-500/10 border-zinc-500/20 text-zinc-400',
+                        label: 'Baixa'
+                      }
+                    }[s.suggestedPriority] || { bg: 'bg-zinc-500/10 border-zinc-500/20 text-zinc-400', label: s.suggestedPriority };
+
+                    return (
+                      <div key={s.ticketId} className="bg-white/5 border border-white/5 hover:border-white/10 rounded-2xl p-5 flex flex-col justify-between transition-all group">
+                        <div>
+                          <div className="flex justify-between items-start gap-4 mb-3">
+                            <div className="min-w-0">
+                              <span className="text-[10px] font-mono font-black text-white/40">{ticket.osNumber || 'O.S.'}</span>
+                              <h4 className="text-sm font-bold text-white mt-0.5 truncate">{ticket.title}</h4>
+                              <p className="text-xs text-white/40 mt-0.5">{ticket.maintenanceCategory} {ticket.maintenanceSubcategory ? `• ${ticket.maintenanceSubcategory}` : ''}</p>
+                            </div>
+                            <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase shrink-0 ${priorityStyles.bg}`}>
+                              {priorityStyles.label}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2 border-t border-white/5 pt-3 mt-3">
+                            <p className="text-xs text-white/70 leading-relaxed">
+                              <span className="font-bold text-white/90">Justificativa:</span> {s.justification}
+                            </p>
+                            <p className="text-xs text-blue-300/90 leading-relaxed bg-blue-500/5 border border-blue-500/10 rounded-lg p-2.5">
+                              <span className="font-bold text-blue-200">Recomendação Técnica:</span> {s.recommendedAction}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 mt-4 border-t border-white/5 flex justify-between items-center">
+                          <span className="text-[10px] text-white/40 font-mono">Técnico: {ticket.technician || 'Não designado'}</span>
+                          <button
+                            type="button"
+                            disabled={isApplied}
+                            onClick={() => handleApplySingleSuggestion(s.ticketId, s.suggestedPriority, s.justification, s.recommendedAction)}
+                            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                              isApplied
+                                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 cursor-default'
+                                : 'bg-white text-black hover:bg-zinc-200'
+                            }`}
+                          >
+                            {isApplied ? '✓ Aplicada' : 'Aplicar'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-end mt-6">
+                  <button
+                    type="button"
+                    disabled={prioritySuggestions.suggestions.every(s => appliedSuggestions.includes(s.ticketId))}
+                    onClick={handleApplyAllSuggestions}
+                    className="px-5 py-2.5 bg-white text-black hover:bg-zinc-200 text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Aplicar Todas as Prioridades
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Target Active execution cards section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
@@ -709,7 +1059,22 @@ export default function ExecutionCenter() {
 
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex flex-col min-w-0 pr-2">
-                        <span className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">{ticket.osNumber}</span>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">{ticket.osNumber}</span>
+                          {ticket.priority && (
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
+                              ticket.priority === 'CRITICAL'
+                                ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                : ticket.priority === 'HIGH'
+                                ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                                : ticket.priority === 'MEDIUM'
+                                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                            }`}>
+                              {ticket.priority === 'CRITICAL' ? 'Crítica 🚨' : ticket.priority === 'HIGH' ? 'Alta' : ticket.priority === 'MEDIUM' ? 'Média' : 'Baixa'}
+                            </span>
+                          )}
+                        </div>
                         <h3 className="text-lg font-bold text-white leading-tight truncate">{ticket.title || 'Sem Título'}</h3>
                       </div>
                       <div className="flex flex-col items-end gap-1.5 shrink-0 select-none">
@@ -731,6 +1096,14 @@ export default function ExecutionCenter() {
                         <Clock className="w-4 h-4 text-white/50 shrink-0" />
                         <span className="text-xs font-semibold">{new Date(ticket.date).toLocaleDateString('pt-BR')}</span>
                       </div>
+                      {ticket.priorityRecommendedAction && (
+                        <div className="text-[10px] text-blue-300/90 bg-blue-500/5 rounded-xl p-3 border border-blue-500/15 leading-relaxed mt-2">
+                          <span className="font-bold text-blue-200 flex items-center gap-1 mb-1">
+                            <Sparkles className="w-3 h-3 text-blue-400" /> RECOMENDAÇÃO DE EXECUÇÃO:
+                          </span>
+                          {ticket.priorityRecommendedAction}
+                        </div>
+                      )}
                     </div>
 
                     <button

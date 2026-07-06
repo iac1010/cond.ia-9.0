@@ -123,16 +123,18 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white transition-colors duration-200 font-sans flex flex-col relative overflow-x-hidden">
-      {/* Background Image */}
+      {/* Background Image / Color Overlay */}
       {backgroundImage && (
         <div 
-          className="fixed inset-0 z-0 opacity-20 pointer-events-none"
-          style={{ 
+          className={`fixed inset-0 z-0 opacity-20 pointer-events-none ${
+            backgroundImage.startsWith('bg-') ? backgroundImage : ''
+          }`}
+          style={!backgroundImage.startsWith('bg-') ? { 
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat'
-          }}
+          } : {}}
         />
       )}
       {/* Modern Top Bar */}

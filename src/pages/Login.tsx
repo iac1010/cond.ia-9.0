@@ -35,8 +35,12 @@ export default function Login() {
 
   return (
     <div 
-      className="min-h-screen bg-[#004a7c] text-white flex flex-col items-center justify-center font-sans overflow-hidden relative transition-all duration-700"
-      style={backgroundImage ? {
+      className={`min-h-screen ${
+        backgroundImage && backgroundImage.startsWith('bg-') 
+          ? backgroundImage 
+          : 'bg-[#004a7c]'
+      } text-white flex flex-col items-center justify-center font-sans overflow-hidden relative transition-all duration-700`}
+      style={backgroundImage && !backgroundImage.startsWith('bg-') ? {
         backgroundImage: `linear-gradient(rgba(0, 74, 124, 0.7), rgba(0, 74, 124, 0.7)), url(${backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center'

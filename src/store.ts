@@ -320,33 +320,47 @@ export const useStore = create<AppState>()(
           }
 
           if (ticketsRes.data) {
-            newState.tickets = ticketsRes.data.map(t => ({
-              id: t.id,
-              osNumber: t.os_number,
-              title: t.title,
-              type: t.type as TicketType,
-              status: t.status as TicketStatus,
-              maintenanceCategory: t.maintenance_category,
-              maintenanceSubcategory: t.maintenance_subcategory,
-              clientId: t.client_id,
-              date: t.date,
-              technician: t.technician,
-              observations: t.observations,
-              reportedProblem: t.reported_problem,
-              productsForQuote: t.products_for_quote,
-              serviceReport: t.service_report,
-              checklistResults: t.checklist_results,
-              images: t.images,
-              reportedBy: t.reported_by,
-              location: t.location,
-              photoBefore: t.photo_before,
-              budgetAmount: t.budget_amount,
-              budgetApproved: t.budget_approved,
-              color: t.color,
-              history: t.history,
-              usedMaterials: t.used_materials,
-              startedAt: t.started_at
-            }));
+            newState.tickets = ticketsRes.data.map(t => {
+              let cleanObservations = t.observations || '';
+              let attachments = [];
+              if (cleanObservations.includes('---ATTACHMENTS_JSON---')) {
+                const parts = cleanObservations.split('---ATTACHMENTS_JSON---');
+                cleanObservations = parts[0].trim();
+                try {
+                  attachments = JSON.parse(parts[1].trim());
+                } catch (e) {
+                  console.error('Erro ao ler anexos:', e);
+                }
+              }
+              return {
+                id: t.id,
+                osNumber: t.os_number,
+                title: t.title,
+                type: t.type as TicketType,
+                status: t.status as TicketStatus,
+                maintenanceCategory: t.maintenance_category,
+                maintenanceSubcategory: t.maintenance_subcategory,
+                clientId: t.client_id,
+                date: t.date,
+                technician: t.technician,
+                observations: cleanObservations,
+                attachments: attachments,
+                reportedProblem: t.reported_problem,
+                productsForQuote: t.products_for_quote,
+                serviceReport: t.service_report,
+                checklistResults: t.checklist_results,
+                images: t.images,
+                reportedBy: t.reported_by,
+                location: t.location,
+                photoBefore: t.photo_before,
+                budgetAmount: t.budget_amount,
+                budgetApproved: t.budget_approved,
+                color: t.color,
+                history: t.history,
+                usedMaterials: t.used_materials,
+                startedAt: t.started_at
+              };
+            });
           }
 
           if (productsRes.data) {
@@ -1573,6 +1587,11 @@ export const useStore = create<AppState>()(
         if (!isSupabaseConfigured) return;
 
         try {
+          let observationsWithAttachments = ticket.observations || '';
+          if (ticket.attachments && ticket.attachments.length > 0) {
+            observationsWithAttachments += `\n\n---ATTACHMENTS_JSON---\n${JSON.stringify(ticket.attachments)}`;
+          }
+
           const payload = {
             id,
             os_number: osNumber,
@@ -1584,7 +1603,7 @@ export const useStore = create<AppState>()(
             client_id: ticket.clientId,
             date: ticket.date,
             technician: ticket.technician,
-            observations: ticket.observations,
+            observations: observationsWithAttachments,
             reported_problem: ticket.reportedProblem,
             products_for_quote: ticket.productsForQuote,
             service_report: ticket.serviceReport,
@@ -1628,6 +1647,11 @@ export const useStore = create<AppState>()(
         if (!isSupabaseConfigured) return;
 
         try {
+          let observationsWithAttachments = updatedTicket.observations || '';
+          if (updatedTicket.attachments && updatedTicket.attachments.length > 0) {
+            observationsWithAttachments += `\n\n---ATTACHMENTS_JSON---\n${JSON.stringify(updatedTicket.attachments)}`;
+          }
+
           const payload = {
             os_number: updatedTicket.osNumber,
             title: updatedTicket.title,
@@ -1638,7 +1662,7 @@ export const useStore = create<AppState>()(
             client_id: updatedTicket.clientId,
             date: updatedTicket.date,
             technician: updatedTicket.technician,
-            observations: updatedTicket.observations,
+            observations: observationsWithAttachments,
             reported_problem: updatedTicket.reportedProblem,
             products_for_quote: updatedTicket.productsForQuote,
             service_report: updatedTicket.serviceReport,

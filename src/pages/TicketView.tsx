@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../store';
-import { Download, Printer, Edit, CheckCircle2, XCircle, DollarSign, Camera, MapPin, User, MessageSquare, Plus, QrCode, Share2, Sparkles, Wrench, ClipboardList, AlertCircle, Package, FileText } from 'lucide-react';
+import { Download, Printer, Edit, CheckCircle2, XCircle, DollarSign, Camera, MapPin, User, MessageSquare, Plus, QrCode, Share2, Sparkles, Wrench, ClipboardList, AlertCircle, Package, FileText, Palette } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -9,6 +9,7 @@ import { safeFormatDate } from '../utils/dateUtils';
 import { toast } from 'react-hot-toast';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, VerticalAlign, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
+import CustomReportModal from '../components/CustomReportModal';
 
 export default function TicketView() {
   const { id } = useParams();
@@ -16,6 +17,7 @@ export default function TicketView() {
   const { tickets, clients, checklistItems, companyLogo, companyData, companySignature, updateTicket, addTicketHistory } = useStore();
   const printRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCustomReportModalOpen, setIsCustomReportModalOpen] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
   const [historyNote, setHistoryNote] = useState('');
 
@@ -511,12 +513,18 @@ export default function TicketView() {
             >
               <Printer className="w-4 h-4" /> Imprimir
             </button>
-            <button 
+             <button 
               onClick={handleDownloadPdf}
               disabled={isGenerating}
               className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-white/20 backdrop-blur-md shadow-lg"
             >
               <Download className="w-4 h-4" /> {isGenerating ? 'Gerando...' : 'Baixar PDF'}
+            </button>
+            <button 
+              onClick={() => setIsCustomReportModalOpen(true)}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center gap-2 shadow-lg transform active:scale-95"
+            >
+              <Palette className="w-4 h-4" /> PDF Customizado
             </button>
             <button 
               onClick={handleDownloadWord}
@@ -827,6 +835,13 @@ export default function TicketView() {
           </div>
         </div>
       </div>
+      
+      <CustomReportModal 
+        isOpen={isCustomReportModalOpen} 
+        onClose={() => setIsCustomReportModalOpen(false)} 
+        ticket={ticket} 
+        client={client} 
+      />
     </div>
   );
 }
