@@ -57,6 +57,7 @@ export default function TicketForm() {
   const [maintenanceSubcategory, setMaintenanceSubcategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [technician, setTechnician] = useState('');
+  const [budgetAmount, setBudgetAmount] = useState<number | ''>('');
   const [observations, setObservations] = useState('');
   const [color, setColor] = useState<string>(() => {
     const palette = ['#3b82f6', '#2563eb', '#ca8a04', '#dc2626', '#9333ea', '#ea580c', '#db2777', '#0891b2'];
@@ -121,6 +122,7 @@ export default function TicketForm() {
         setClientId(ticket.clientId);
         setDate(ticket.date);
         setTechnician(ticket.technician);
+        setBudgetAmount(ticket.budgetAmount !== undefined ? ticket.budgetAmount : '');
         setObservations(ticket.observations);
         setColor(ticket.color || '');
         setImages(ticket.images || []);
@@ -175,6 +177,7 @@ export default function TicketForm() {
       clientId,
       date,
       technician,
+      budgetAmount: budgetAmount === '' ? undefined : Number(budgetAmount),
       observations,
       color,
       images,
@@ -623,7 +626,7 @@ export default function TicketForm() {
                       </div>
                     </div>
 
-                    <div className="md:col-span-2 space-y-2 md:space-y-3">
+                    <div className="space-y-2 md:space-y-3">
                       <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-white/40 ml-1">Técnico Responsável</label>
                       <input 
                         type="text"
@@ -631,6 +634,18 @@ export default function TicketForm() {
                         onChange={(e) => setTechnician(e.target.value)}
                         className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-5 outline-none transition-all text-white text-base md:text-xl placeholder:text-white/10"
                         placeholder="Nome do técnico"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:space-y-3">
+                      <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-white/40 ml-1">Valor Cobrado (R$)</label>
+                      <input 
+                        type="number"
+                        step="0.01"
+                        value={budgetAmount}
+                        onChange={(e) => setBudgetAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-5 outline-none transition-all text-white text-base md:text-xl placeholder:text-white/10"
+                        placeholder="0.00"
                       />
                     </div>
 

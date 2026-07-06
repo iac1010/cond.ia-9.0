@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { Ticket, TicketStatus, SupplyItem } from '../types';
 import { 
-  Play, CheckCircle2, Clock, MapPin, 
+  Play, Pause, FileText, CheckCircle2, Clock, MapPin, 
   ChevronRight, Package, DollarSign, 
   Plus, Minus, X, AlertTriangle,
   ArrowRight, Info, Pin, Trash2, Search, Palette, Check, Edit2,
@@ -60,7 +60,7 @@ export default function ExecutionCenter() {
   } = useStore();
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isExecutionModalOpen, setIsExecutionModalOpen] = useState(false);
-  const [usedMaterials, setUsedMaterials] = useState<{ itemId?: string; name?: string; quantity: number }[]>([]);
+  const [usedMaterials, setUsedMaterials] = useState<{ itemId?: string; name?: string; quantity: number; price?: number }[]>([]);
   const [materialName, setMaterialName] = useState('');
   const [extraCosts, setExtraCosts] = useState<{ description: string; value: number; category: string }[]>([]);
   const [checklistProgress, setChecklistProgress] = useState<{ [taskId: string]: boolean }>({});
@@ -418,6 +418,104 @@ export default function ExecutionCenter() {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskCategory, setNewTaskCategory] = useState('Geral');
 
+  const [isReportPreviewOpen, setIsReportPreviewOpen] = useState(false);
+  const [reportNotes, setReportNotes] = useState('');
+
+  // Cost calculations for current execution
+  const materialsCostTotal = useMemo(() => {
+    let total = 0;
+    usedMaterials.forEach(m => {
+      const item = supplyItems.find(i => i.id === m.itemId || i.name === m.name);
+      const price = m.price || item?.lastPrice || 0;
+      total += price * m.quantity;
+    });
+    return total;
+  }, [usedMaterials, supplyItems]);
+
+  const extraCostsTotal = useMemo(() => {
+    return extraCosts.reduce((acc, c) => acc + (c.value || 0), 0);
+  }, [extraCosts]);
+
+  const totalExecutionCost = useMemo(() => {
+    return materialsCostTotal + extraCostsTotal;
+  }, [materialsCostTotal, extraCostsTotal]);
+
+  const generateDefaultReportText = () => {
+    if (!selectedTicket) return '';
+    const clientName = clients.find(c => c.id === selectedTicket.clientId)?.name || 'N/A';
+    const clientAddress = clients.find(c => c.id === selectedTicket.clientId)?.address || 'N/A';
+    
+    const completedTasks = Object.entries(checklistProgress)
+      .filter(([_, ok]) => ok)
+      .map(([taskId]) => checklistItems.find(ci => ci.id === taskId)?.task || taskId);
+
+    const pendingTasks = Object.entries(checklistProgress)
+      .filter(([_, ok]) => !ok)
+      .map(([taskId]) => checklistItems.find(ci => ci.id === taskId)?.task || taskId);
+
+    let report = `RELATÓRIO DE EXECUÇÃO TÉCNICA - O.S. ${selectedTicket.osNumber || ''}\n`;
+    report += `==================================================\n`;
+    report += `Cliente: ${clientName}\n`;
+    report += `Local: ${clientAddress}\n`;
+    report += `Tipo de Serviço: ${selectedTicket.type}\n`;
+    report += `Técnico Responsável: ${selectedTicket.technician || 'Equipe Técnica'}\n`;
+    report += `Data de Início: ${selectedTicket.startedAt ? new Date(selectedTicket.startedAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR')}\n`;
+    report += `Data de Conclusão: ${new Date().toLocaleString('pt-BR')}\n\n`;
+
+    report += `CHECKLIST DE PASSOS:\n`;
+    if (completedTasks.length > 0) {
+      report += `[CONCLUÍDO]:\n`;
+      completedTasks.forEach((t) => { report += `  - ${t}\n`; });
+    }
+    if (pendingTasks.length > 0) {
+      report += `[PENDENTE/NÃO REALIZADO]:\n`;
+      pendingTasks.forEach((t) => { report += `  - ${t}\n`; });
+    }
+    if (completedTasks.length === 0 && pendingTasks.length === 0) {
+      report += `  Nenhuma tarefa definida.\n`;
+    }
+    report += `\n`;
+
+    report += `MATERIAIS UTILIZADOS:\n`;
+    if (usedMaterials.length > 0) {
+      usedMaterials.forEach(m => {
+        const item = supplyItems.find(i => i.id === m.itemId || i.name === m.name);
+        const displayName = m.name || item?.name || 'Material';
+        const price = m.price || item?.lastPrice || 0;
+        report += `  - ${displayName} x${m.quantity} (Preço unitário: R$ ${price.toFixed(2)} | Total: R$ ${(price * m.quantity).toFixed(2)})\n`;
+      });
+      report += `  Total Materiais: R$ ${materialsCostTotal.toFixed(2)}\n`;
+    } else {
+      report += `  Nenhum material utilizado.\n`;
+    }
+    report += `\n`;
+
+    report += `GASTOS EXTRAS DO DIA:\n`;
+    if (extraCosts.length > 0) {
+      extraCosts.forEach(c => {
+        report += `  - ${c.description} [${c.category}]: R$ ${c.value.toFixed(2)}\n`;
+      });
+      report += `  Total Gastos Extras: R$ ${extraCostsTotal.toFixed(2)}\n`;
+    } else {
+      report += `  Nenhum gasto extra registrado.\n`;
+    }
+    report += `\n`;
+
+    report += `RESUMO FINANCEIRO DA O.S.:\n`;
+    report += `  Custo Total da Execução: R$ ${totalExecutionCost.toFixed(2)}\n`;
+    report += `  Valor Orçado do Serviço: R$ ${(selectedTicket.budgetAmount || 0).toFixed(2)}\n`;
+    report += `==================================================\n`;
+    report += `Observações Finais do Técnico:\n`;
+    report += `Atendimento realizado com sucesso seguindo todas as normas técnicas vigentes. Sistema testado e operando 100%.`;
+    
+    return report;
+  };
+
+  const handleOpenReportModal = () => {
+    setReportNotes(generateDefaultReportText());
+    setIsReportPreviewOpen(true);
+  };
+
   // Filter active tickets for execution
   const activeTickets = useMemo(() => {
     const activeStatuses: TicketStatus[] = ['PENDENTE_APROVACAO', 'APROVADO', 'EM_ROTA', 'AGUARDANDO_MATERIAL', 'REALIZANDO'];
@@ -492,12 +590,37 @@ export default function ExecutionCenter() {
       initialProgress[result.taskId] = result.status === 'OK';
     });
     setChecklistProgress(initialProgress);
+
+    // Initialize materials and extra costs from ticket
+    setUsedMaterials(ticket.usedMaterials || []);
+    setExtraCosts(ticket.extraCosts || []);
     
     // Update status to REALIZANDO if it wasn't already, setting start time
     if (ticket.status !== 'REALIZANDO') {
       updateTicket(ticket.id, { ...ticket, status: 'REALIZANDO', startedAt: new Date().toISOString() });
     } else if (!ticket.startedAt) {
       updateTicket(ticket.id, { ...ticket, startedAt: new Date().toISOString() });
+    }
+  };
+
+  const handleToggleExecution = () => {
+    if (!selectedTicket) return;
+    const isRunning = selectedTicket.status === 'REALIZANDO';
+    const nextStatus = isRunning ? 'APROVADO' as const : 'REALIZANDO' as const;
+    const nextStartedAt = isRunning ? selectedTicket.startedAt : new Date().toISOString();
+    
+    const updatedTicket = { 
+      ...selectedTicket, 
+      status: nextStatus,
+      startedAt: nextStartedAt 
+    };
+    setSelectedTicket(updatedTicket);
+    updateTicket(selectedTicket.id, updatedTicket);
+    
+    if (nextStatus === 'REALIZANDO') {
+      toast.success('Execução iniciada!');
+    } else {
+      toast.success('Execução pausada!');
     }
   };
 
@@ -518,10 +641,19 @@ export default function ExecutionCenter() {
     
     setUsedMaterials(prev => {
       const existing = prev.find(m => (m.itemId && m.itemId === material?.id) || (m.name && m.name === nameOrId));
+      let updated;
       if (existing) {
-        return prev.map(m => ((m.itemId && m.itemId === material?.id) || (m.name && m.name === nameOrId)) ? { ...m, quantity: m.quantity + 1 } : m);
+        updated = prev.map(m => ((m.itemId && m.itemId === material?.id) || (m.name && m.name === nameOrId)) ? { ...m, quantity: m.quantity + 1 } : m);
+      } else {
+        updated = [...prev, { itemId: material?.id, name: material?.name || nameOrId, quantity: 1, price: material?.lastPrice || 0 }];
       }
-      return [...prev, { itemId: material?.id, name: material?.name || nameOrId, quantity: 1 }];
+
+      if (selectedTicket) {
+        const updatedTicket = { ...selectedTicket, usedMaterials: updated };
+        setSelectedTicket(updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket);
+      }
+      return updated;
     });
     setMaterialName('');
   };
@@ -529,19 +661,56 @@ export default function ExecutionCenter() {
   const handleRemoveMaterial = (nameOrId: string) => {
     setUsedMaterials(prev => {
       const existing = prev.find(m => (m.itemId && m.itemId === nameOrId) || (m.name && m.name === nameOrId));
+      let updated;
       if (existing && existing.quantity > 1) {
-        return prev.map(m => ((m.itemId && m.itemId === nameOrId) || (m.name && m.name === nameOrId)) ? { ...m, quantity: m.quantity - 1 } : m);
+        updated = prev.map(m => ((m.itemId && m.itemId === nameOrId) || (m.name && m.name === nameOrId)) ? { ...m, quantity: m.quantity - 1 } : m);
+      } else {
+        updated = prev.filter(m => !((m.itemId && m.itemId === nameOrId) || (m.name && m.name === nameOrId)));
       }
-      return prev.filter(m => !((m.itemId && m.itemId === nameOrId) || (m.name && m.name === nameOrId)));
+
+      if (selectedTicket) {
+        const updatedTicket = { ...selectedTicket, usedMaterials: updated };
+        setSelectedTicket(updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket);
+      }
+      return updated;
+    });
+  };
+
+  const handleUpdateMaterialPrice = (index: number, price: number) => {
+    setUsedMaterials(prev => {
+      const updated = prev.map((m, i) => i === index ? { ...m, price } : m);
+      if (selectedTicket) {
+        const updatedTicket = { ...selectedTicket, usedMaterials: updated };
+        setSelectedTicket(updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket);
+      }
+      return updated;
     });
   };
 
   const handleAddExtraCost = () => {
-    setExtraCosts(prev => [...prev, { description: '', value: 0, category: 'Operacional' }]);
+    setExtraCosts(prev => {
+      const updated = [...prev, { description: '', value: 0, category: 'Operacional' }];
+      if (selectedTicket) {
+        const updatedTicket = { ...selectedTicket, extraCosts: updated };
+        setSelectedTicket(updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket);
+      }
+      return updated;
+    });
   };
 
   const handleUpdateExtraCost = (index: number, field: 'description' | 'value' | 'category', value: string | number) => {
-    setExtraCosts(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));
+    setExtraCosts(prev => {
+      const updated = prev.map((c, i) => i === index ? { ...c, [field]: value } : c);
+      if (selectedTicket) {
+        const updatedTicket = { ...selectedTicket, extraCosts: updated };
+        setSelectedTicket(updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket);
+      }
+      return updated;
+    });
   };
 
   const handleSaveExtraCostsToStore = () => {
@@ -564,10 +733,24 @@ export default function ExecutionCenter() {
 
     toast.success(`${validCosts.length} gastos registrados no financeiro.`);
     setExtraCosts([]); // Limpa a lista local após salvar para evitar duplicidade ao finalizar
+    
+    if (selectedTicket) {
+      const updatedTicket = { ...selectedTicket, extraCosts: [] };
+      setSelectedTicket(updatedTicket);
+      updateTicket(selectedTicket.id, updatedTicket);
+    }
   };
 
   const handleRemoveExtraCost = (index: number) => {
-    setExtraCosts(prev => prev.filter((_, i) => i !== index));
+    setExtraCosts(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (selectedTicket) {
+        const updatedTicket = { ...selectedTicket, extraCosts: updated };
+        setSelectedTicket(updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket);
+      }
+      return updated;
+    });
   };
 
   const handleAddNewTask = async () => {
@@ -638,7 +821,7 @@ export default function ExecutionCenter() {
     toast.success(`${clientTasks.length} tarefas importadas do cliente.`);
   };
 
-  const handleFinishProject = async () => {
+  const handleFinishProject = async (customReportText?: string) => {
     if (!selectedTicket) return;
 
     try {
@@ -660,7 +843,7 @@ export default function ExecutionCenter() {
       usedMaterials.forEach(m => {
         const item = supplyItems.find(i => i.id === m.itemId || i.name === m.name);
         if (item) {
-          const costValue = (item.lastPrice || 0) * m.quantity;
+          const costValue = (m.price || item.lastPrice || 0) * m.quantity;
           totalExpenses += costValue;
           
           addCost({
@@ -674,9 +857,11 @@ export default function ExecutionCenter() {
           updateStock(item.id, -m.quantity);
         } else if (m.name) {
           // Manual entry without linked item
+          const costValue = (m.price || 0) * m.quantity;
+          totalExpenses += costValue;
           addCost({
             description: `Material Manual OS ${selectedTicket.osNumber}: ${m.name} (x${m.quantity})`,
-            value: 0, // We don't have a price for manual entries yet
+            value: costValue,
             date: new Date().toISOString(),
             category: 'Material'
           });
@@ -700,7 +885,7 @@ export default function ExecutionCenter() {
       updateTicket(selectedTicket.id, { 
         ...selectedTicket, 
         status: 'CONCLUIDO',
-        serviceReport: `Projeto finalizado via Central de Execução.\nChecklist concluído.\nMateriais utilizados: ${usedMaterials.length}\nGastos extras: ${extraCosts.length}`,
+        serviceReport: customReportText || `Projeto finalizado via Central de Execução.\nChecklist concluído.\nMateriais utilizados: ${usedMaterials.length}\nGastos extras: ${extraCosts.length}`,
         checklistResults: Object.entries(checklistProgress).map(([taskId, ok]) => ({
           taskId,
           status: ok ? 'OK' : 'NOK',
@@ -708,8 +893,9 @@ export default function ExecutionCenter() {
         }))
       });
 
-      toast.success('Projeto finalizado com sucesso! Financeiro atualizado.');
+      toast.success('Atendimento finalizado com sucesso! Relatório gerado e financeiro atualizado.');
       setIsExecutionModalOpen(false);
+      setIsReportPreviewOpen(false);
       setSelectedTicket(null);
       setUsedMaterials([]);
       setExtraCosts([]);
@@ -1580,6 +1766,69 @@ export default function ExecutionCenter() {
             </div>
           </div>
 
+          {/* Execution Control & Running Cost Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/60 p-4 rounded-3xl border border-white/10 shadow-lg">
+            {/* Execution Control */}
+            <div className="flex flex-col justify-between p-4 bg-black/40 rounded-2xl border border-white/5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Status de Execução</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`w-2.5 h-2.5 rounded-full ${selectedTicket?.status === 'REALIZANDO' ? 'bg-[#39FF14] animate-pulse shadow-[0_0_8px_rgba(57,255,20,0.5)]' : 'bg-amber-400'}`} />
+                    <span className="text-sm font-black text-white uppercase tracking-wider">
+                      {selectedTicket?.status === 'REALIZANDO' ? 'EM EXECUÇÃO' : 'PAUSADO'}
+                    </span>
+                  </div>
+                </div>
+                {selectedTicket?.status === 'REALIZANDO' && (
+                  <ExecutionTimer startedAt={selectedTicket?.startedAt} />
+                )}
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={handleToggleExecution}
+                  className={`flex-1 py-2.5 px-4 text-xs font-bold uppercase tracking-wider rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                    selectedTicket?.status === 'REALIZANDO'
+                      ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      : 'bg-[#39FF14]/10 hover:bg-[#39FF14]/20 text-[#39FF14] border border-[#39FF14]/30'
+                  }`}
+                >
+                  {selectedTicket?.status === 'REALIZANDO' ? (
+                    <>
+                      <Pause size={14} className="fill-current" />
+                      Pausar Atendimento
+                    </>
+                  ) : (
+                    <>
+                      <Play size={14} className="fill-current" />
+                      Iniciar Execução
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Financial Cost Summary */}
+            <div className="grid grid-cols-3 gap-3 p-4 bg-black/40 rounded-2xl border border-white/5">
+              <div className="flex flex-col justify-center">
+                <p className="text-[9px] font-black text-white/40 uppercase tracking-wider">Materiais Usados</p>
+                <p className="text-lg font-black text-[#39FF14] mt-1">R$ {materialsCostTotal.toFixed(2)}</p>
+                <span className="text-[10px] text-white/30">{usedMaterials.length} itens</span>
+              </div>
+              <div className="flex flex-col justify-center border-l border-white/5 pl-3">
+                <p className="text-[9px] font-black text-white/40 uppercase tracking-wider">Custos Extras</p>
+                <p className="text-lg font-black text-[#39FF14] mt-1">R$ {extraCostsTotal.toFixed(2)}</p>
+                <span className="text-[10px] text-white/30">{extraCosts.length} despesas</span>
+              </div>
+              <div className="flex flex-col justify-center border-l border-white/5 pl-3 bg-[#39FF14]/5 rounded-xl p-1">
+                <p className="text-[9px] font-black text-[#39FF14] uppercase tracking-wider">CUSTO TOTAL DIA</p>
+                <p className="text-xl font-black text-white mt-1">R$ {totalExecutionCost.toFixed(2)}</p>
+                <span className="text-[9px] text-[#39FF14]/80 font-mono">Orçado: R$ {(selectedTicket?.budgetAmount || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column: Checklist */}
             <div className="space-y-6">
@@ -1736,16 +1985,32 @@ export default function ExecutionCenter() {
                       const item = supplyItems.find(i => i.id === m.itemId || i.name === m.name);
                       const displayName = m.name || item?.name || 'Material';
                       const identifier = m.itemId || m.name || '';
+                      const price = m.price !== undefined ? m.price : (item?.lastPrice || 0);
                       return (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-white">{displayName}</span>
-                            <span className="text-[10px] text-white/40">{item ? `${item.currentStock} em estoque` : 'Entrada manual'}</span>
+                        <div key={idx} className="flex flex-col gap-2 p-3 bg-white/5 rounded-xl border border-white/10">
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold text-white">{displayName}</span>
+                              <span className="text-[10px] text-white/40">{item ? `${item.currentStock} em estoque` : 'Entrada manual'}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button onClick={() => handleRemoveMaterial(identifier)} className="p-1 hover:bg-white/10 rounded-lg text-white/40"><Minus size={14} /></button>
+                              <span className="text-sm font-black text-white w-6 text-center">{m.quantity}</span>
+                              <button onClick={() => handleAddMaterial(identifier)} className="p-1 hover:bg-white/10 rounded-lg text-blue-400"><Plus size={14} /></button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <button onClick={() => handleRemoveMaterial(identifier)} className="p-1 hover:bg-white/10 rounded-lg text-white/40"><Minus size={14} /></button>
-                            <span className="text-sm font-black text-white w-6 text-center">{m.quantity}</span>
-                            <button onClick={() => handleAddMaterial(identifier)} className="p-1 hover:bg-white/10 rounded-lg text-blue-400"><Plus size={14} /></button>
+                          <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-white/40">Custo Unit: R$</span>
+                              <input 
+                                type="number" 
+                                className="w-20 bg-white/10 border border-white/20 rounded-lg px-2 py-0.5 text-[10.5px] text-white font-mono font-bold"
+                                value={price || ''}
+                                placeholder="0.00"
+                                onChange={(e) => handleUpdateMaterialPrice(idx, parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <span className="text-xs font-black text-[#39FF14]">Total: R$ {(price * m.quantity).toFixed(2)}</span>
                           </div>
                         </div>
                       );
@@ -1840,12 +2105,88 @@ export default function ExecutionCenter() {
               <p className="text-xs">Ao finalizar, os valores serão registrados automaticamente no financeiro.</p>
             </div>
             <button
-              onClick={handleFinishProject}
-              className="w-full md:w-auto px-12 py-4 bg-black text-white font-black uppercase tracking-widest rounded-2xl hover:bg-zinc-800 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-black/30"
+              onClick={handleOpenReportModal}
+              className="w-full md:w-auto px-10 py-4 bg-[#39FF14] text-black font-black uppercase tracking-wider rounded-2xl hover:bg-[#39FF14]/90 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-[#39FF14]/15 border border-[#39FF14]/30"
             >
-              FINALIZAR PROJETO
-              <ArrowRight size={20} />
+              Gerar Relatório e Finalizar
+              <FileText size={18} />
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Report Preview Modal */}
+      <Modal
+        isOpen={isReportPreviewOpen}
+        onClose={() => setIsReportPreviewOpen(false)}
+        title="Relatório de Execução do Atendimento"
+        maxWidth="3xl"
+        glass={true}
+      >
+        <div className="space-y-6 p-2 text-white">
+          <p className="text-xs text-white/60 uppercase tracking-wider">
+            Revise as informações coletadas automaticamente e complemente as observações técnicas antes de finalizar o atendimento.
+          </p>
+
+          <div className="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-4">
+            <label className="block text-xs font-black uppercase tracking-widest text-[#39FF14]">
+              Relatório Técnico Final
+            </label>
+            <textarea
+              className="w-full h-96 bg-zinc-950/80 border border-white/10 rounded-xl p-4 text-xs font-mono text-white/95 leading-relaxed focus:outline-none focus:border-[#39FF14]/50"
+              value={reportNotes}
+              onChange={(e) => setReportNotes(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-center pt-4 border-t border-white/5">
+            <button
+              onClick={() => {
+                const win = window.open('', '_blank');
+                if (win) {
+                  win.document.write(`
+                    <html>
+                      <head>
+                        <title>Relatório de Execução - OS ${selectedTicket?.osNumber || ''}</title>
+                        <style>
+                          body { font-family: monospace; padding: 40px; line-height: 1.5; color: #111; background: #fff; }
+                          pre { white-space: pre-wrap; font-size: 14px; }
+                          @media print {
+                            body { padding: 0; }
+                            button { display: none; }
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <button onclick="window.print()" style="margin-bottom: 20px; padding: 10px 20px; font-weight: bold; background: #111; color: #fff; border: none; border-radius: 5px; cursor: pointer;">Imprimir Relatório</button>
+                        <pre>${reportNotes.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                      </body>
+                    </html>
+                  `);
+                  win.document.close();
+                } else {
+                  toast.error('Por favor, permita pop-ups para imprimir o relatório.');
+                }
+              }}
+              className="w-full sm:w-auto px-6 py-3 bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-white/5 flex items-center justify-center gap-2"
+            >
+              Imprimir / Copiar
+            </button>
+
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => setIsReportPreviewOpen(false)}
+                className="flex-1 sm:flex-initial px-6 py-3 bg-black/40 hover:bg-black/60 text-white/70 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-white/5"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={() => handleFinishProject(reportNotes)}
+                className="flex-1 sm:flex-initial px-10 py-3 bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest rounded-xl hover:bg-[#39FF14]/90 transition-all active:scale-95 shadow-lg shadow-[#39FF14]/15"
+              >
+                Emitir e Concluir O.S.
+              </button>
+            </div>
           </div>
         </div>
       </Modal>

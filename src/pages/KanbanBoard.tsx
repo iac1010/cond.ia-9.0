@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { TicketStatus, Ticket } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
-import { Clock, Wrench, CheckCircle, AlertCircle, Calendar, User, Edit, Plus, MoreVertical, ExternalLink, X, Trash2, Settings, ZoomIn, ZoomOut, HelpCircle, Palette, Upload, Image as ImageIcon, Check, RotateCcw, FileImage, Paintbrush } from 'lucide-react';
+import { Clock, Wrench, CheckCircle, AlertCircle, Calendar, User, Edit, Plus, MoreVertical, ExternalLink, X, Trash2, Settings, ZoomIn, ZoomOut, HelpCircle, Palette, Upload, Image as ImageIcon, Check, RotateCcw, FileImage, Paintbrush, DollarSign } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -569,6 +569,12 @@ export default function KanbanBoard() {
                             <User className={`${footerIconSize} text-purple-400`} />
                             <span className="truncate">{ticket.technician}</span>
                           </div>
+                          {ticket.budgetAmount !== undefined && ticket.budgetAmount !== null && Number(ticket.budgetAmount) > 0 && (
+                            <div className={`flex items-center ${footerItemTextClass} text-emerald-400 font-black`}>
+                              <DollarSign className={`${footerIconSize} text-emerald-500`} />
+                              <span>Valor: R$ {Number(ticket.budgetAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
                         </div>
 
                         <div className={`flex justify-end ${detailsLinkMargin}`}>

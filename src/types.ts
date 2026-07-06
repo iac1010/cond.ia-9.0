@@ -127,6 +127,11 @@ export type Ticket = {
     quantity: number;
     price?: number;
   }[];
+  extraCosts?: {
+    description: string;
+    value: number;
+    category: string;
+  }[];
   images?: string[];
   attachments?: {
     id: string;
