@@ -189,7 +189,7 @@ export default function Residents() {
                     referrerPolicy="no-referrer"
                   />
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex flex-wrap gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity justify-end">
                   <button 
                     onClick={(e) => { e.preventDefault(); openModal(client); }}
                     className="p-2 hover:bg-white/20 rounded-lg transition-colors"

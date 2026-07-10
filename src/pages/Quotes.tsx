@@ -726,7 +726,7 @@ export default function Quotes() {
                           <option value="REJECTED" className="bg-[#0f0f11]">Rejeitado</option>
                         </select>
                         
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex flex-wrap gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity justify-end">
                           <button 
                             onClick={() => {
                               setEditingQuote(quote);

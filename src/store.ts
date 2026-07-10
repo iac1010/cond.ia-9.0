@@ -322,6 +322,16 @@ export const useStore = create<AppState>()(
           if (ticketsRes.data) {
             newState.tickets = ticketsRes.data.map(t => {
               let cleanObservations = t.observations || '';
+              let extraCosts = [];
+              if (cleanObservations.includes('---EXTRA_COSTS_JSON---')) {
+                const parts = cleanObservations.split('---EXTRA_COSTS_JSON---');
+                cleanObservations = parts[0].trim();
+                try {
+                  extraCosts = JSON.parse(parts[1].trim());
+                } catch (e) {
+                  console.error('Erro ao ler custos extras:', e);
+                }
+              }
               let attachments = [];
               if (cleanObservations.includes('---ATTACHMENTS_JSON---')) {
                 const parts = cleanObservations.split('---ATTACHMENTS_JSON---');
@@ -345,6 +355,7 @@ export const useStore = create<AppState>()(
                 technician: t.technician,
                 observations: cleanObservations,
                 attachments: attachments,
+                extraCosts: extraCosts,
                 reportedProblem: t.reported_problem,
                 productsForQuote: t.products_for_quote,
                 serviceReport: t.service_report,
@@ -1591,6 +1602,9 @@ export const useStore = create<AppState>()(
           if (ticket.attachments && ticket.attachments.length > 0) {
             observationsWithAttachments += `\n\n---ATTACHMENTS_JSON---\n${JSON.stringify(ticket.attachments)}`;
           }
+          if (ticket.extraCosts && ticket.extraCosts.length > 0) {
+            observationsWithAttachments += `\n\n---EXTRA_COSTS_JSON---\n${JSON.stringify(ticket.extraCosts)}`;
+          }
 
           const payload = {
             id,
@@ -1639,7 +1653,7 @@ export const useStore = create<AppState>()(
           toast.error('Erro de conexão ao salvar OS.');
         }
       },
-      updateTicket: async (id, updatedTicket) => {
+      updateTicket: async (id, updatedTicket, silent = false) => {
         set((state) => ({
           tickets: state.tickets.map(t => t.id === id ? { ...updatedTicket, id } : t)
         }));
@@ -1650,6 +1664,9 @@ export const useStore = create<AppState>()(
           let observationsWithAttachments = updatedTicket.observations || '';
           if (updatedTicket.attachments && updatedTicket.attachments.length > 0) {
             observationsWithAttachments += `\n\n---ATTACHMENTS_JSON---\n${JSON.stringify(updatedTicket.attachments)}`;
+          }
+          if (updatedTicket.extraCosts && updatedTicket.extraCosts.length > 0) {
+            observationsWithAttachments += `\n\n---EXTRA_COSTS_JSON---\n${JSON.stringify(updatedTicket.extraCosts)}`;
           }
 
           const payload = {
@@ -1687,7 +1704,9 @@ export const useStore = create<AppState>()(
             console.error('Erro Supabase updateTicket:', error);
             toast.error(`Erro ao atualizar OS: ${error.message}`);
           } else {
-            toast.success('OS atualizada!');
+            if (!silent) {
+              toast.success('OS atualizada!');
+            }
           }
         } catch (e: any) { 
           console.error(e);
@@ -1970,6 +1989,32 @@ export const useStore = create<AppState>()(
             await supabase.from('company_settings').update({ cost_categories: newCategories }).eq('id', id);
             toast.success('Categoria removida com sucesso!');
           } catch (e) { console.error(e); }
+        }
+      },
+
+      clearFinancialData: async () => {
+        const state = get();
+        const receiptIds = state.receipts.map(r => r.id);
+        const costIds = state.costs.map(c => c.id);
+
+        set({ receipts: [], costs: [] });
+
+        if (!isSupabaseConfigured) {
+          toast.success('Movimentações financeiras zeradas localmente!');
+          return;
+        }
+
+        try {
+          if (receiptIds.length > 0) {
+            await supabase.from('receipts').delete().in('id', receiptIds);
+          }
+          if (costIds.length > 0) {
+            await supabase.from('costs').delete().in('id', costIds);
+          }
+          toast.success('Movimentações financeiras zeradas no banco de dados!');
+        } catch (e: any) {
+          console.error('Erro ao limpar dados do Supabase:', e);
+          toast.error('Erro ao limpar dados no banco de dados.');
         }
       },
 
@@ -2897,17 +2942,32 @@ export const useStore = create<AppState>()(
         set((state) => ({
           scheduledMaintenances: [...state.scheduledMaintenances, newMaintenance]
         }));
+        
+        if (!isSupabaseConfigured) return;
+
         try {
+          const clients = get().clients || [];
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          let finalClientId = maintenance.clientId;
+          if (!finalClientId || !uuidRegex.test(finalClientId)) {
+            finalClientId = clients[0]?.id || '';
+          }
+
+          if (!finalClientId || !uuidRegex.test(finalClientId)) {
+            console.warn('Cannot add scheduled maintenance to Supabase without a valid client UUID.');
+            return;
+          }
+
           const { error } = await supabase.from('scheduled_maintenances').insert([{
             id,
-            client_id: maintenance.clientId,
-            standard_id: maintenance.standardId,
+            client_id: finalClientId,
+            standard_id: maintenance.standardId || 'custom',
             item: maintenance.item,
             frequency: maintenance.frequency,
-            last_done: maintenance.lastDone,
-            next_date: maintenance.nextDate,
-            status: maintenance.status,
-            category: maintenance.category
+            last_done: maintenance.lastDone ? maintenance.lastDone : null,
+            next_date: maintenance.nextDate || new Date().toISOString().split('T')[0],
+            status: maintenance.status || 'PENDING',
+            category: maintenance.category || 'Geral'
           }]);
           if (error) {
             console.error('Erro Supabase addScheduledMaintenance:', error);
@@ -2928,16 +2988,29 @@ export const useStore = create<AppState>()(
         if (!isSupabaseConfigured) return;
 
         try {
-          const { error } = await supabase.from('scheduled_maintenances').update({
-            client_id: updated.clientId,
-            standard_id: updated.standardId,
-            item: updated.item,
-            frequency: updated.frequency,
-            last_done: updated.lastDone,
-            next_date: updated.nextDate,
-            status: updated.status,
-            category: updated.category
-          }).eq('id', id);
+          const updateData: any = {};
+          const clients = get().clients || [];
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          
+          if (updated.clientId !== undefined) {
+            let finalClientId = updated.clientId;
+            if (!finalClientId || !uuidRegex.test(finalClientId)) {
+              finalClientId = clients[0]?.id || '';
+            }
+            if (finalClientId && uuidRegex.test(finalClientId)) {
+              updateData.client_id = finalClientId;
+            }
+          }
+          
+          if (updated.standardId !== undefined) updateData.standard_id = updated.standardId;
+          if (updated.item !== undefined) updateData.item = updated.item;
+          if (updated.frequency !== undefined) updateData.frequency = updated.frequency;
+          if (updated.lastDone !== undefined) updateData.last_done = updated.lastDone ? updated.lastDone : null;
+          if (updated.nextDate !== undefined) updateData.next_date = updated.nextDate ? updated.nextDate : undefined;
+          if (updated.status !== undefined) updateData.status = updated.status;
+          if (updated.category !== undefined) updateData.category = updated.category;
+
+          const { error } = await supabase.from('scheduled_maintenances').update(updateData).eq('id', id);
           if (error) {
             console.error('Erro Supabase updateScheduledMaintenance:', error);
             toast.error(`Erro ao atualizar manutenção: ${error.message}`);
@@ -2996,6 +3069,8 @@ export const useStore = create<AppState>()(
           ]
         }));
 
+        if (!isSupabaseConfigured) return;
+
         try {
           // Remove antigos e insere novos no Supabase
           await supabase.from('scheduled_maintenances').delete().eq('client_id', clientId);
@@ -3019,6 +3094,8 @@ export const useStore = create<AppState>()(
         set((state) => ({
           notifications: [newNotif, ...state.notifications].slice(0, 50)
         }));
+
+        if (!isSupabaseConfigured) return;
 
         try {
           await supabase.from('notifications').insert([{
@@ -3056,10 +3133,25 @@ export const useStore = create<AppState>()(
         set((state) => ({
           consumptionReadings: [...state.consumptionReadings, newReading]
         }));
+
+        if (!isSupabaseConfigured) return;
+
         try {
+          const clients = get().clients || [];
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          let finalClientId = reading.clientId;
+          if (!finalClientId || !uuidRegex.test(finalClientId)) {
+            finalClientId = clients[0]?.id || '';
+          }
+
+          if (!finalClientId || !uuidRegex.test(finalClientId)) {
+            console.warn('Cannot add consumption reading to Supabase without a valid client UUID.');
+            return;
+          }
+
           const { error } = await supabase.from('consumption_readings').insert([{
             id,
-            client_id: reading.clientId,
+            client_id: finalClientId,
             type: reading.type,
             previous_value: reading.previousValue,
             current_value: reading.currentValue,
@@ -3091,10 +3183,25 @@ export const useStore = create<AppState>()(
         set((state) => ({
           digitalFolder: [...state.digitalFolder, newItem]
         }));
+
+        if (!isSupabaseConfigured) return;
+
         try {
+          const clients = get().clients || [];
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          let finalClientId = item.clientId;
+          if (!finalClientId || !uuidRegex.test(finalClientId)) {
+            finalClientId = clients[0]?.id || '';
+          }
+
+          if (!finalClientId || !uuidRegex.test(finalClientId)) {
+            console.warn('Cannot add digital folder item to Supabase without a valid client UUID.');
+            return;
+          }
+
           const { error } = await supabase.from('digital_folder').insert([{
             id,
-            client_id: item.clientId,
+            client_id: finalClientId,
             title: item.title,
             description: item.description,
             category: item.category,
@@ -3159,6 +3266,9 @@ export const useStore = create<AppState>()(
         set((state) => ({
           assemblies: [...state.assemblies, newAssembly]
         }));
+
+        if (!isSupabaseConfigured) return;
+
         try {
           const { error } = await supabase.from('assemblies').insert([{
             id,
@@ -3344,29 +3454,34 @@ export const useStore = create<AppState>()(
         
         set((state) => ({ packages: [newPkg, ...state.packages] }));
 
-        try {
-          const { error } = await supabase.from('packages').insert([{
-            id,
-            resident_name: pkg.residentName,
-            apartment: pkg.apartment,
-            tower: pkg.tower,
-            carrier: pkg.carrier,
-            tracking_code: pkg.trackingCode,
-            received_at: newPkg.receivedAt,
-            status: 'PENDING',
-            qr_code: newPkg.qrCode,
-            photo_url: pkg.photoUrl,
-            client_id: pkg.clientId
-          }]);
-          if (error) {
-            console.error('Erro Supabase addPackage:', error);
-            toast.error(`Erro ao salvar encomenda: ${error.message}`);
-          } else {
-            toast.success('Encomenda salva no Supabase!');
+        if (isSupabaseConfigured) {
+          try {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const finalClientId = pkg.clientId && uuidRegex.test(pkg.clientId) ? pkg.clientId : null;
+
+            const { error } = await supabase.from('packages').insert([{
+              id,
+              resident_name: pkg.residentName,
+              apartment: pkg.apartment,
+              tower: pkg.tower,
+              carrier: pkg.carrier,
+              tracking_code: pkg.trackingCode,
+              received_at: newPkg.receivedAt,
+              status: 'PENDING',
+              qr_code: newPkg.qrCode,
+              photo_url: pkg.photoUrl,
+              client_id: finalClientId
+            }]);
+            if (error) {
+              console.error('Erro Supabase addPackage:', error);
+              toast.error(`Erro ao salvar encomenda: ${error.message}`);
+            } else {
+              toast.success('Encomenda salva no Supabase!');
+            }
+          } catch (e: any) { 
+            console.error(e);
+            toast.error('Erro de conexão ao salvar encomenda.');
           }
-        } catch (e: any) { 
-          console.error(e);
-          toast.error('Erro de conexão ao salvar encomenda.');
         }
 
         get().addNotification({
@@ -3403,13 +3518,15 @@ export const useStore = create<AppState>()(
           )
         }));
 
-        try {
-          const { error } = await supabase.from('packages').update({ 
-            status: 'PICKED_UP', 
-            picked_up_at: pickedUpAt 
-          }).eq('id', id);
-          if (error) console.error('Erro Supabase pickupPackage:', error);
-        } catch (e) { console.error(e); }
+        if (isSupabaseConfigured) {
+          try {
+            const { error } = await supabase.from('packages').update({ 
+              status: 'PICKED_UP', 
+              picked_up_at: pickedUpAt 
+            }).eq('id', id);
+            if (error) console.error('Erro Supabase pickupPackage:', error);
+          } catch (e) { console.error(e); }
+        }
 
         get().addNotification({
           title: 'Encomenda Retirada',
@@ -3471,6 +3588,7 @@ export const useStore = create<AppState>()(
         set((state) => ({
           visitors: state.visitors.map(v => v.id === id ? { ...v, status: 'EXPIRED' } : v)
         }));
+        if (!isSupabaseConfigured) return;
         try {
           const { error } = await supabase.from('visitors').update({ status: 'EXPIRED' }).eq('id', id);
           if (error) console.error('Erro Supabase revokeVisitor:', error);
@@ -3485,14 +3603,16 @@ export const useStore = create<AppState>()(
           )
         }));
 
-        try {
-          const { error } = await supabase.from('critical_events').update({ 
-            status, 
-            description, 
-            last_update: lastUpdate 
-          }).eq('id', id);
-          if (error) console.error('Erro Supabase updateCriticalEvent:', error);
-        } catch (e) { console.error(e); }
+        if (isSupabaseConfigured) {
+          try {
+            const { error } = await supabase.from('critical_events').update({ 
+              status, 
+              description, 
+              last_update: lastUpdate 
+            }).eq('id', id);
+            if (error) console.error('Erro Supabase updateCriticalEvent:', error);
+          } catch (e) { console.error(e); }
+        }
 
         if (status === 'CRITICAL') {
           const event = get().criticalEvents.find(e => e.id === id);

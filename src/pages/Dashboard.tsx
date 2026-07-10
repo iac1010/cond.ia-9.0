@@ -15,7 +15,8 @@ import {
   X, Download, FileUp, Database as DatabaseIcon, MessageSquare, Target,
   Wifi, WifiOff, GripVertical, ClipboardList, LayoutList,
   Eye, EyeOff,
-  Bell, Truck, Brain, ExternalLink, Sparkles, LineChart
+  Bell, Truck, Brain, ExternalLink, Sparkles, LineChart,
+  Phone, Mail, Send, Trash2, Edit, MapPin
 } from 'lucide-react';
 import { KanbanMirror } from '../components/KanbanMirror';
 import { TicketsMirror } from '../components/TicketsMirror';
@@ -342,13 +343,29 @@ export default function Dashboard() {
     vivianOnline,
     vivianEnabled,
     toggleVivian,
+    checklistItems,
+    iotState,
     showBalance,
     setShowBalance,
     lastSync,
-    syncToSupabase
+    syncToSupabase,
+    updateScheduledMaintenance,
+    addTicket,
+    staff,
+    updateStaff,
+    addStaff,
+    deleteStaff,
+    updateTicketStatus
   } = useStore();
 
   const [isEditMode, setIsEditMode] = useState(false);
+  const [liveTime, setLiveTime] = useState(new Date().toLocaleTimeString('pt-BR'));
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTime(new Date().toLocaleTimeString('pt-BR'));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   const executionTickets = useMemo(() => {
     const activeStatuses: TicketStatus[] = ['PENDENTE_APROVACAO', 'APROVADO', 'EM_ROTA', 'AGUARDANDO_MATERIAL', 'REALIZANDO'];
     return tickets
@@ -549,6 +566,77 @@ export default function Dashboard() {
       }
     });
   }, [scheduledMaintenances, clients, addNotification, notifications]);
+
+  const nbr5674Alerts = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return scheduledMaintenances
+      .filter(m => m.status !== 'DONE')
+      .map(m => {
+        if (!m.nextDate) return null;
+        const nextDate = new Date(m.nextDate);
+        nextDate.setHours(0, 0, 0, 0);
+
+        const diffTime = nextDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let threshold = 7;
+        if (m.frequency === 'Mensal') threshold = 5;
+        else if (m.frequency === 'Trimestral') threshold = 10;
+        else if (m.frequency === 'Semestral') threshold = 15;
+        else if (m.frequency === 'Anual') threshold = 30;
+
+        const isNear = diffDays <= threshold;
+        const isOverdue = diffDays < 0;
+
+        return {
+          ...m,
+          diffDays,
+          threshold,
+          isNear,
+          isOverdue,
+        };
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null && (m.isNear || m.isOverdue))
+      .sort((a, b) => a.diffDays - b.diffDays);
+  }, [scheduledMaintenances]);
+
+  const [activeMonitorTab, setActiveMonitorTab] = useState<'alerts' | 'team' | 'execution'>('alerts');
+  const [isAddingStaff, setIsAddingStaff] = useState(false);
+  const [newStaffForm, setNewStaffForm] = useState({
+    name: '',
+    role: 'Técnico',
+    phone: '',
+    email: '',
+    shift: 'MORNING' as 'MORNING' | 'AFTERNOON' | 'NIGHT' | 'FLEXIBLE',
+    status: 'ACTIVE' as 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE'
+  });
+  const [assignTechAlertId, setAssignTechAlertId] = useState<string | null>(null);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [editStaffForm, setEditStaffForm] = useState<any>({});
+
+  const staffWorkload = useMemo(() => {
+    const workloadMap: Record<string, { activeCount: number; tickets: typeof tickets }> = {};
+    
+    // Initialize with all staff members
+    staff.forEach(s => {
+      workloadMap[s.name] = { activeCount: 0, tickets: [] };
+    });
+    
+    // Compute from active tickets
+    tickets.forEach(ticket => {
+      if (!ticket.technician || ticket.status === 'CONCLUIDO' || ticket.status === 'REJEITADO') return;
+      const techName = ticket.technician;
+      if (!workloadMap[techName]) {
+        workloadMap[techName] = { activeCount: 0, tickets: [] };
+      }
+      workloadMap[techName].activeCount += 1;
+      workloadMap[techName].tickets.push(ticket);
+    });
+    
+    return workloadMap;
+  }, [staff, tickets]);
 
   const totalReceitas = receipts.reduce((acc, curr) => acc + curr.value, 0);
   const totalDespesas = costs.reduce((acc, curr) => acc + curr.value, 0);
@@ -2324,6 +2412,1219 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* NBR 5674 Preventive Maintenance & Team Workload Real-Time Monitor */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 relative z-10 max-w-[1400px] bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-6 shadow-2xl"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent pointer-events-none" />
+        
+        {/* Dynamic Connected Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/5 pb-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/30 text-amber-400 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.15)] shrink-0">
+              <ShieldCheck className="w-7 h-7 text-amber-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-xl font-black uppercase tracking-wider text-white">Central de Monitoramento Integrado</h2>
+                <div className="flex items-center gap-1.5 bg-[#39FF14]/5 border border-[#39FF14]/20 text-[#39FF14] text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-[0_0_15px_rgba(57,255,20,0.15)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse" />
+                  Supabase Live Sync
+                </div>
+              </div>
+              <p className="text-xs text-white/50 mt-1">Conexão em tempo real entre Norma NBR 5674, Ordens de Serviço (O.S.) e alocação operacional da equipe técnica.</p>
+            </div>
+          </div>
+          
+          {/* Elegant tab selector & navigation shortcuts */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="bg-black/40 border border-white/10 rounded-2xl p-1 flex flex-wrap gap-1">
+              <button
+                onClick={() => setActiveMonitorTab('alerts')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${
+                  activeMonitorTab === 'alerts' 
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-lg' 
+                    : 'text-white/60 hover:text-white border border-transparent'
+                }`}
+              >
+                Alertas Ativos NBR 5674
+              </button>
+              <button
+                onClick={() => setActiveMonitorTab('execution')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
+                  activeMonitorTab === 'execution' 
+                    ? 'bg-[#39FF14]/10 text-[#39FF14] border border-[#39FF14]/20 shadow-lg shadow-[#39FF14]/5' 
+                    : 'text-white/60 hover:text-white border border-transparent'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" />
+                Atividades em Tempo Real ({tickets.filter(t => t.status === 'REALIZANDO').length})
+              </button>
+              <button
+                onClick={() => setActiveMonitorTab('team')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${
+                  activeMonitorTab === 'team' 
+                    ? 'bg-[#39FF14]/10 text-[#39FF14] border border-[#39FF14]/20 shadow-lg' 
+                    : 'text-white/60 hover:text-white border border-transparent'
+                }`}
+              >
+                Carga & Gestão de Equipe ({staff.length})
+              </button>
+            </div>
+
+            <Link 
+              to="/operational" 
+              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/80 transition-all active:scale-95 flex items-center gap-1.5"
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              Ver Cronograma
+            </Link>
+          </div>
+        </div>
+
+        {/* TAB 1: NBR 5674 Preventive Maintenance Alerts */}
+        {activeMonitorTab === 'alerts' && (
+          <div>
+            {nbr5674Alerts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
+                {nbr5674Alerts.map((alert) => {
+                  const client = clients.find(c => c.id === alert.clientId);
+                  const clientName = client?.name || 'Condomínio Geral';
+                  const isOverdue = alert.isOverdue;
+                  const daysLeft = alert.diffDays;
+                  const isAssigning = assignTechAlertId === alert.id;
+                  
+                  return (
+                    <motion.div 
+                      key={alert.id}
+                      whileHover={{ scale: 1.01, y: -2 }}
+                      className={`relative p-5 rounded-2xl border transition-all backdrop-blur-lg flex flex-col justify-between h-full ${
+                        isOverdue 
+                          ? 'bg-red-500/5 border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.03)]' 
+                          : 'bg-amber-500/5 border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.03)]'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-1 min-w-0">
+                            <span className="text-[10px] text-white/40 font-mono tracking-wider block uppercase font-bold">{clientName}</span>
+                            <h4 className="text-sm font-black text-white truncate uppercase tracking-tight" title={alert.item}>
+                              {alert.item}
+                            </h4>
+                          </div>
+                          
+                          {isOverdue ? (
+                            <div className="p-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl shrink-0 animate-pulse">
+                              <AlertTriangle className="w-4 h-4" />
+                            </div>
+                          ) : (
+                            <div className="p-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl shrink-0">
+                              <AlertCircle className="w-4 h-4" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-lg text-white/70">
+                            {alert.frequency}
+                          </span>
+                          <span className="bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-lg text-white/70">
+                            {alert.category || 'Inspeção'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] font-semibold pt-2 border-t border-white/5">
+                          <span className="text-white/40">Vencimento:</span>
+                          <span className={isOverdue ? 'text-red-400 font-bold' : 'text-amber-400 font-bold'}>
+                            {safeFormatDate(alert.nextDate)}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-[11px] font-semibold">
+                          <span className="text-white/40">Status do Prazo:</span>
+                          <span className={isOverdue ? 'text-red-400 font-black uppercase' : 'text-amber-400 font-black uppercase'}>
+                            {isOverdue ? `Atrasada (${Math.abs(daysLeft)}d)` : `Vence em ${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Interactive Assignment or Controls */}
+                      <div className="mt-4 pt-3 border-t border-white/5">
+                        {isAssigning ? (
+                          <div className="bg-black/60 border border-white/10 p-3 rounded-xl space-y-3">
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-white/50">Técnico Responsável</label>
+                            <select
+                              id={`tech-select-${alert.id}`}
+                              defaultValue=""
+                              className="w-full bg-zinc-900 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                            >
+                              <option value="">A Definir (Sem técnico)</option>
+                              {staff.filter(s => s.status === 'ACTIVE').map(s => (
+                                <option key={s.id} value={s.name}>
+                                  {s.name} ({staffWorkload[s.name]?.activeCount || 0} OS ativas)
+                                </option>
+                              ))}
+                            </select>
+                            
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => {
+                                  const selectEl = document.getElementById(`tech-select-${alert.id}`) as HTMLSelectElement;
+                                  const chosenTechName = selectEl?.value || 'A Definir';
+                                  try {
+                                    addTicket({
+                                      type: 'TAREFA',
+                                      title: `Manutenção Preventiva NBR 5674: ${alert.item}`,
+                                      clientId: alert.clientId,
+                                      date: alert.nextDate,
+                                      technician: chosenTechName,
+                                      observations: `O.S. automática gerada via Monitoramento NBR 5674 no Dashboard Principal.\n\nNorma regulamentadora aplicável: NBR 5674\nItem inspecionado: ${alert.item}\nFrequência programada: ${alert.frequency}\nPrazo original: ${safeFormatDate(alert.nextDate)}`,
+                                      status: 'PENDENTE_APROVACAO',
+                                      maintenanceCategory: 'Preventiva',
+                                      maintenanceSubcategory: alert.frequency
+                                    });
+                                    toast.success(`O.S. de Preventiva aberta com sucesso e atribuída a ${chosenTechName}!`);
+                                    setAssignTechAlertId(null);
+                                  } catch (err: any) {
+                                    toast.error(`Falha ao abrir O.S.: ${err.message || String(err)}`);
+                                  }
+                                }}
+                                className="flex-1 py-1.5 bg-blue-500 text-black text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-blue-400 transition-all active:scale-95 cursor-pointer"
+                              >
+                                Abrir O.S. Atribuída
+                              </button>
+                              <button 
+                                onClick={() => setAssignTechAlertId(null)}
+                                className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-white/60 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border border-white/10"
+                              >
+                                Voltar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button 
+                              onClick={async () => {
+                                const confirmAction = window.confirm(`Deseja marcar a manutenção de "${alert.item}" em "${clientName}" como CONCLUÍDA?`);
+                                if (confirmAction) {
+                                  try {
+                                    updateScheduledMaintenance(alert.id, { 
+                                      status: 'DONE', 
+                                      lastDone: new Date().toISOString().split('T')[0] 
+                                    });
+                                    toast.success(`Manutenção de ${alert.item} marcada como Concluída!`);
+                                  } catch (err: any) {
+                                    toast.error(`Falha ao concluir: ${err.message || String(err)}`);
+                                  }
+                                }
+                              }}
+                              className="py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 transition-all active:scale-95 text-center flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Concluir
+                            </button>
+                            
+                            <button 
+                              onClick={() => {
+                                setAssignTechAlertId(alert.id);
+                              }}
+                              className="py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-blue-500/20 transition-all active:scale-95 text-center flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Atribuir & Abrir
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center justify-between p-5 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-500/10 text-[#39FF14] rounded-xl">
+                    <ShieldCheck className="w-6 h-6 text-[#39FF14]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-white uppercase tracking-tight">Sistemas em Conformidade Legal</p>
+                    <p className="text-xs text-white/50">Todas as inspeções prediais preventivas da norma NBR 5674 estão rigorosamente em dia para todos os condomínios.</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black text-[#39FF14] uppercase tracking-[0.2em] bg-[#39FF14]/5 px-3 py-1.5 rounded-full border border-[#39FF14]/20 shadow-[0_0_15px_rgba(57,255,20,0.1)]">
+                  100% OK
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: Dynamic Team & Workload Management */}
+        {activeMonitorTab === 'team' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Header Controls */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/5 p-4 rounded-2xl border border-white/5 gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#39FF14]" />
+                  Painel Operacional da Equipe Técnica
+                </h3>
+                <p className="text-[11px] text-white/50">Gerenciamento direto de escalas, turnos, edição de cadastros e monitoramento de carga em tempo real.</p>
+              </div>
+              <button
+                onClick={() => setIsAddingStaff(!isAddingStaff)}
+                className="px-4 py-2 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#39FF14] transition-all active:scale-95 flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {isAddingStaff ? 'Fechar Cadastro' : 'Cadastrar Membro'}
+              </button>
+            </div>
+
+            {/* Quick Metrics Indicators Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-zinc-950/40 border border-white/5 rounded-2xl flex flex-col justify-between">
+                <span className="text-[9px] uppercase font-black text-white/40 tracking-wider">Total de Equipe</span>
+                <span className="text-2xl font-black text-white mt-1">{staff.length}</span>
+              </div>
+              <div className="p-4 bg-[#39FF14]/5 border border-[#39FF14]/10 rounded-2xl flex flex-col justify-between">
+                <span className="text-[9px] uppercase font-black text-[#39FF14]/60 tracking-wider">Técnicos Disponíveis</span>
+                <span className="text-2xl font-black text-[#39FF14] mt-1">{staff.filter(s => s.status === 'ACTIVE').length}</span>
+              </div>
+              <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex flex-col justify-between">
+                <span className="text-[9px] uppercase font-black text-amber-400/60 tracking-wider">Em Licença / Ausentes</span>
+                <span className="text-2xl font-black text-amber-400 mt-1">{staff.filter(s => s.status === 'ON_LEAVE' || s.status === 'INACTIVE').length}</span>
+              </div>
+              <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex flex-col justify-between">
+                <span className="text-[9px] uppercase font-black text-blue-400/60 tracking-wider">Ordens de Serviço Ativas</span>
+                <span className="text-2xl font-black text-blue-400 mt-1">
+                  {Object.values(staffWorkload).reduce((acc, curr) => acc + curr.activeCount, 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Slide-out inline register form */}
+            {isAddingStaff && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="p-5 bg-black/40 border border-white/10 rounded-2xl space-y-4"
+              >
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <h4 className="text-xs font-black uppercase text-[#39FF14] tracking-wider">Novo Profissional</h4>
+                  <span className="text-[8px] font-black text-white/30 uppercase tracking-widest font-mono">Sync com Supabase</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-[9px] uppercase font-black tracking-widest text-white/40 mb-1.5">Nome Completo</label>
+                    <input 
+                      type="text"
+                      value={newStaffForm.name}
+                      onChange={(e) => setNewStaffForm({ ...newStaffForm, name: e.target.value })}
+                      placeholder="Ex: Carlos Souza"
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase font-black tracking-widest text-white/40 mb-1.5">Especialidade / Cargo</label>
+                    <input 
+                      type="text"
+                      value={newStaffForm.role}
+                      onChange={(e) => setNewStaffForm({ ...newStaffForm, role: e.target.value })}
+                      placeholder="Ex: Técnico Hidráulico, Eletricista"
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase font-black tracking-widest text-white/40 mb-1.5">Telefone</label>
+                    <input 
+                      type="text"
+                      value={newStaffForm.phone}
+                      onChange={(e) => setNewStaffForm({ ...newStaffForm, phone: e.target.value })}
+                      placeholder="Ex: (11) 99999-9999"
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase font-black tracking-widest text-white/40 mb-1.5">Turno</label>
+                    <select
+                      value={newStaffForm.shift}
+                      onChange={(e) => setNewStaffForm({ ...newStaffForm, shift: e.target.value as any })}
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                    >
+                      <option value="MORNING">Manhã</option>
+                      <option value="AFTERNOON">Tarde</option>
+                      <option value="NIGHT">Noite</option>
+                      <option value="FLEXIBLE">Flexível</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
+                  <button
+                    onClick={() => {
+                      if (!newStaffForm.name.trim()) {
+                        toast.error('O nome do membro da equipe é obrigatório.');
+                        return;
+                      }
+                      addStaff({
+                        name: newStaffForm.name,
+                        role: newStaffForm.role,
+                        phone: newStaffForm.phone,
+                        email: newStaffForm.email || `${newStaffForm.name.toLowerCase().replace(/\s+/g, '')}@condfy.ia`,
+                        shift: newStaffForm.shift,
+                        status: newStaffForm.status
+                      });
+                      toast.success(`${newStaffForm.name} cadastrado e sincronizado com o banco!`);
+                      setNewStaffForm({
+                        name: '',
+                        role: 'Técnico',
+                        phone: '',
+                        email: '',
+                        shift: 'MORNING',
+                        status: 'ACTIVE'
+                      });
+                      setIsAddingStaff(false);
+                    }}
+                    className="px-5 py-2.5 bg-[#39FF14] text-black font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-[#39FF14]/90 transition-all cursor-pointer shadow-lg shadow-[#39FF14]/10"
+                  >
+                    Confirmar Cadastro no Banco
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Team listing Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {staff.map((member) => {
+                const workload = staffWorkload[member.name] || { activeCount: 0, tickets: [] };
+                const count = workload.activeCount;
+                const isEditing = editingStaffId === member.id;
+                
+                // Color states for Active Status
+                const statusConfig = {
+                  ACTIVE: { text: 'text-[#39FF14]', bg: 'bg-[#39FF14]/10', border: 'border-[#39FF14]/20', label: 'Disponível' },
+                  ON_LEAVE: { text: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20', label: 'Licença' },
+                  INACTIVE: { text: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', label: 'Inativo' }
+                };
+                const currentStatus = statusConfig[member.status] || statusConfig.ACTIVE;
+
+                // Color states for Workload Progress bar
+                let workloadColor = 'text-[#39FF14]';
+                let workloadBarColor = 'bg-[#39FF14]';
+                let workloadLabel = 'Carga Baixa';
+                let percent = Math.min(count * 25, 100) || 10;
+
+                if (count >= 4) {
+                  workloadColor = 'text-red-400 font-bold';
+                  workloadBarColor = 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.4)]';
+                  workloadLabel = 'Carga Crítica';
+                } else if (count >= 2) {
+                  workloadColor = 'text-amber-400 font-bold';
+                  workloadBarColor = 'bg-amber-500';
+                  workloadLabel = 'Carga Média';
+                }
+
+                return (
+                  <motion.div
+                    key={member.id}
+                    layoutId={`staff-card-${member.id}`}
+                    whileHover={!isEditing ? { y: -3, scale: 1.01 } : {}}
+                    className={`p-5 rounded-2xl border transition-all flex flex-col justify-between h-full min-h-[300px] relative overflow-hidden ${
+                      isEditing 
+                        ? 'bg-zinc-950/80 border-[#39FF14]/50 shadow-[0_0_30px_rgba(57,255,20,0.1)]' 
+                        : 'bg-zinc-900/40 border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    {isEditing ? (
+                      /* Inline Edit Form */
+                      <div className="space-y-4 h-full flex flex-col justify-between">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                            <span className="text-xs uppercase font-black text-[#39FF14] tracking-widest">Editar Profissional</span>
+                            <span className="text-[9px] font-mono text-white/30">ID: {member.id.substring(0, 6)}</span>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-[9px] font-black uppercase text-white/40 mb-1">Nome Completo</label>
+                              <input 
+                                type="text"
+                                value={editStaffForm.name || ''}
+                                onChange={(e) => setEditStaffForm({ ...editStaffForm, name: e.target.value })}
+                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black uppercase text-white/40 mb-1">Cargo / Especialidade</label>
+                              <input 
+                                type="text"
+                                value={editStaffForm.role || ''}
+                                onChange={(e) => setEditStaffForm({ ...editStaffForm, role: e.target.value })}
+                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black uppercase text-white/40 mb-1">Telefone WhatsApp</label>
+                              <input 
+                                type="text"
+                                value={editStaffForm.phone || ''}
+                                onChange={(e) => setEditStaffForm({ ...editStaffForm, phone: e.target.value })}
+                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[9px] font-black uppercase text-white/40 mb-1">Turno</label>
+                                <select
+                                  value={editStaffForm.shift || 'MORNING'}
+                                  onChange={(e) => setEditStaffForm({ ...editStaffForm, shift: e.target.value })}
+                                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                                >
+                                  <option value="MORNING">Manhã</option>
+                                  <option value="AFTERNOON">Tarde</option>
+                                  <option value="NIGHT">Noite</option>
+                                  <option value="FLEXIBLE">Flexível</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black uppercase text-white/40 mb-1">Status</label>
+                                <select
+                                  value={editStaffForm.status || 'ACTIVE'}
+                                  onChange={(e) => setEditStaffForm({ ...editStaffForm, status: e.target.value })}
+                                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#39FF14]"
+                                >
+                                  <option value="ACTIVE">Disponível</option>
+                                  <option value="ON_LEAVE">Em Licença</option>
+                                  <option value="INACTIVE">Inativo</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/5">
+                          <button
+                            onClick={() => {
+                              if (!editStaffForm.name?.trim()) {
+                                toast.error('O nome do técnico é obrigatório.');
+                                return;
+                              }
+                              updateStaff(member.id, editStaffForm);
+                              toast.success(`Cadastro de ${editStaffForm.name} atualizado no banco!`);
+                              setEditingStaffId(null);
+                            }}
+                            className="py-2 bg-[#39FF14] text-black text-[9px] font-black uppercase tracking-wider rounded-xl hover:bg-[#39FF14]/90 transition-all cursor-pointer text-center"
+                          >
+                            Salvar Alterações
+                          </button>
+                          <button
+                            onClick={() => setEditingStaffId(null)}
+                            className="py-2 bg-white/5 hover:bg-white/10 text-white/70 text-[9px] font-black uppercase tracking-wider rounded-xl border border-white/10 transition-all cursor-pointer text-center"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Standard Display Mode */
+                      <div className="flex flex-col justify-between h-full">
+                        <div>
+                          {/* Card Header (Avatar + Name + Status Dropdown) */}
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/20 flex items-center justify-center text-lg font-black text-amber-400 shrink-0">
+                                {member.name.charAt(0)}
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-sm font-black text-white uppercase tracking-tight truncate" title={member.name}>{member.name}</h4>
+                                <p className="text-[11px] text-white/50 truncate">{member.role}</p>
+                              </div>
+                            </div>
+                            
+                            {/* Fast Direct Status Switch Selector */}
+                            <select
+                              value={member.status}
+                              onChange={(e) => {
+                                const newStatusVal = e.target.value as any;
+                                updateStaff(member.id, { status: newStatusVal });
+                                toast.success(`Status de ${member.name} alterado para ${statusConfig[newStatusVal]?.label}!`);
+                              }}
+                              className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-black/40 border transition-colors cursor-pointer focus:outline-none ${currentStatus.text} ${currentStatus.border} hover:bg-black/60`}
+                            >
+                              <option value="ACTIVE" className="bg-zinc-950 text-[#39FF14] font-black">Disponível ●</option>
+                              <option value="ON_LEAVE" className="bg-zinc-950 text-amber-400 font-black">Em Licença ◑</option>
+                              <option value="INACTIVE" className="bg-zinc-950 text-zinc-500 font-black">Inativo ○</option>
+                            </select>
+                          </div>
+
+                          {/* technical stats rows */}
+                          <div className="space-y-1.5 text-[11px] text-white/60 mb-4 pb-3 border-b border-white/5">
+                            <div className="flex justify-between">
+                              <span className="text-white/40">Escala / Turno:</span>
+                              <span className="font-bold text-white uppercase tracking-tight">
+                                {member.shift === 'MORNING' ? 'Manhã' : member.shift === 'AFTERNOON' ? 'Tarde' : member.shift === 'NIGHT' ? 'Noite' : 'Flexível'}
+                              </span>
+                            </div>
+                            {member.phone && (
+                              <div className="flex justify-between">
+                                <span className="text-white/40">WhatsApp:</span>
+                                <span className="font-mono text-white/80">{member.phone}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Workload Level and Progress */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-[11px] items-center">
+                              <span className="text-white/40">Fila de OS Ativas:</span>
+                              <span className={`${workloadColor} font-black uppercase text-[10px] tracking-wide`}>
+                                {count} {count === 1 ? 'OS' : 'OSs'} • {workloadLabel}
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                              <div className={`h-full ${workloadBarColor} transition-all duration-500`} style={{ width: `${percent}%` }} />
+                            </div>
+                          </div>
+
+                          {/* Active OS list with status coloring & Navigation */}
+                          {workload.tickets.length > 0 ? (
+                            <div className="mt-4 pt-3 border-t border-white/5 space-y-2">
+                              <p className="text-[9px] uppercase font-black text-white/30 tracking-widest block mb-1">Chamados em Execução:</p>
+                              <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                                {workload.tickets.map(t => {
+                                  // Ticket status display configurations
+                                  const ticketConfig: { [key in TicketStatus]?: { label: string; style: string } } = {
+                                    PENDENTE_APROVACAO: { label: 'Pendente', style: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+                                    APROVADO: { label: 'Aprovada', style: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
+                                    EM_ROTA: { label: 'Em Rota', style: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                                    AGUARDANDO_MATERIAL: { label: 'Ag. Mat.', style: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+                                    REALIZANDO: { label: 'Em Execução', style: 'bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/20 animate-pulse' },
+                                    CONCLUIDO: { label: 'Concluída', style: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+                                    REJEITADO: { label: 'Rejeitada', style: 'bg-red-500/10 text-red-400 border-red-500/20' }
+                                  };
+                                  const currentMaint = ticketConfig[t.status as TicketStatus] || { label: String(t.status), style: 'bg-white/5 text-white/60 border-white/10' };
+
+                                  return (
+                                    <div 
+                                      key={t.id} 
+                                      onClick={() => navigate(`/execution?play=${t.id}`)}
+                                      className="flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all cursor-pointer text-[11px] group/ticket gap-2"
+                                      title="Clique para ir à Central de Execução"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-mono text-[#39FF14] font-bold shrink-0">{t.osNumber || 'OS'}</span>
+                                          <span className="text-white truncate font-medium group-hover/ticket:text-[#39FF14] transition-colors">{t.title}</span>
+                                        </div>
+                                      </div>
+                                      <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider border shrink-0 ${currentMaint.style}`}>
+                                        {currentMaint.label}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-4 pt-4 border-t border-white/5 text-center">
+                              <p className="text-[10px] text-white/30 italic">Sem tarefas ativas pendentes no momento.</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Interactive Grid Actions */}
+                        <div className="grid grid-cols-3 gap-2 mt-5 pt-3 border-t border-white/5">
+                          <button
+                            onClick={() => {
+                              setEditingStaffId(member.id);
+                              setEditStaffForm(member);
+                            }}
+                            className="py-2 bg-white/5 hover:bg-white/10 text-white/80 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10 transition-all active:scale-95 text-center flex items-center justify-center gap-1 cursor-pointer"
+                            title="Editar Cadastro"
+                          >
+                            <Edit className="w-3 h-3 text-white/70" />
+                            Editar
+                          </button>
+
+                          <button
+                            onClick={async () => {
+                              const confirmDel = window.confirm(`Deseja remover permanentemente o técnico "${member.name}" do banco de dados? Esta ação não pode ser desfeita.`);
+                              if (confirmDel) {
+                                try {
+                                  await deleteStaff(member.id);
+                                } catch (err: any) {
+                                  toast.error(`Falha ao remover: ${err.message || String(err)}`);
+                                }
+                              }
+                            }}
+                            className="py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-500/20 transition-all active:scale-95 text-center flex items-center justify-center gap-1 cursor-pointer"
+                            title="Remover Técnico"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Excluir
+                          </button>
+
+                          <a
+                            href={`tel:${member.phone}`}
+                            className="py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-blue-500/20 transition-all active:scale-95 text-center flex items-center justify-center gap-1"
+                            title="Ligar para o Profissional"
+                          >
+                            <Phone className="w-3 h-3" />
+                            Ligar
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+              {staff.length === 0 && (
+                <div className="col-span-full py-16 text-center border border-dashed border-white/10 rounded-2xl">
+                  <Users className="w-12 h-12 opacity-10 mx-auto mb-3" />
+                  <p className="text-xs text-white/40">Nenhum membro operacional cadastrado no banco de dados.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: Real-Time Services Execution (Kanban REALIZANDO) */}
+        {activeMonitorTab === 'execution' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Live Operations HUD / Command Header */}
+            <div className="bg-zinc-950/60 border border-white/10 rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-40 bg-radial from-[#39FF14]/5 to-transparent pointer-events-none rounded-full blur-3xl" />
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-12 h-12 bg-[#39FF14]/10 rounded-2xl flex items-center justify-center border border-[#39FF14]/20 shadow-[0_0_20px_rgba(57,255,20,0.15)] shrink-0">
+                  <Activity className="w-6 h-6 text-[#39FF14] animate-pulse" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-ping" />
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">Centro de Telemetria Operacional</h3>
+                  </div>
+                  <p className="text-xs text-white/50 mt-0.5 truncate">
+                    Monitoramento integrado de equipes de campo, checklists em andamento e sensores de infraestrutura.
+                  </p>
+                </div>
+              </div>
+
+              {/* Time display & signal indicators */}
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto shrink-0 justify-end">
+                {/* Scoreboard Clock */}
+                <div className="bg-black/50 border border-white/5 px-4 py-2 rounded-2xl flex items-center gap-2.5 font-mono shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
+                  <Clock className="w-4 h-4 text-[#39FF14]/80" />
+                  <span className="text-sm text-[#39FF14] font-black tracking-widest drop-shadow-[0_0_5px_rgba(57,255,20,0.4)]">
+                    {liveTime}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg border flex items-center gap-1 ${
+                    isSupabaseConfigured 
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' 
+                      : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+                  }`}>
+                    <Wifi className="w-2.5 h-2.5" />
+                    {isSupabaseConfigured ? 'TELEMETRIA CLOUD' : 'LOCAL CACHE'}
+                  </span>
+                  
+                  <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg border flex items-center gap-1 ${
+                    vivianEnabled 
+                      ? 'bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/25 shadow-[0_0_8px_rgba(57,255,20,0.05)]' 
+                      : 'bg-white/5 text-white/40 border-white/10'
+                  }`}>
+                    <Brain className="w-2.5 h-2.5" />
+                    VIVIAN.AI: {vivianOnline ? 'ATIVADA' : 'OFFLINE'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Split layout: Services on the left, infrastructure and staff allocation on the right */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              
+              {/* Main Column: Active Tickets */}
+              <div className="lg:col-span-3 space-y-6">
+                
+                {/* Live Operations KPIs */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-black/30 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-[#39FF14]/10 text-[#39FF14] rounded-xl shadow-[0_0_15px_rgba(57,255,20,0.1)]">
+                      <Activity className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs text-white/50 uppercase tracking-wider font-bold">Equipes em Campo</h4>
+                      <p className="text-lg font-black text-white mt-0.5">
+                        {tickets.filter(t => t.status === 'REALIZANDO').length} Serviços Ativos
+                      </p>
+                      <p className="text-[10px] text-[#39FF14] font-medium">Inspeções e corretivas correntes</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/30 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
+                      <ClipboardCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs text-white/50 uppercase tracking-wider font-bold">Checklists Ativos</h4>
+                      <p className="text-lg font-black text-white mt-0.5">
+                        {tickets.filter(t => t.status === 'REALIZANDO' && t.checklistResults && t.checklistResults.length > 0).length} Monitorados
+                      </p>
+                      <p className="text-[10px] text-white/40">Inspecionados passo a passo</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/30 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-red-500/10 text-red-400 rounded-xl">
+                      <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs text-white/50 uppercase tracking-wider font-bold">Atenção Crítica</h4>
+                      <p className="text-lg font-black text-white mt-0.5">
+                        {tickets.filter(t => t.status === 'REALIZANDO' && (t.priority === 'CRITICAL' || t.priority === 'HIGH')).length} Ocorrências
+                      </p>
+                      <p className="text-[10px] text-white/40 font-medium">Prioridade máxima em curso</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grid of active service order cards */}
+                {tickets.filter(t => t.status === 'REALIZANDO').length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {tickets.filter(t => t.status === 'REALIZANDO').map((t) => {
+                      const client = clients.find(c => c.id === t.clientId);
+                      const clientName = client?.name || 'Condomínio Geral';
+                      const tech = staff.find(s => s.name === t.technician);
+                      
+                      // Calculate Checklist progress
+                      const totalChecklists = t.checklistResults?.length || 0;
+                      const completedChecklists = t.checklistResults?.filter(r => r.status === 'OK' || r.status === 'NOK').length || 0;
+                      const checklistProgressPct = totalChecklists > 0 ? Math.round((completedChecklists / totalChecklists) * 100) : 0;
+
+                      // Priority style configuration
+                      const getPriorityConfig = (p?: string) => {
+                        switch (p) {
+                          case 'CRITICAL':
+                            return { label: 'CRÍTICA', colorClass: 'bg-red-500/15 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-pulse' };
+                          case 'HIGH':
+                            return { label: 'ALTA', colorClass: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+                          case 'MEDIUM':
+                            return { label: 'MÉDIA', colorClass: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+                          default:
+                            return { label: 'BAIXA', colorClass: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' };
+                        }
+                      };
+                      const prio = getPriorityConfig(t.priority);
+
+                      return (
+                        <motion.div
+                          key={t.id}
+                          whileHover={{ scale: 1.01, y: -2 }}
+                          className={`relative p-5 rounded-3xl bg-zinc-950/45 border transition-all flex flex-col justify-between h-full ${
+                            t.priority === 'CRITICAL' 
+                              ? 'border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.06)]' 
+                              : 'border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="space-y-4">
+                            {/* Card Header (Client + OS ID) */}
+                            <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-3">
+                              <div className="min-w-0">
+                                <span className="text-[10px] text-white/40 font-mono tracking-wider block uppercase font-bold truncate">
+                                  {clientName}
+                                </span>
+                                <h4 className="text-sm font-black text-white truncate uppercase tracking-tight mt-0.5" title={t.title || 'Ordem de Serviço'}>
+                                  {t.title || 'Ordem de Serviço'}
+                                </h4>
+                              </div>
+                              <span className="text-[10px] text-[#39FF14] font-mono font-black tracking-widest bg-[#39FF14]/5 px-2.5 py-1 rounded-lg border border-[#39FF14]/20 shrink-0 shadow-[0_0_10px_rgba(57,255,20,0.05)]">
+                                {t.osNumber || 'O.S. ATIVA'}
+                              </span>
+                            </div>
+
+                            {/* Location & category detail */}
+                            {t.location && (
+                              <div className="flex items-center gap-1.5 text-xs text-white/60 bg-white/5 px-2.5 py-1.5 rounded-xl border border-white/5">
+                                <MapPin className="w-3.5 h-3.5 text-[#39FF14]/80 shrink-0" />
+                                <span className="truncate font-medium">{t.location}</span>
+                              </div>
+                            )}
+
+                            {/* Badges (Type & Priority) */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg text-white/70">
+                                {t.type}
+                              </span>
+                              <span className={`border text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${prio.colorClass}`}>
+                                {prio.label}
+                              </span>
+                            </div>
+
+                            {/* Technician details & interactive notification */}
+                            <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 relative group">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center text-xs font-black text-[#39FF14] shrink-0 relative">
+                                  {t.technician?.charAt(0) || 'T'}
+                                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#39FF14] border border-black animate-pulse" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-white truncate">{t.technician || 'Sem Técnico'}</p>
+                                  <p className="text-[10px] text-white/50 truncate">Executando Serviço</p>
+                                </div>
+                              </div>
+                              
+                              {tech?.phone && (
+                                <button
+                                  onClick={async () => {
+                                    const text = `Olá ${tech.name}, estamos monitorando a execução da ${t.osNumber || 'Ordem de Serviço'} (${t.title}) em tempo real no Dashboard. Tudo correndo bem por aí? Há algum imprevisto? 👍`;
+                                    try {
+                                      const success = await sendWhatsAppMessage(tech.phone, text);
+                                      if (success) {
+                                        toast.success(`Mensagem enviada via WhatsApp para ${tech.name}!`);
+                                      } else {
+                                        toast.error('Ocorreu um erro ao enviar a mensagem.');
+                                      }
+                                    } catch (err: any) {
+                                      toast.error(`Falha no envio: ${err.message || String(err)}`);
+                                    }
+                                  }}
+                                  className="p-1.5 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/20 text-[#39FF14] rounded-lg transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-[0_0_10px_rgba(57,255,20,0.05)]"
+                                  title="Enviar lembrete / Notificar via WhatsApp"
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Real-time progress bar & indicator */}
+                            <div className="space-y-2 pt-1">
+                              <div className="flex justify-between text-[11px] items-center">
+                                <span className="text-white/40 flex items-center gap-1">
+                                  <Activity className="w-3 h-3 text-[#39FF14] animate-spin" style={{ animationDuration: '3s' }} />
+                                  Status do Progresso:
+                                </span>
+                                <span className="text-white font-black text-[10px] tracking-wide">
+                                  {totalChecklists > 0 
+                                    ? `${completedChecklists} de ${totalChecklists} concluídas (${checklistProgressPct}%)`
+                                    : 'Diagnóstico Inicial'
+                                  }
+                                </span>
+                              </div>
+                              
+                              {totalChecklists > 0 ? (
+                                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-blue-500 to-[#39FF14] transition-all duration-500" 
+                                    style={{ width: `${checklistProgressPct}%` }} 
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden relative">
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#39FF14]/30 to-transparent w-1/2 h-full rounded-full animate-pulse" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* COMPACT REAL-TIME CHECKLIST PEEK */}
+                            {t.checklistResults && t.checklistResults.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+                                <span className="text-[10px] text-white/30 uppercase tracking-wider font-bold block">Checklist em Andamento:</span>
+                                <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                                  {t.checklistResults.map((result, idx) => {
+                                    const itemObj = checklistItems.find(item => item.id === result.taskId);
+                                    const taskText = itemObj?.task || `Item de Inspeção #${idx + 1}`;
+                                    const getStatusStyles = (status: string) => {
+                                      switch (status) {
+                                        case 'OK':
+                                          return { icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />, bg: 'bg-emerald-500/5 text-emerald-300 border-emerald-500/10' };
+                                        case 'NOK':
+                                          return { icon: <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 animate-pulse" />, bg: 'bg-red-500/5 text-red-300 border-red-500/10' };
+                                        default:
+                                          return { icon: <Clock className="w-3.5 h-3.5 text-white/30 shrink-0" />, bg: 'bg-white/5 text-white/40 border-white/5' };
+                                      }
+                                    };
+                                    const st = getStatusStyles(result.status);
+                                    return (
+                                      <div key={idx} className={`flex items-start gap-2 p-2 rounded-xl border text-[11px] ${st.bg}`}>
+                                        {st.icon}
+                                        <div className="min-w-0 flex-1">
+                                          <p className="font-medium truncate" title={taskText}>{taskText}</p>
+                                          {result.notes && (
+                                            <p className="text-[9px] text-white/50 italic mt-0.5 truncate" title={result.notes}>
+                                              Obs: {result.notes}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* RECENT OPERATIONAL HISTORY NOTES */}
+                            {t.history && t.history.length > 0 && (
+                              <div className="mt-3 pt-2.5 border-t border-white/5">
+                                <span className="text-[9px] text-white/30 uppercase tracking-wider block font-bold mb-1">Último status de campo:</span>
+                                <div className="bg-black/40 border border-white/5 p-2 rounded-xl flex gap-2 items-start">
+                                  <MessageSquare className="w-3.5 h-3.5 text-[#39FF14]/80 shrink-0 mt-0.5" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] text-white/80 font-mono leading-normal line-clamp-2 italic">
+                                      "{t.history[t.history.length - 1].note}"
+                                    </p>
+                                    <p className="text-[8px] text-white/40 font-mono mt-1">
+                                      {safeFormatTime(t.history[t.history.length - 1].date)} por {t.history[t.history.length - 1].userName || 'Técnico'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* OS Action Buttons */}
+                          <div className="grid grid-cols-3 gap-2 mt-5 pt-3 border-t border-white/5">
+                            <button
+                              onClick={() => navigate(`/execution?play=${t.id}`)}
+                              className="py-2 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 text-[#39FF14] rounded-xl text-[9px] font-black uppercase tracking-widest border border-[#39FF14]/20 transition-all active:scale-95 text-center flex items-center justify-center gap-1 cursor-pointer"
+                              title="Abrir Central de Execução da OS"
+                            >
+                              <Play className="w-3 h-3" />
+                              Acompanhar
+                            </button>
+
+                            <button
+                              onClick={async () => {
+                                const confirmClose = window.confirm(`Deseja finalizar permanentemente a ${t.osNumber || 'O.S.'} "${t.title}" como CONCLUÍDA?`);
+                                if (confirmClose) {
+                                  try {
+                                    updateTicketStatus(t.id, 'CONCLUIDO');
+                                    toast.success(`O.S. ${t.osNumber || ''} concluída com sucesso!`);
+                                  } catch (err: any) {
+                                    toast.error(`Falha ao concluir: ${err.message || String(err)}`);
+                                  }
+                                }
+                              }}
+                              className="py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 transition-all active:scale-95 text-center flex items-center justify-center gap-1 cursor-pointer"
+                              title="Marcar como Concluída"
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                              Concluir
+                            </button>
+
+                            <button
+                              onClick={async () => {
+                                const confirmPause = window.confirm(`Deseja pausar a ${t.osNumber || 'O.S.'} "${t.title}" por FALTA DE MATERIAL / AGUARDANDO RECURSO?`);
+                                if (confirmPause) {
+                                  try {
+                                    updateTicketStatus(t.id, 'AGUARDANDO_MATERIAL');
+                                    toast.success(`O.S. ${t.osNumber || ''} pausada e colocada em "Aguardando Material".`);
+                                  } catch (err: any) {
+                                    toast.error(`Falha ao pausar: ${err.message || String(err)}`);
+                                  }
+                                }
+                              }}
+                              className="py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-amber-500/20 transition-all active:scale-95 text-center flex items-center justify-center gap-1 cursor-pointer"
+                              title="Pausar por Falta de Material"
+                            >
+                              <Truck className="w-3 h-3" />
+                              Pausar
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-12 bg-white/5 border border-white/10 rounded-3xl text-center">
+                    <div className="p-4 bg-white/5 text-white/30 rounded-full mb-4">
+                      <Activity className="w-8 h-8" />
+                    </div>
+                    <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1">Nenhuma atividade em curso</h4>
+                    <p className="text-xs text-white/50 max-w-md">
+                      Nenhum técnico está com ordens de serviço marcadas como <strong className="text-[#39FF14]">"Realizando"</strong> no momento.
+                      Acesse o quadro Kanban ou a página operacional para delegar e iniciar as tarefas.
+                    </p>
+                    <div className="flex gap-2 mt-5">
+                      <Link 
+                        to="/kanban"
+                        className="px-4 py-2 bg-[#39FF14] text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#39FF14]/90 transition-all active:scale-95 flex items-center gap-1.5"
+                      >
+                        <Columns className="w-3.5 h-3.5" />
+                        Quadro Kanban
+                      </Link>
+                      <Link 
+                        to="/operational"
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                      >
+                        Cronograma de Visitas
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Side Column: Telemetry & Infrastructure Board */}
+              <div className="lg:col-span-1 space-y-6">
+                
+                {/* IoT Infrastructure Telemetry Block */}
+                <div className="bg-zinc-950/40 border border-white/10 rounded-3xl p-5 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                    <Wifi className="w-4 h-4 text-[#39FF14]" />
+                    <span className="text-xs font-black uppercase tracking-wider text-white">Tecnologia & Sinais IoT</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Pump Caixa */}
+                    <div className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-2xl">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                          <Droplets className={`w-4 h-4 text-blue-400 ${iotState?.pumps?.caixa ? 'animate-bounce' : ''}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">Bomba Caixa</p>
+                          <p className="text-[9px] text-white/40 font-mono">Infraestrutura Água</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md tracking-wider ${
+                        iotState?.pumps?.caixa 
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse' 
+                          : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/10'
+                      }`}>
+                        {iotState?.pumps?.caixa ? 'ATIVA' : 'STANDBY'}
+                      </span>
+                    </div>
+
+                    {/* Pump Jardim */}
+                    <div className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-2xl">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                          <Droplets className={`w-4 h-4 text-amber-400 ${iotState?.pumps?.jardim ? 'animate-bounce' : ''}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">Bomba Recalque</p>
+                          <p className="text-[9px] text-white/40 font-mono">Infraestrutura Poço</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md tracking-wider ${
+                        iotState?.pumps?.jardim 
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse' 
+                          : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/10'
+                      }`}>
+                        {iotState?.pumps?.jardim ? 'ATIVA' : 'STANDBY'}
+                      </span>
+                    </div>
+
+                    {/* Perimeter Alarm */}
+                    <div className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-2xl">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">Alarme Geral</p>
+                          <p className="text-[9px] text-white/40 font-mono">Sistema Perimetral</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md tracking-wider ${
+                        iotState?.alarmActive 
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' 
+                          : 'bg-red-500/15 text-red-400 border border-red-500/25 animate-pulse'
+                      }`}>
+                        {iotState?.alarmActive ? 'PROTEGIDO' : 'ALERTA'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team On-Duty Allocation Block */}
+                <div className="bg-zinc-950/40 border border-white/10 rounded-3xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#39FF14]" />
+                      <span className="text-xs font-black uppercase tracking-wider text-white">Equipes de Plantão</span>
+                    </div>
+                    <span className="text-[9px] bg-white/5 px-2 py-0.5 rounded-md text-white/60 font-black font-mono">
+                      {staff.filter(s => s.status === 'ACTIVE').length} ON
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {staff.filter(s => s.status === 'ACTIVE').map((member) => {
+                      const isWorking = tickets.some(t => t.status === 'REALIZANDO' && t.technician === member.name);
+                      return (
+                        <div key={member.id} className="flex items-center justify-between p-2.5 bg-white/5 border border-white/5 rounded-2xl text-xs">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-xl bg-[#39FF14]/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white/80 shrink-0">
+                              {member.name.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-white truncate">{member.name}</p>
+                              <p className="text-[9px] text-white/40 capitalize">{member.shift.toLowerCase()}</p>
+                            </div>
+                          </div>
+                          
+                          <span className={`px-2 py-0.5 text-[8px] font-black rounded-md ${
+                            isWorking 
+                              ? 'bg-[#39FF14]/10 text-[#39FF14] border border-[#39FF14]/15 animate-pulse' 
+                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'
+                          }`}>
+                            {isWorking ? 'EM CAMPO' : 'DISPONÍVEL'}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {staff.filter(s => s.status === 'ACTIVE').length === 0 && (
+                      <p className="text-[10px] text-white/40 text-center py-2">Sem técnicos de plantão ativos no momento.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Critical System Warnings / NBR Ticker */}
+                {criticalEvents.length > 0 && (
+                  <div className="bg-zinc-950/40 border border-white/10 rounded-3xl p-5 space-y-4">
+                    <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                      <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
+                      <span className="text-xs font-black uppercase tracking-wider text-white">Alertas Críticos NBR</span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {criticalEvents.slice(0, 3).map((event) => (
+                        <div key={event.id} className="p-3 bg-black/40 border border-red-500/10 rounded-2xl space-y-1.5 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-radial from-red-500/5 to-transparent pointer-events-none rounded-full blur-xl" />
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[9px] font-black uppercase text-red-400 tracking-wider">
+                              {event.type} ALERT
+                            </span>
+                            <span className="text-[8px] font-mono text-white/40">{safeFormatTime(event.lastUpdate)}</span>
+                          </div>
+                          <p className="text-xs font-bold text-white truncate uppercase tracking-tight">{event.device}</p>
+                          <p className="text-[10px] text-white/50 leading-relaxed font-mono truncate">{event.description}</p>
+                          
+                          <div className="flex justify-between items-center pt-1">
+                            <span className="text-[9px] text-white/30 font-semibold">{event.location}</span>
+                            <span className={`px-1.5 py-0.5 text-[7px] font-black rounded ${
+                              event.status === 'CRITICAL' 
+                                ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' 
+                                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            }`}>
+                              {event.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        )}
+      </motion.div>
 
       <DndContext 
         sensors={sensors}

@@ -130,7 +130,7 @@ export default function ExecutionCenter() {
         priority,
         priorityJustification: justification,
         priorityRecommendedAction: recommendedAction
-      });
+      }, true);
       setAppliedSuggestions(prev => [...prev, ticketId]);
       toast.success(`Prioridade ${priority} aplicada à ordem de serviço ${ticket.osNumber || ''}!`);
     }
@@ -148,7 +148,7 @@ export default function ExecutionCenter() {
           priority: s.suggestedPriority,
           priorityJustification: s.justification,
           priorityRecommendedAction: s.recommendedAction
-        });
+        }, true);
         appliedCount++;
       }
     });
@@ -490,19 +490,19 @@ export default function ExecutionCenter() {
     }
     report += `\n`;
 
-    report += `GASTOS EXTRAS DO DIA:\n`;
+    report += `CUSTOS DE INSTALAÇÃO:\n`;
     if (extraCosts.length > 0) {
       extraCosts.forEach(c => {
         report += `  - ${c.description} [${c.category}]: R$ ${c.value.toFixed(2)}\n`;
       });
-      report += `  Total Gastos Extras: R$ ${extraCostsTotal.toFixed(2)}\n`;
+      report += `  Total Custos de Instalação: R$ ${extraCostsTotal.toFixed(2)}\n`;
     } else {
-      report += `  Nenhum gasto extra registrado.\n`;
+      report += `  Nenhum custo de instalação registrado.\n`;
     }
     report += `\n`;
 
     report += `RESUMO FINANCEIRO DA O.S.:\n`;
-    report += `  Custo Total da Execução: R$ ${totalExecutionCost.toFixed(2)}\n`;
+    report += `  Custo Total da Instalação: R$ ${totalExecutionCost.toFixed(2)}\n`;
     report += `  Valor Orçado do Serviço: R$ ${(selectedTicket.budgetAmount || 0).toFixed(2)}\n`;
     report += `==================================================\n`;
     report += `Observações Finais do Técnico:\n`;
@@ -597,9 +597,9 @@ export default function ExecutionCenter() {
     
     // Update status to REALIZANDO if it wasn't already, setting start time
     if (ticket.status !== 'REALIZANDO') {
-      updateTicket(ticket.id, { ...ticket, status: 'REALIZANDO', startedAt: new Date().toISOString() });
+      updateTicket(ticket.id, { ...ticket, status: 'REALIZANDO', startedAt: new Date().toISOString() }, true);
     } else if (!ticket.startedAt) {
-      updateTicket(ticket.id, { ...ticket, startedAt: new Date().toISOString() });
+      updateTicket(ticket.id, { ...ticket, startedAt: new Date().toISOString() }, true);
     }
   };
 
@@ -615,7 +615,7 @@ export default function ExecutionCenter() {
       startedAt: nextStartedAt 
     };
     setSelectedTicket(updatedTicket);
-    updateTicket(selectedTicket.id, updatedTicket);
+    updateTicket(selectedTicket.id, updatedTicket, true);
     
     if (nextStatus === 'REALIZANDO') {
       toast.success('Execução iniciada!');
@@ -651,7 +651,7 @@ export default function ExecutionCenter() {
       if (selectedTicket) {
         const updatedTicket = { ...selectedTicket, usedMaterials: updated };
         setSelectedTicket(updatedTicket);
-        updateTicket(selectedTicket.id, updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket, true);
       }
       return updated;
     });
@@ -671,7 +671,7 @@ export default function ExecutionCenter() {
       if (selectedTicket) {
         const updatedTicket = { ...selectedTicket, usedMaterials: updated };
         setSelectedTicket(updatedTicket);
-        updateTicket(selectedTicket.id, updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket, true);
       }
       return updated;
     });
@@ -683,7 +683,7 @@ export default function ExecutionCenter() {
       if (selectedTicket) {
         const updatedTicket = { ...selectedTicket, usedMaterials: updated };
         setSelectedTicket(updatedTicket);
-        updateTicket(selectedTicket.id, updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket, true);
       }
       return updated;
     });
@@ -695,7 +695,7 @@ export default function ExecutionCenter() {
       if (selectedTicket) {
         const updatedTicket = { ...selectedTicket, extraCosts: updated };
         setSelectedTicket(updatedTicket);
-        updateTicket(selectedTicket.id, updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket, true);
       }
       return updated;
     });
@@ -707,7 +707,7 @@ export default function ExecutionCenter() {
       if (selectedTicket) {
         const updatedTicket = { ...selectedTicket, extraCosts: updated };
         setSelectedTicket(updatedTicket);
-        updateTicket(selectedTicket.id, updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket, true);
       }
       return updated;
     });
@@ -722,23 +722,13 @@ export default function ExecutionCenter() {
       return;
     }
     
-    validCosts.forEach(c => {
-      addCost({
-        description: `Gasto Extra OS ${selectedTicket.osNumber}: ${c.description}`,
-        value: c.value,
-        date: new Date().toISOString(),
-        category: c.category
-      });
-    });
-
-    toast.success(`${validCosts.length} gastos registrados no financeiro.`);
-    setExtraCosts([]); // Limpa a lista local após salvar para evitar duplicidade ao finalizar
-    
     if (selectedTicket) {
-      const updatedTicket = { ...selectedTicket, extraCosts: [] };
+      const updatedTicket = { ...selectedTicket, extraCosts: validCosts };
       setSelectedTicket(updatedTicket);
-      updateTicket(selectedTicket.id, updatedTicket);
+      updateTicket(selectedTicket.id, updatedTicket, true);
     }
+
+    toast.success('Custos de Instalação salvos com sucesso na Ordem de Serviço!');
   };
 
   const handleRemoveExtraCost = (index: number) => {
@@ -747,7 +737,7 @@ export default function ExecutionCenter() {
       if (selectedTicket) {
         const updatedTicket = { ...selectedTicket, extraCosts: updated };
         setSelectedTicket(updatedTicket);
-        updateTicket(selectedTicket.id, updatedTicket);
+        updateTicket(selectedTicket.id, updatedTicket, true);
       }
       return updated;
     });
@@ -777,7 +767,7 @@ export default function ExecutionCenter() {
     };
     
     setSelectedTicket(updatedTicket);
-    updateTicket(selectedTicket.id, updatedTicket);
+    updateTicket(selectedTicket.id, updatedTicket, true);
 
     setNewTaskName('');
     setIsAddingTask(false);
@@ -816,7 +806,7 @@ export default function ExecutionCenter() {
     };
     
     setSelectedTicket(updatedTicket);
-    updateTicket(selectedTicket.id, updatedTicket);
+    updateTicket(selectedTicket.id, updatedTicket, true);
 
     toast.success(`${clientTasks.length} tarefas importadas do cliente.`);
   };
@@ -836,48 +826,28 @@ export default function ExecutionCenter() {
         description: `Finalização OS ${selectedTicket.osNumber}: ${selectedTicket.title}`
       });
 
-      // 3. Register Expenses (Materials + Extra Costs)
+      // 3. Register Expenses (Materials + Extra Costs - Demostrative only, do not discount from main account)
       let totalExpenses = 0;
       
-      // Materials expenses
+      // Materials expenses (demostrative only, stock is updated but main ledger is not charged)
       usedMaterials.forEach(m => {
         const item = supplyItems.find(i => i.id === m.itemId || i.name === m.name);
         if (item) {
           const costValue = (m.price || item.lastPrice || 0) * m.quantity;
           totalExpenses += costValue;
           
-          addCost({
-            description: `Material OS ${selectedTicket.osNumber}: ${item.name} (x${m.quantity})`,
-            value: costValue,
-            date: new Date().toISOString(),
-            category: 'Material'
-          });
-
           // Update stock (subtract)
           updateStock(item.id, -m.quantity);
         } else if (m.name) {
-          // Manual entry without linked item
           const costValue = (m.price || 0) * m.quantity;
           totalExpenses += costValue;
-          addCost({
-            description: `Material Manual OS ${selectedTicket.osNumber}: ${m.name} (x${m.quantity})`,
-            value: costValue,
-            date: new Date().toISOString(),
-            category: 'Material'
-          });
         }
       });
 
-      // Extra costs expenses
+      // Extra costs expenses (demostrative only, do not addCost to main ledger)
       extraCosts.forEach(c => {
         if (c.value > 0) {
           totalExpenses += c.value;
-          addCost({
-            description: `Gasto Extra OS ${selectedTicket.osNumber}: ${c.description}`,
-            value: c.value,
-            date: new Date().toISOString(),
-            category: c.category || 'Operacional'
-          });
         }
       });
 
@@ -885,13 +855,13 @@ export default function ExecutionCenter() {
       updateTicket(selectedTicket.id, { 
         ...selectedTicket, 
         status: 'CONCLUIDO',
-        serviceReport: customReportText || `Projeto finalizado via Central de Execução.\nChecklist concluído.\nMateriais utilizados: ${usedMaterials.length}\nGastos extras: ${extraCosts.length}`,
+        serviceReport: customReportText || `Projeto finalizado via Central de Execução.\nChecklist concluído.\nMateriais utilizados: ${usedMaterials.length}\nCustos de instalação: ${extraCosts.length}`,
         checklistResults: Object.entries(checklistProgress).map(([taskId, ok]) => ({
           taskId,
           status: ok ? 'OK' : 'NOK',
           notes: ''
         }))
-      });
+      }, true);
 
       toast.success('Atendimento finalizado com sucesso! Relatório gerado e financeiro atualizado.');
       setIsExecutionModalOpen(false);
@@ -1817,12 +1787,12 @@ export default function ExecutionCenter() {
                 <span className="text-[10px] text-white/30">{usedMaterials.length} itens</span>
               </div>
               <div className="flex flex-col justify-center border-l border-white/5 pl-3">
-                <p className="text-[9px] font-black text-white/40 uppercase tracking-wider">Custos Extras</p>
+                <p className="text-[9px] font-black text-white/40 uppercase tracking-wider">Custo de Instalação</p>
                 <p className="text-lg font-black text-[#39FF14] mt-1">R$ {extraCostsTotal.toFixed(2)}</p>
-                <span className="text-[10px] text-white/30">{extraCosts.length} despesas</span>
+                <span className="text-[10px] text-white/30">{extraCosts.length} registros</span>
               </div>
               <div className="flex flex-col justify-center border-l border-white/5 pl-3 bg-[#39FF14]/5 rounded-xl p-1">
-                <p className="text-[9px] font-black text-[#39FF14] uppercase tracking-wider">CUSTO TOTAL DIA</p>
+                <p className="text-[9px] font-black text-[#39FF14] uppercase tracking-wider">CUSTO TOTAL DA INSTALAÇÃO</p>
                 <p className="text-xl font-black text-white mt-1">R$ {totalExecutionCost.toFixed(2)}</p>
                 <span className="text-[9px] text-[#39FF14]/80 font-mono">Orçado: R$ {(selectedTicket?.budgetAmount || 0).toFixed(2)}</span>
               </div>
@@ -2029,7 +1999,7 @@ export default function ExecutionCenter() {
                     <div className="p-2 bg-amber-500/20 rounded-xl">
                       <DollarSign className="w-5 h-5 text-amber-400" />
                     </div>
-                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Gastos Extras</h3>
+                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Custos de Instalação</h3>
                   </div>
                   <button 
                     onClick={handleAddExtraCost}
@@ -2045,7 +2015,7 @@ export default function ExecutionCenter() {
                       <div className="flex gap-2">
                         <input 
                           type="text"
-                          placeholder="Descrição do gasto (ex: Almoço, Combustível)"
+                          placeholder="Descrição do custo (ex: Almoço, Combustível, Suporte)"
                           className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500 transition-all font-bold"
                           value={cost.description}
                           onChange={(e) => handleUpdateExtraCost(idx, 'description', e.target.value)}
@@ -2086,12 +2056,12 @@ export default function ExecutionCenter() {
                       onClick={handleSaveExtraCostsToStore}
                       className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] border border-amber-500/20 transition-all active:scale-95 shadow-lg shadow-amber-500/5 mb-4"
                     >
-                      Salvar Gastos no Financeiro
+                      Salvar Custos de Instalação
                     </button>
                   )}
 
                   {extraCosts.length === 0 && (
-                    <p className="text-center py-4 text-xs text-white/40 italic bg-white/5 rounded-2xl border border-white/10">Nenhum gasto extra registrado</p>
+                    <p className="text-center py-4 text-xs text-white/40 italic bg-white/5 rounded-2xl border border-white/10">Nenhum custo de instalação registrado</p>
                   )}
                 </div>
               </div>

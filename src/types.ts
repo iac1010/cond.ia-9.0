@@ -595,7 +595,7 @@ export interface AppState {
   deleteChecklistItem: (id: string) => void;
   
   addTicket: (ticket: Omit<Ticket, 'id'>) => void;
-  updateTicket: (id: string, ticket: Omit<Ticket, 'id'>) => void;
+  updateTicket: (id: string, ticket: Omit<Ticket, 'id'>, silent?: boolean) => void;
   deleteTicket: (id: string) => void;
 
   addQuote: (quote: Omit<Quote, 'id'>) => void;
@@ -714,6 +714,7 @@ export interface AppState {
 
   addCostCategory: (category: string) => void;
   deleteCostCategory: (category: string) => void;
+  clearFinancialData: () => Promise<void>;
 
   addSale: (sale: Omit<Sale, 'id'>) => Promise<void>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;

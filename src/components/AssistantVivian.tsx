@@ -356,9 +356,9 @@ export function AssistantVivian() {
     switch (topic.toLowerCase()) {
       case 'financeiro':
       case 'finanças':
-        const totalReceitas = store.receipts.reduce((acc, r) => acc + r.value, 0);
-        const totalDespesas = store.costs.reduce((acc, c) => acc + c.value, 0);
-        return `Resumo Financeiro: Receitas totais de R$ ${totalReceitas.toFixed(2)} e despesas totais de R$ ${totalDespesas.toFixed(2)}. Saldo: R$ ${(totalReceitas - totalDespesas).toFixed(2)}.`;
+        const totalReceitas = store.receipts.reduce((acc, r) => acc + (Number(r.value) || 0), 0);
+        const totalDespesas = store.costs.reduce((acc, c) => acc + (Number(c.value) || 0), 0);
+        return `Resumo Financeiro: Receitas totais de R$ ${(totalReceitas).toFixed(2)} e despesas totais de R$ ${(totalDespesas).toFixed(2)}. Saldo: R$ ${(totalReceitas - totalDespesas).toFixed(2)}.`;
       case 'chamados':
       case 'tickets':
         const abertos = store.tickets.filter(t => t.status === 'PENDENTE_APROVACAO').length;

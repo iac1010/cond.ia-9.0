@@ -53,7 +53,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Request logging middleware
   app.use((req, res, next) => {
@@ -264,6 +265,114 @@ ${JSON.stringify(activeTickets.map((t: any) => ({
       console.error('Erro na API do Gemini para priorização:', error);
       res.status(500).json({ 
         error: 'Falha ao processar sugestões de prioridade com o Gemini',
+        details: error.message || String(error)
+      });
+    }
+  });
+
+  // Gemini Financial Report Audit & Extraction API
+  apiRouter.post('/gemini/analyze-financial-report', async (req, res) => {
+    try {
+      const { fileContent, mimeType, fileName } = req.body;
+      if (!fileContent) {
+        return res.status(400).json({ error: 'Conteúdo do arquivo é obrigatório.' });
+      }
+
+      const ai = getGeminiClient();
+
+      const systemInstruction = `Você é um CFO e Especialista em Auditoria Financeira Condominial de elite.
+Sua tarefa é realizar uma análise profunda ("Ultra Análise") de relatórios financeiros, notas fiscais, faturas ou extratos enviados.
+
+Você deve extrair informações estruturadas de receitas (receipts) e custos (costs), além de gerar um relatório analítico detalhado e informativo.
+
+Para a extração estruturada:
+- Identifique todas as transações possíveis do documento.
+- Receitas devem ser mapeadas para: type: "income", description (descrição clara), value (valor numérico positivo), date (formato YYYY-MM-DD), clientId (se identificável ou deixar em branco).
+- Custos/Despesas devem ser mapeadas para: type: "cost", description (descrição clara), value (valor numérico positivo), date (formato YYYY-MM-DD), category (uma destas categorias padrão se encaixar: 'Material', 'Serviço', 'Água', 'Luz', 'Imposto', 'Outros', ou criar categoria coerente).
+
+Para a análise qualitativa (Ultra Análise):
+- Forneça um resumo executivo claro.
+- Calcule métricas chave (Total de Receitas, Total de Custos, Saldo, Saúde Financeira de 0 a 100).
+- Identifique anomalias, furos, picos de gastos ou transações suspeitas.
+- Forneça recomendações práticas para economia (ações corretivas) baseadas no relatório.
+
+Toda a resposta deve vir estritamente em formato JSON seguindo o esquema especificado. O texto deve ser inteiramente em Português do Brasil (pt-BR).`;
+
+      const userPrompt = `Analise o documento financeiro anexo chamado "${fileName || 'relatorio.pdf'}". Extraia as transações e forneça a ultra análise financeira detalhada.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: [
+          {
+            inlineData: {
+              data: fileContent,
+              mimeType: mimeType || "application/pdf"
+            }
+          },
+          { text: userPrompt }
+        ],
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING, description: "Resumo executivo detalhado em português." },
+              healthScore: { type: Type.INTEGER, description: "Nota de saúde financeira do documento (0 a 100)." },
+              financialMetrics: {
+                type: Type.OBJECT,
+                properties: {
+                  extractedIncomes: { type: Type.NUMBER, description: "Soma das receitas extraídas." },
+                  extractedExpenses: { type: Type.NUMBER, description: "Soma das despesas extraídas." },
+                  netBalance: { type: Type.NUMBER, description: "Saldo líquido (receitas - despesas) extraído." }
+                },
+                required: ["extractedIncomes", "extractedExpenses", "netBalance"]
+              },
+              anomalies: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Lista de pontos de atenção, possíveis erros, duplicidades ou valores atípicos."
+              },
+              savingsRecommendations: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING, description: "Título curto da recomendação" },
+                    description: { type: Type.STRING, description: "Explicação e economia estimada" }
+                  },
+                  required: ["title", "description"]
+                },
+                description: "Sugestões de redução de custo ou otimização de fluxo de caixa."
+              },
+              transactions: {
+                type: Type.ARRAY,
+                description: "Todas as transações detectadas no documento.",
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    type: { type: Type.STRING, description: "Tipo da transação: 'income' ou 'cost'." },
+                    description: { type: Type.STRING, description: "Nome ou histórico da transação limpo." },
+                    value: { type: Type.NUMBER, description: "Valor numérico absoluto positivo." },
+                    date: { type: Type.STRING, description: "Data no formato YYYY-MM-DD. Se ano for omitido no doc, use 2026." },
+                    category: { type: Type.STRING, description: "Apenas para custos: categoria sugerida (ex: 'Material', 'Serviço', 'Água', 'Luz', 'Imposto', 'Outros')." }
+                  },
+                  required: ["type", "description", "value", "date"]
+                }
+              }
+            },
+            required: ["summary", "healthScore", "financialMetrics", "anomalies", "savingsRecommendations", "transactions"]
+          }
+        }
+      });
+
+      const resultText = response.text || "{}";
+      const data = JSON.parse(resultText);
+      res.json(data);
+    } catch (error: any) {
+      console.error('Erro na API de Análise Financeira do Gemini:', error);
+      res.status(500).json({ 
+        error: 'Falha ao processar análise do relatório com o Gemini',
         details: error.message || String(error)
       });
     }

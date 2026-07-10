@@ -378,8 +378,8 @@ export const VivianBrain: React.FC = () => {
           let summary = '';
           
           if (topic === 'financeiro') {
-            const totalReceitas = store.receipts.reduce((acc, r) => acc + r.value, 0);
-            const totalDespesas = store.costs.reduce((acc, c) => acc + c.value, 0);
+            const totalReceitas = store.receipts.reduce((acc, r) => acc + (Number(r.value) || 0), 0);
+            const totalDespesas = store.costs.reduce((acc, c) => acc + (Number(c.value) || 0), 0);
             const saldo = totalReceitas - totalDespesas;
             summary = `Resumo Financeiro:
 💰 Receitas: R$ ${totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

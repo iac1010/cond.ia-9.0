@@ -220,7 +220,7 @@ export default function Operational() {
             }`}>
               {member.status === 'ACTIVE' ? 'Ativo' : member.status === 'ON_LEAVE' ? 'Licença' : 'Inativo'}
             </div>
-            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex flex-wrap gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity justify-end">
               <button onClick={() => openModal(member)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                 <Edit2 className="w-4 h-4" />
               </button>
@@ -279,7 +279,7 @@ export default function Operational() {
             }`}>
               {key.status === 'AVAILABLE' ? 'Disponível' : key.status === 'BORROWED' ? 'Emprestada' : 'Perdida'}
             </div>
-            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex flex-wrap gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity justify-end">
               <button onClick={() => openModal(key)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                 <Edit2 className="w-4 h-4" />
               </button>
@@ -664,7 +664,7 @@ export default function Operational() {
                         {safeFormatDate(m.nextDate, { day: '2-digit', month: 'long' })}
                       </p>
                     </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex flex-wrap gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity justify-end">
                       {m.status !== 'DONE' && (
                         <button 
                           type="button"

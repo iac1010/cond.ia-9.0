@@ -6,7 +6,7 @@ import {
   FileSpreadsheet, BarChart3, Lightbulb, ArrowUpRight, ArrowDownRight, 
   X, Calendar, Tag, User, ShieldCheck, FolderOpen, 
   FileText, UserCheck, Target, Brain, Loader2, Sparkles, ShieldAlert, AlertCircle,
-  Pencil, Eye, EyeOff, Check
+  Pencil, Eye, EyeOff, Check, Download, Upload
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Modal } from '../components/Modal';
@@ -14,6 +14,8 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import { SavingsMirror } from '../components/SavingsMirror';
 import { safeFormatDate } from '../utils/dateUtils';
 import Papa from 'papaparse';
+import ReactMarkdown from 'react-markdown';
+import html2pdf from 'html2pdf.js';
 import { GlassCard, CircularProgress } from '../components/GlassUI';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
@@ -33,12 +35,14 @@ export default function Financial() {
     receipts, costs, addCost, deleteCost, addReceipt, deleteReceipt, 
     updateCost, updateReceipt, clients, payments, savingsGoals, 
     addSavingsGoal, updateSavingsGoal, deleteSavingsGoal,
-    showBalance, setShowBalance, costCategories, addCostCategory
+    showBalance, setShowBalance, costCategories, addCostCategory, addClient,
+    clearFinancialData
   } = useStore();
   
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
   
   const [isAddingCost, setIsAddingCost] = useState(false);
   const [isAddingIncome, setIsAddingIncome] = useState(false);
@@ -95,6 +99,17 @@ export default function Financial() {
   const [goalIcon, setGoalIcon] = useState('Target');
   const [goalStatus, setGoalStatus] = useState<'IN_PROGRESS' | 'COMPLETED' | 'PAUSED'>('IN_PROGRESS');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // States for Financial Report Ultra Analysis and Importing
+  const [isUltraImportOpen, setIsUltraImportOpen] = useState(false);
+  const [ultraImportTab, setUltraImportTab] = useState<'CSV' | 'ULTRA_AI'>('CSV');
+  const [selectedReportFile, setSelectedReportFile] = useState<File | null>(null);
+  const [fileBase64, setFileBase64] = useState<string>('');
+  const [fileMimeType, setFileMimeType] = useState<string>('');
+  const [isAnalyzingReport, setIsAnalyzingReport] = useState(false);
+  const [extractedReportResult, setExtractedReportResult] = useState<any | null>(null);
+  const [selectedTransactions, setSelectedTransactions] = useState<Record<number, boolean>>({});
+  const [editableTransactions, setEditableTransactions] = useState<any[]>([]);
 
   const handleEdit = (type: 'cost' | 'income' | 'goal', id: string) => {
     if (type === 'goal') {
@@ -224,8 +239,8 @@ export default function Financial() {
     }
   };
 
-  const totalIncome = receipts.reduce((sum, r) => sum + r.value, 0);
-  const totalCosts = costs.reduce((sum, c) => sum + c.value, 0);
+  const totalIncome = receipts.reduce((sum, r) => sum + (Number(r.value) || 0), 0);
+  const totalCosts = costs.reduce((sum, c) => sum + (Number(c.value) || 0), 0);
   const estimatedTax = totalIncome * 0.08;
   const balance = totalIncome - totalCosts;
   const profitMargin = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
@@ -237,7 +252,8 @@ export default function Financial() {
   const categoryData = useMemo(() => {
     const categories: { [key: string]: number } = {};
     costs.forEach(c => {
-      categories[c.category] = (categories[c.category] || 0) + c.value;
+      const val = Number(c.value) || 0;
+      categories[c.category] = (categories[c.category] || 0) + val;
     });
     return Object.entries(categories).map(([name, value]) => ({ name, value }));
   }, [costs]);
@@ -337,6 +353,173 @@ export default function Financial() {
         toast.success(`Importação concluída: ${importedIncomes} receitas e ${importedCosts} custos importados.`);
       }
     });
+  };
+
+  const handleReportFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedReportFile(file);
+    setFileMimeType(file.type || 'application/pdf');
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Extract base64 part
+      const base64 = result.split(',')[1];
+      setFileBase64(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAnalyzeReport = async () => {
+    if (!fileBase64) {
+      toast.error('Por favor, selecione um arquivo primeiro.');
+      return;
+    }
+
+    setIsAnalyzingReport(true);
+    try {
+      const response = await fetch('/api/gemini/analyze-financial-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileContent: fileBase64,
+          mimeType: fileMimeType,
+          fileName: selectedReportFile?.name || 'relatorio.pdf'
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro na requisição');
+      }
+
+      const data = await response.json();
+      setExtractedReportResult(data);
+      
+      // Initialize editable copy and select all by default
+      if (data.transactions && Array.isArray(data.transactions)) {
+        setEditableTransactions(data.transactions);
+        const initialSelected: Record<number, boolean> = {};
+        data.transactions.forEach((_: any, idx: number) => {
+          initialSelected[idx] = true;
+        });
+        setSelectedTransactions(initialSelected);
+      }
+
+      toast.success('Análise do relatório concluída com sucesso!');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Falha ao analisar o relatório: ${error.message || String(error)}`);
+    } finally {
+      setIsAnalyzingReport(false);
+    }
+  };
+
+  const handleUpdateTransactionField = (idx: number, field: string, val: any) => {
+    setEditableTransactions(prev => prev.map((t, i) => i === idx ? { ...t, [field]: val } : t));
+  };
+
+  const handleRemoveTransactionFromList = (idx: number) => {
+    setEditableTransactions(prev => prev.filter((_, i) => i !== idx));
+    setSelectedTransactions(prev => {
+      const updated = { ...prev };
+      delete updated[idx];
+      return updated;
+    });
+  };
+
+  const handleImportSelectedTransactions = async () => {
+    const transactionsToImport = editableTransactions.filter((_, idx) => selectedTransactions[idx]);
+    if (transactionsToImport.length === 0) {
+      toast.error('Nenhuma transação selecionada para importação.');
+      return;
+    }
+
+    const toastId = toast.loading('Processando importação...');
+    let importedCosts = 0;
+    let importedIncomes = 0;
+
+    try {
+      // Get or create generic client
+      let genericClientId = clients.length > 0 ? clients[0].id : '';
+      if (!genericClientId) {
+        await addClient({
+          name: 'Caixa Geral / Consumidor',
+          phone: '(00) 00000-0000',
+          address: 'Condomínio'
+        });
+        const updatedClients = useStore.getState().clients;
+        genericClientId = updatedClients.length > 0 ? updatedClients[updatedClients.length - 1].id : '';
+      }
+
+      for (const t of transactionsToImport) {
+        if (t.type === 'income') {
+          await addReceipt({
+            clientId: genericClientId,
+            description: t.description,
+            value: Number(t.value) || 0,
+            date: t.date || new Date().toISOString().split('T')[0]
+          });
+          importedIncomes++;
+        } else {
+          await addCost({
+            description: t.description,
+            value: Number(t.value) || 0,
+            date: t.date || new Date().toISOString().split('T')[0],
+            category: t.category || 'Outros'
+          });
+          importedCosts++;
+        }
+      }
+
+      toast.success(`Importação concluída: ${importedIncomes} receitas e ${importedCosts} despesas adicionadas no caixa.`, { id: toastId });
+      setIsUltraImportOpen(false);
+      
+      // Clear states
+      setSelectedReportFile(null);
+      setFileBase64('');
+      setFileMimeType('');
+      setExtractedReportResult(null);
+      setEditableTransactions([]);
+      setSelectedTransactions({});
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Falha ao realizar importação: ${err.message || String(err)}`, { id: toastId });
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('report-pdf-content');
+    if (!element) {
+      toast.error('Elemento do relatório não encontrado.');
+      return;
+    }
+
+    const toastId = toast.loading('Gerando PDF do Relatório...');
+
+    try {
+      const opt = {
+        margin: 10,
+        filename: `Ultra_Analise_Financeira_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#09090b' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { 
+          mode: ['avoid-all', 'css', 'legacy'],
+          avoid: ['.break-inside-avoid', 'tr', '.no-break', 'img', 'table', 'h1', 'h2', 'h3', 'h4', 'h5', 'li', 'p']
+        }
+      };
+
+      await html2pdf().set(opt as any).from(element).save();
+      toast.success('PDF baixado com sucesso!', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao gerar PDF.', { id: toastId });
+    }
   };
 
   const handleGenerateAIReport = async () => {
@@ -810,15 +993,28 @@ export default function Financial() {
               className="hidden" 
               id="csv-upload-financial"
             />
-            <motion.label 
+            <motion.button 
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
-              htmlFor="csv-upload-financial"
-              className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white px-6 py-3 flex items-center gap-2 border border-white/10 backdrop-blur-2xl transition-all cursor-pointer rounded-2xl font-bold uppercase tracking-widest text-[10px]"
+              onClick={() => {
+                setUltraImportTab('ULTRA_AI');
+                setIsUltraImportOpen(true);
+              }}
+              className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 px-6 py-3 flex items-center gap-2 border border-purple-500/30 transition-all rounded-2xl backdrop-blur-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(168,85,247,0.1)]"
             >
-              <FileSpreadsheet className="w-4 h-4" /> 
-              <span>Importar</span>
-            </motion.label>
+              <Upload className="w-4 h-4 text-purple-400" /> 
+              <span>Importar Extrato / Planilha</span>
+            </motion.button>
+
+            <motion.button 
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setIsConfirmClearOpen(true)}
+              className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-6 py-3 flex items-center gap-2 border border-rose-500/30 transition-all rounded-2xl backdrop-blur-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(244,63,94,0.1)]"
+            >
+              <Trash2 className="w-4 h-4 text-rose-400" /> 
+              <span>Zerar Dados</span>
+            </motion.button>
 
             <motion.button 
               whileHover={{ scale: 1.02, y: -2 }}
@@ -2302,6 +2498,470 @@ export default function Financial() {
         confirmText="Sim, Excluir"
         cancelText="Cancelar"
       />
+
+      <ConfirmationModal
+        isOpen={isConfirmClearOpen}
+        onClose={() => setIsConfirmClearOpen(false)}
+        onConfirm={async () => {
+          setIsConfirmClearOpen(false);
+          const toastId = toast.loading('Limpando dados financeiros...');
+          try {
+            await clearFinancialData();
+            toast.dismiss(toastId);
+          } catch (err: any) {
+            toast.error(`Falha ao zerar dados: ${err.message || String(err)}`, { id: toastId });
+          }
+        }}
+        title="Zerar Dados Financeiros"
+        message="ATENÇÃO CRÍTICA: Você tem certeza absoluta de que deseja zerar permanentemente todas as movimentações financeiras, receitas e despesas lançadas? Esta ação é irreversível e apagará todos os registros de caixa."
+        confirmText="Sim, Zerar Tudo"
+        cancelText="Cancelar"
+      />
+
+      <Modal
+        isOpen={isUltraImportOpen}
+        onClose={() => {
+          setIsUltraImportOpen(false);
+          setExtractedReportResult(null);
+          setSelectedReportFile(null);
+          setFileBase64('');
+          setEditableTransactions([]);
+          setSelectedTransactions({});
+        }}
+        title="Importador & Auditor de Extrato Bancário (Ultra Análise)"
+        maxWidth="7xl"
+        glass={true}
+      >
+        <div className="space-y-6 text-white max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
+          {/* Tabs */}
+          <div className="flex border-b border-white/10 pb-4 justify-between items-center">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setUltraImportTab('ULTRA_AI')}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  ultraImportTab === 'ULTRA_AI' 
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]' 
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Análise com IA & Importador de Extratos
+              </button>
+              <button
+                onClick={() => setUltraImportTab('CSV')}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  ultraImportTab === 'CSV' 
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)]' 
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Importação Direta de Planilhas (CSV)
+              </button>
+            </div>
+          </div>
+
+          {ultraImportTab === 'CSV' ? (
+            <div className="space-y-6 py-4 text-center">
+              <div className="max-w-md mx-auto p-8 border-2 border-dashed border-white/10 rounded-3xl bg-white/5 flex flex-col items-center justify-center space-y-4">
+                <div className="p-4 bg-cyan-500/10 rounded-2xl text-cyan-400">
+                  <FileSpreadsheet size={40} />
+                </div>
+                <h3 className="text-lg font-bold">Importação Padrão via CSV</h3>
+                <p className="text-xs text-white/60 leading-relaxed">
+                  Faça o upload de planilhas de movimentações financeiras em formato CSV para importação direta de receitas e despesas.
+                </p>
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden" 
+                  id="csv-file-selector"
+                />
+                <label 
+                  htmlFor="csv-file-selector"
+                  className="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 text-black font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer text-xs"
+                >
+                  Selecionar Planilha CSV
+                </label>
+              </div>
+            </div>
+          ) : (
+            // Tab ULTRA_AI
+            <div className="space-y-6">
+              {!extractedReportResult ? (
+                // 1. Upload state
+                <div className="max-w-2xl mx-auto p-8 border-2 border-dashed border-purple-500/20 rounded-3xl bg-purple-500/5 flex flex-col items-center justify-center space-y-6 shadow-[0_0_40px_rgba(168,85,247,0.05)]">
+                  <div className="p-4 bg-purple-500/10 rounded-2xl text-purple-400 animate-pulse">
+                    <Upload size={40} />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-black tracking-tight text-white uppercase">Upload do Extrato / Relatório Bancário</h3>
+                    <p className="text-xs text-white/60 leading-relaxed max-w-md">
+                      Arraste ou selecione qualquer extrato em formato <span className="text-purple-400 font-bold">PDF, Excel (.xlsx/.xls), CSV ou TXT</span> emitido pelo seu banco (Itaú, Nubank, Bradesco, etc) com as movimentações reais.
+                    </p>
+                  </div>
+
+                  <div className="w-full max-w-md flex flex-col items-center gap-4">
+                    <input 
+                      type="file" 
+                      accept=".pdf,.csv,.xlsx,.xls,.txt" 
+                      onChange={handleReportFileChange}
+                      className="hidden" 
+                      id="report-file-selector"
+                    />
+                    <label 
+                      htmlFor="report-file-selector"
+                      className="w-full text-center px-6 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl border border-white/15 transition-all cursor-pointer text-sm flex items-center justify-center gap-3"
+                    >
+                      <FolderOpen className="w-5 h-5 text-purple-400" />
+                      {selectedReportFile ? selectedReportFile.name : 'Escolher Arquivo do Extrato'}
+                    </label>
+
+                    {selectedReportFile && (
+                      <div className="text-xs text-white/40 flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span>{(selectedReportFile.size / 1024).toFixed(1)} KB • {selectedReportFile.type || 'Tipo desconhecido'}</span>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleAnalyzeReport}
+                      disabled={isAnalyzingReport || !selectedReportFile}
+                      className="w-full mt-2 py-4 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-500/20 disabled:text-white/40 text-black font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] disabled:shadow-none flex items-center justify-center gap-2"
+                    >
+                      {isAnalyzingReport ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Auditando & Extraindo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Brain className="w-5 h-5" />
+                          <span>Iniciar Ultra Análise Inteligente</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // 2. Results State
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  
+                  {/* Left Column: Sample report / PDF preview */}
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center bg-[#09090b]/40 p-4 rounded-2xl border border-white/5">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
+                        <Brain className="w-4 h-4" /> Laudo de Auditoria Gerado
+                      </h4>
+                      <button
+                        onClick={handleDownloadPDF}
+                        className="px-4 py-2 bg-[#39FF14]/15 hover:bg-[#39FF14]/35 text-[#39FF14] rounded-xl text-[10px] font-black uppercase tracking-wider border border-[#39FF14]/30 flex items-center gap-2 transition-all"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Baixar PDF Completo
+                      </button>
+                    </div>
+
+                    {/* Report PDF layout wrapper */}
+                    <div 
+                      id="report-pdf-content" 
+                      className="bg-[#09090b] p-8 rounded-3xl border border-white/10 space-y-6 text-white text-sm leading-relaxed"
+                      style={{ contentVisibility: 'auto' }}
+                    >
+                      <div className="border-b border-white/10 pb-6 text-center space-y-2">
+                        <div className="inline-block px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-purple-400">
+                          Auditoria de Extrato Real de Caixa
+                        </div>
+                        <h2 className="text-xl font-black uppercase tracking-tight text-white">Laudo de Ultra Análise Financeira</h2>
+                        <p className="text-xs text-white/40 font-mono">
+                          Documento: {selectedReportFile?.name} • Gerado em: {new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR')}
+                        </p>
+                      </div>
+
+                      {/* Financial Metrics Cards */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-col justify-between">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-white/40">Soma Receitas</span>
+                          <span className="text-base font-black text-[#39FF14] mt-1">
+                            R$ {extractedReportResult.financialMetrics?.extractedIncomes?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
+                          </span>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-col justify-between">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-white/40">Soma Despesas</span>
+                          <span className="text-base font-black text-rose-400 mt-1">
+                            R$ {extractedReportResult.financialMetrics?.extractedExpenses?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
+                          </span>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-col justify-between">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-white/40">Saldo Líquido</span>
+                          <span className={`text-base font-black mt-1 ${extractedReportResult.financialMetrics?.netBalance >= 0 ? 'text-[#39FF14]' : 'text-rose-400'}`}>
+                            R$ {extractedReportResult.financialMetrics?.netBalance?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Score card */}
+                      <div className="bg-purple-500/5 p-6 rounded-3xl border border-purple-500/10 flex items-center gap-6">
+                        <div className="relative flex items-center justify-center w-20 h-20 bg-purple-500/10 rounded-full border border-purple-500/20">
+                          <div className="text-center">
+                            <span className="text-3xl font-black text-purple-400">{extractedReportResult.healthScore}</span>
+                            <span className="text-[8px] block font-bold text-purple-400/60 uppercase">Score</span>
+                          </div>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-purple-400">Nota de Saúde Financeira</h4>
+                          <p className="text-xs text-white/60 leading-relaxed">
+                            {extractedReportResult.healthScore >= 75 
+                              ? 'Excelente saúde financeira. O volume de caixa gerado cobre amplamente os custos operacionais com anomalias mínimas identificadas.' 
+                              : extractedReportResult.healthScore >= 50 
+                              ? 'Saúde financeira em estado de atenção. Foram encontrados custos extras ou taxas elevadas que podem ser otimizados.' 
+                              : 'Alerta financeiro grave. Alto volume de despesas em relação a receitas ou presença expressiva de furos financeiros.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Executive Summary */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-purple-400 flex items-center gap-2 border-b border-white/5 pb-2">
+                          <FileText className="w-4 h-4" /> Resumo Executivo e Diagnóstico de Contas
+                        </h3>
+                        <div className="text-xs text-white/70 leading-relaxed markdown-body">
+                          <ReactMarkdown>{extractedReportResult.summary}</ReactMarkdown>
+                        </div>
+                      </div>
+
+                      {/* Anomalies and alerts */}
+                      {extractedReportResult.anomalies && extractedReportResult.anomalies.length > 0 && (
+                        <div className="space-y-3 bg-rose-500/5 p-5 rounded-3xl border border-rose-500/10">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-rose-400 flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4" /> Pontos de Atenção & Suspeitas Detectadas
+                          </h3>
+                          <ul className="list-disc pl-5 space-y-1.5">
+                            {extractedReportResult.anomalies.map((item: string, idx: number) => (
+                              <li key={idx} className="text-xs text-rose-300 leading-relaxed">{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Savings Recommendations */}
+                      {extractedReportResult.savingsRecommendations && extractedReportResult.savingsRecommendations.length > 0 && (
+                        <div className="space-y-3 bg-[#39FF14]/5 p-5 rounded-3xl border border-[#39FF14]/10">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-[#39FF14] flex items-center gap-2">
+                            <Lightbulb className="w-4 h-4" /> Plano de Ação & Redução de Gastos
+                          </h3>
+                          <div className="space-y-3">
+                            {extractedReportResult.savingsRecommendations.map((rec: any, idx: number) => (
+                              <div key={idx} className="space-y-1">
+                                <h4 className="text-xs font-black text-white flex items-center gap-2">
+                                  <span className="w-1.5 h-1.5 bg-[#39FF14] rounded-full"></span>
+                                  {rec.title}
+                                </h4>
+                                <p className="text-[11px] text-white/60 leading-relaxed pl-3.5">{rec.description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Short list of transaction audit for PDF */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-white/40 border-b border-white/5 pb-2">
+                          Demonstrativo Completo de Transações Extraídas
+                        </h3>
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-white/10 text-[9px] uppercase tracking-wider text-white/40">
+                              <th className="py-2">Data</th>
+                              <th className="py-2">Descrição</th>
+                              <th className="py-2">Categoria</th>
+                              <th className="py-2 text-right">Valor (R$)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5 text-[10px]">
+                            {editableTransactions.map((t: any, idx: number) => (
+                              <tr key={idx} className={t.type === 'income' ? 'text-[#39FF14]/90' : 'text-rose-300/90'}>
+                                <td className="py-2 font-mono">{t.date}</td>
+                                <td className="py-2 font-bold max-w-[150px] truncate">{t.description}</td>
+                                <td className="py-2">{t.type === 'income' ? 'Receita' : t.category || 'Outros'}</td>
+                                <td className="py-2 text-right font-black">
+                                  {t.type === 'income' ? '+' : '-'} R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Dynamic Import Checklist & Inputs */}
+                  <div className="space-y-6">
+                    <div className="bg-[#09090b]/40 p-4 rounded-2xl border border-white/5 flex justify-between items-center">
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-purple-400">Selecione as Transações para o Caixa</h4>
+                        <p className="text-[10px] text-white/60">Edite descrições, categorias e valores antes de importar para o livro de caixa oficial.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end mb-2">
+                      <button
+                        onClick={() => {
+                          const allSelected = editableTransactions.every((_, idx) => selectedTransactions[idx]);
+                          const nextSelected: Record<number, boolean> = {};
+                          editableTransactions.forEach((_, idx) => {
+                            nextSelected[idx] = !allSelected;
+                          });
+                          setSelectedTransactions(nextSelected);
+                        }}
+                        className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                      >
+                        {editableTransactions.every((_, idx) => selectedTransactions[idx]) ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                      {editableTransactions.map((t: any, idx: number) => {
+                        const isSelected = !!selectedTransactions[idx];
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`p-4 rounded-2xl border transition-all ${
+                              isSelected 
+                                ? t.type === 'income' 
+                                  ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
+                                  : 'bg-rose-500/10 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.05)]'
+                                : 'bg-white/5 border-white/10 hover:border-white/20'
+                            }`}
+                          >
+                            <div className="flex gap-3 items-start">
+                              <button
+                                onClick={() => setSelectedTransactions(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                                className={`mt-1 p-1 rounded-md border transition-all ${
+                                  isSelected 
+                                    ? t.type === 'income' 
+                                      ? 'bg-[#39FF14] text-black border-[#39FF14]' 
+                                      : 'bg-rose-500 text-black border-rose-400'
+                                    : 'border-white/30 text-transparent hover:border-white/60'
+                                }`}
+                              >
+                                <Check size={12} strokeWidth={4} />
+                              </button>
+
+                              <div className="flex-1 space-y-3">
+                                {/* First line: description and remove btn */}
+                                <div className="flex justify-between items-start gap-2">
+                                  <input 
+                                    type="text"
+                                    value={t.description}
+                                    onChange={(e) => handleUpdateTransactionField(idx, 'description', e.target.value)}
+                                    className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border border-white/10 focus:border-purple-500/40 rounded-lg px-3 py-1.5 text-xs font-bold text-white outline-none transition-all"
+                                    placeholder="Descrição da movimentação"
+                                  />
+                                  <button
+                                    onClick={() => handleRemoveTransactionFromList(idx)}
+                                    className="p-1.5 text-white/40 hover:text-rose-400 transition-colors"
+                                    title="Remover da lista"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+
+                                {/* Second line: metadata edits */}
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <label className="text-[8px] font-black uppercase text-white/40 block mb-1">Tipo</label>
+                                    <select
+                                      value={t.type}
+                                      onChange={(e) => handleUpdateTransactionField(idx, 'type', e.target.value)}
+                                      className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] font-black text-white outline-none cursor-pointer"
+                                    >
+                                      <option value="income" className="bg-[#1a1a1a] text-[#39FF14]">Receita</option>
+                                      <option value="cost" className="bg-[#1a1a1a] text-rose-400">Despesa</option>
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[8px] font-black uppercase text-white/40 block mb-1">Categoria / Destino</label>
+                                    {t.type === 'income' ? (
+                                      <div className="w-full bg-white/5 border border-white/5 text-white/40 text-[10px] font-bold rounded-lg px-2 py-1.5">
+                                        Receita Geral
+                                      </div>
+                                    ) : (
+                                      <select
+                                        value={t.category || 'Outros'}
+                                        onChange={(e) => handleUpdateTransactionField(idx, 'category', e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] font-black text-white outline-none cursor-pointer"
+                                      >
+                                        {costCategories.map(cat => (
+                                          <option key={cat} value={cat} className="bg-[#1a1a1a]">{cat}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[8px] font-black uppercase text-white/40 block mb-1">Valor (R$)</label>
+                                    <input 
+                                      type="number"
+                                      step="0.01"
+                                      value={t.value}
+                                      onChange={(e) => handleUpdateTransactionField(idx, 'value', parseFloat(e.target.value) || 0)}
+                                      className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] font-black text-white outline-none focus:border-purple-500/40"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="col-span-2">
+                                    <label className="text-[8px] font-black uppercase text-white/40 block mb-1">Data</label>
+                                    <input 
+                                      type="date"
+                                      value={t.date}
+                                      onChange={(e) => handleUpdateTransactionField(idx, 'date', e.target.value)}
+                                      className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] font-bold text-white outline-none"
+                                    />
+                                  </div>
+                                  <div className="flex items-end justify-end">
+                                    <span className={`text-[10px] font-black tracking-tight ${t.type === 'income' ? 'text-[#39FF14]' : 'text-rose-400'}`}>
+                                      {t.type === 'income' ? '+' : '-'} R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="pt-4 border-t border-white/10 flex gap-4">
+                      <button
+                        onClick={() => {
+                          setExtractedReportResult(null);
+                          setSelectedReportFile(null);
+                          setFileBase64('');
+                          setEditableTransactions([]);
+                          setSelectedTransactions({});
+                        }}
+                        className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase tracking-wider text-white transition-all active:scale-95"
+                      >
+                        Analisar Novo Extrato
+                      </button>
+                      <button
+                        onClick={handleImportSelectedTransactions}
+                        className="flex-1 py-3 bg-purple-500 hover:bg-purple-600 text-black rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.2)] flex items-center justify-center gap-2"
+                      >
+                        <Check className="w-4 h-4" /> Importar Selecionadas ({editableTransactions.filter((_, idx) => selectedTransactions[idx]).length})
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

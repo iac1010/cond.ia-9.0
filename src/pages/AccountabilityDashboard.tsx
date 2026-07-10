@@ -161,7 +161,7 @@ export default function AccountabilityDashboard() {
   }, [operationalCosts]);
 
   const totalOperationalCost = useMemo(() => {
-    const storeTotal = costs.reduce((acc, curr) => acc + curr.value, 0);
+    const storeTotal = costs.reduce((acc, curr) => acc + (Number(curr.value) || 0), 0);
     return totalStaffCost + totalManagerCost + storeTotal;
   }, [totalStaffCost, totalManagerCost, costs]);
 
@@ -174,7 +174,8 @@ export default function AccountabilityDashboard() {
     // Group store costs by category
     const storeCategories: { [key: string]: number } = {};
     costs.forEach(c => {
-      storeCategories[c.category] = (storeCategories[c.category] || 0) + c.value;
+      const val = Number(c.value) || 0;
+      storeCategories[c.category] = (storeCategories[c.category] || 0) + val;
     });
 
     const additional = Object.entries(storeCategories).map(([name, value]) => ({ name, value }));
@@ -882,12 +883,12 @@ export default function AccountabilityDashboard() {
                           </td>
                           <td className="py-4 text-white/60 text-sm">{safeFormatDate(cost.date)}</td>
                           <td className="py-4 text-right font-black text-white">
-                            R$ {cost.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {(Number(cost.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                           <td className="py-4 text-right">
                             <div className="flex justify-end gap-1">
                               <button 
-                                onClick={() => navigate(`/financeiro?action=edit&id=${cost.id}`)}
+                                onClick={() => navigate(`/financial?action=edit&id=${cost.id}`)}
                                 className="p-2 text-white/20 hover:text-cyan-400 hover:bg-white/10 rounded-lg transition-all"
                                 title="Editar"
                               >

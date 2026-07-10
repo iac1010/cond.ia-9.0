@@ -138,7 +138,7 @@ export default function Reservations() {
                 <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(res.status)}`}>
                   {res.status === 'PENDING' ? 'Pendente' : res.status === 'CONFIRMED' ? 'Confirmado' : 'Cancelado'}
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex flex-wrap gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity justify-end">
                   <button onClick={() => openModal(res)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                     <Clock className="w-4 h-4" />
                   </button>
