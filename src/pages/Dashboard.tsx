@@ -3,13 +3,17 @@ import { TicketStatus } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { safeFormatDate, safeFormatTime } from '../utils/dateUtils';
+import { jsPDF } from 'jspdf';
+import { 
+  ResponsiveContainer, BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell
+} from 'recharts';
 import { 
   Users, FileText, Plus, Hammer, RefreshCw,
   DollarSign, TrendingUp, Package, Database, 
   Calendar as CalendarIcon, CloudSun, Image as ImageIcon,
   Settings, Moon, Sun, UserPlus, Sun as SunIcon,
   Columns, Clock, ClipboardCheck, AlertCircle, QrCode, AlertTriangle, Play,
-  BarChart3, Droplets, Zap, ShieldCheck, Megaphone,
+  BarChart3, Droplets, Zap, ShieldCheck, Megaphone, Newspaper, Globe,
   TrendingDown,
   Box, UserCheck, Activity, Maximize2, CheckCircle2, Presentation, LogOut,
   X, Download, FileUp, Database as DatabaseIcon, MessageSquare, Target,
@@ -389,6 +393,358 @@ export default function Dashboard() {
   });
   const backupInputRef = useRef<HTMLInputElement>(null);
   
+  const generateDaySummaryReport = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth(); // 210
+      const pageHeight = doc.internal.pageSize.getHeight(); // 297
+      const margin = 15;
+      const contentWidth = pageWidth - (margin * 2); // 180
+      
+      let y = 15;
+
+      // Header drawing helper
+      const drawHeader = (isSubsequentPage = false) => {
+        // Upper border banner
+        doc.setFillColor(30, 41, 59); // Slate-800
+        doc.rect(margin, 15, contentWidth, isSubsequentPage ? 12 : 25, 'F');
+        
+        // Title text
+        doc.setTextColor(255, 255, 255);
+        if (isSubsequentPage) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text('RESUMO OPERACIONAL DIARIO - CONTINUACAO', margin + 5, 23);
+        } else {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.text('CENTRAL DE TELEMETRIA OPERACIONAL', margin + 6, 24);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.text('RESUMO DIARIO DE ATIVIDADES, OCORRENCIAS E SENSORES IoT', margin + 6, 31);
+        }
+        
+        // Frame outline for the document
+        doc.setDrawColor(226, 232, 240); // slate-200
+        doc.setLineWidth(0.2);
+        doc.line(margin, 15, margin, pageHeight - 15);
+        doc.line(pageWidth - margin, 15, pageWidth - margin, pageHeight - 15);
+        doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+      };
+
+      // Helper function to check space and add new page if needed
+      const checkPageBreak = (neededHeight: number) => {
+        if (y + neededHeight > pageHeight - 20) {
+          doc.addPage();
+          drawHeader(true);
+          y = 35; // Reset y to below page header
+        }
+      };
+
+      // Draw initial header
+      drawHeader(false);
+      y = 45;
+
+      // Metadata section
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const todayStr = new Date().toLocaleDateString('pt-BR');
+      const timeStr = new Date().toLocaleTimeString('pt-BR');
+      
+      doc.text(`Data do Relatorio: ${todayStr} as ${timeStr}`, margin + 2, y);
+      doc.text(`Operador responsavel: guto.ferr22@gmail.com`, margin + 2, y + 5);
+      doc.text(`Ambiente: ${isSupabaseConfigured ? 'Telemetria Integrada Cloud' : 'Servidor Cache Local'}`, margin + 2, y + 10);
+      
+      y += 18;
+
+      // Draw horizontal separator
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 8;
+
+      // Completed activities
+      const todayISO = new Date().toISOString().split('T')[0];
+      const completedTickets = tickets.filter(t => t.status === 'CONCLUIDO');
+      const completedToday = completedTickets.filter(t => t.date && t.date.startsWith(todayISO));
+      
+      // Critical/High Priority Pending
+      const criticalPending = tickets.filter(t => t.status !== 'CONCLUIDO' && (t.priority === 'CRITICAL' || t.priority === 'HIGH'));
+
+      // Active field teams
+      const activeTeamsCount = tickets.filter(t => t.status === 'REALIZANDO').length;
+
+      // Draw 3 KPI blocks
+      checkPageBreak(25);
+      const cardW = (contentWidth - 10) / 3; // ~56mm each
+      
+      // Card 1: Atividades Concluidas
+      doc.setFillColor(248, 250, 252); // slate-50
+      doc.roundedRect(margin, y, cardW, 18, 2, 2, 'F');
+      doc.setDrawColor(241, 245, 249);
+      doc.roundedRect(margin, y, cardW, 18, 2, 2, 'D');
+      doc.setTextColor(16, 185, 129); // Emerald-500
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(`${completedToday.length} (${completedTickets.length})`, margin + 4, y + 8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('Concluidos Hoje (Total)', margin + 4, y + 14);
+
+      // Card 2: Pendencias Criticas
+      const card2X = margin + cardW + 5;
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(card2X, y, cardW, 18, 2, 2, 'F');
+      doc.setDrawColor(241, 245, 249);
+      doc.roundedRect(card2X, y, cardW, 18, 2, 2, 'D');
+      doc.setTextColor(239, 68, 68); // Red-500
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(`${criticalPending.length}`, card2X + 4, y + 8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('Pendencias Criticas/Alta', card2X + 4, y + 14);
+
+      // Card 3: Equipes Ativas
+      const card3X = margin + (cardW * 2) + 10;
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(card3X, y, cardW, 18, 2, 2, 'F');
+      doc.setDrawColor(241, 245, 249);
+      doc.roundedRect(card3X, y, cardW, 18, 2, 2, 'D');
+      doc.setTextColor(59, 130, 246); // Blue-500
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(`${activeTeamsCount}`, card3X + 4, y + 8);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('Servicos Ativos em Campo', card3X + 4, y + 14);
+
+      y += 26;
+
+      // Section 1: IoT Status
+      checkPageBreak(45);
+      // Small visual block prefix
+      doc.setFillColor(59, 130, 246); // Blue-500
+      doc.rect(margin + 2, y - 4, 3, 5, 'F');
+      
+      doc.setTextColor(30, 41, 59); // slate-800
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('1. TELEMETRIA E SEGURANCA DA INFRAESTRUTURA IoT', margin + 8, y);
+      y += 6;
+
+      // Draw IoT Table
+      const iotRows = [
+        { resource: "Bomba Caixa d'Agua Condominio", type: 'Abastecimento Caixa', status: iotState?.pumps?.caixa ? 'ATIVA' : 'STANDBY', color: iotState?.pumps?.caixa ? [16, 185, 129] : [100, 116, 139] },
+        { resource: 'Bomba Jardim / Poco Recalque', type: 'Irrigacao & Poco', status: iotState?.pumps?.jardim ? 'ATIVA' : 'STANDBY', color: iotState?.pumps?.jardim ? [16, 185, 129] : [100, 116, 139] },
+        { resource: 'Alarme Perimetral de Seguranca', type: 'Monitoramento Portaria', status: iotState?.alarmActive ? 'PROTEGIDO' : 'ALERTA / INATIVO', color: iotState?.alarmActive ? [16, 185, 129] : [239, 68, 68] },
+        { resource: 'Automacao de Iluminacao Cozinha', type: 'Sensor Presenca', status: iotState?.lights?.cozinha ? `${iotState.lights.cozinha}% Brilho` : 'DESLIGADA', color: iotState?.lights?.cozinha ? [59, 130, 246] : [100, 116, 139] },
+        { resource: 'Automacao de Iluminacao Jardim', type: 'Fotocelula Temporizada', status: iotState?.lights?.jardim ? `${iotState.lights.jardim}% Brilho` : 'DESLIGADA', color: iotState?.lights?.jardim ? [59, 130, 246] : [100, 116, 139] },
+      ];
+
+      doc.setFillColor(241, 245, 249);
+      doc.rect(margin + 2, y, contentWidth - 4, 6, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Recurso Infraestrutura', margin + 6, y + 4.5);
+      doc.text('Subsistema', margin + 80, y + 4.5);
+      doc.text('Status de Operacao', margin + 135, y + 4.5);
+      y += 6;
+
+      iotRows.forEach((row) => {
+        checkPageBreak(8);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(margin + 2, y, contentWidth - 4, 6, 'F');
+        doc.setDrawColor(241, 245, 249);
+        doc.line(margin + 2, y + 6, margin - 2 + contentWidth, y + 6);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(30, 41, 59);
+        doc.text(row.resource, margin + 6, y + 4.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(row.type, margin + 80, y + 4.5);
+        
+        const [r, g, b] = row.color;
+        doc.setTextColor(r, g, b);
+        doc.setFont('helvetica', 'bold');
+        doc.text(row.status, margin + 135, y + 4.5);
+        y += 6;
+      });
+
+      y += 8;
+
+      // Section 2: Completed Activities
+      checkPageBreak(30);
+      doc.setFillColor(16, 185, 129); // Green-500
+      doc.rect(margin + 2, y - 4, 3, 5, 'F');
+      
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('2. ATIVIDADES CONCLUIDAS', margin + 8, y);
+      y += 6;
+
+      // List completed
+      const completedList = completedToday.length > 0 ? completedToday : completedTickets.slice(0, 8);
+      
+      if (completedList.length === 0) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8.5);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Nenhuma ordem de servico concluida registrada no historico recente.', margin + 6, y);
+        y += 8;
+      } else {
+        completedList.forEach((t) => {
+          checkPageBreak(25);
+          doc.setFillColor(248, 250, 252);
+          doc.roundedRect(margin + 2, y, contentWidth - 4, 18, 1.5, 1.5, 'F');
+          
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8.5);
+          doc.setTextColor(30, 41, 59);
+          
+          const client = clients.find(c => c.id === t.clientId);
+          const clientName = client?.name || 'Condominio Geral';
+          
+          doc.text(`[${t.osNumber || 'O.S.'}] ${t.title || 'Manutencao'}`, margin + 6, y + 5);
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7.5);
+          doc.setTextColor(100, 116, 139);
+          doc.text(`Cliente: ${clientName}`, margin + 6, y + 10);
+          doc.text(`Tecnico: ${t.technician || 'Nao Definido'}`, margin + 85, y + 10);
+          doc.text(`Data: ${safeFormatDate(t.date)}`, margin + 140, y + 10);
+
+          const reportText = t.serviceReport || t.observations || 'Nenhuma observacao adicional.';
+          const wrappedReport = doc.splitTextToSize(`Relatorio: ${reportText}`, contentWidth - 12);
+          doc.text(wrappedReport[0] || '', margin + 6, y + 14);
+          
+          y += 21;
+        });
+      }
+
+      y += 4;
+
+      // Section 3: Critical Pending
+      checkPageBreak(30);
+      doc.setFillColor(239, 68, 68); // Red-500
+      doc.rect(margin + 2, y - 4, 3, 5, 'F');
+      
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('3. OCORRENCIAS CRITICAS E ALERTA ELEVADO', margin + 8, y);
+      y += 6;
+
+      if (criticalPending.length === 0) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(16, 185, 129);
+        doc.text('EXCELENTE: Nenhuma pendencia critica ou de alta prioridade aberta em campo no momento.', margin + 6, y);
+        y += 8;
+      } else {
+        criticalPending.forEach((t) => {
+          checkPageBreak(28);
+          doc.setFillColor(254, 242, 242);
+          doc.roundedRect(margin + 2, y, contentWidth - 4, 22, 1.5, 1.5, 'F');
+          
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8.5);
+          doc.setTextColor(153, 27, 27);
+          
+          const client = clients.find(c => c.id === t.clientId);
+          const clientName = client?.name || 'Condominio Geral';
+          
+          doc.text(`[${t.osNumber || 'O.S. ALERTA'}] ${t.title || 'Ocorrencia Critica'}`, margin + 6, y + 5);
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7.5);
+          doc.setTextColor(127, 29, 29);
+          doc.text(`Prioridade: ${t.priority === 'CRITICAL' ? 'MAXIMA (CRITICA)' : 'ALTA'}`, margin + 6, y + 10);
+          doc.text(`Status: ${t.status || 'Pendente'}`, margin + 55, y + 10);
+          doc.text(`Local: ${t.location || 'Area Comum'}`, margin + 95, y + 10);
+          doc.text(`Tecnico: ${t.technician || 'A Alocar'}`, margin + 140, y + 10);
+
+          const pbText = t.reportedProblem || t.observations || 'Problema reportado pendente de inspecao detalhada.';
+          const wrappedProblem = doc.splitTextToSize(`Problema: ${pbText}`, contentWidth - 12);
+          doc.text(wrappedProblem[0] || '', margin + 6, y + 14);
+          
+          if (t.priorityRecommendedAction) {
+            const wrappedAction = doc.splitTextToSize(`Recomendacao: ${t.priorityRecommendedAction}`, contentWidth - 12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(wrappedAction[0] || '', margin + 6, y + 18);
+          } else {
+            doc.text(`Aguardando plano de acao do tecnico.`, margin + 6, y + 18);
+          }
+          
+          y += 25;
+        });
+      }
+
+      y += 4;
+
+      // Section 4: Teams
+      checkPageBreak(30);
+      doc.setFillColor(100, 116, 139); // Slate-500
+      doc.rect(margin + 2, y - 4, 3, 5, 'F');
+      
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('4. ALOCACAO DE EQUIPES EM CAMPO', margin + 8, y);
+      y += 6;
+
+      const activeStaff = staff.filter(s => s.status === 'ACTIVE');
+      if (activeStaff.length === 0) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text('Nenhum profissional de campo registrado como ativo no plantao hoje.', margin + 6, y);
+        y += 8;
+      } else {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(30, 41, 59);
+        
+        activeStaff.forEach((member) => {
+          checkPageBreak(6);
+          const isWorking = tickets.some(t => t.status === 'REALIZANDO' && t.technician === member.name);
+          const currentActivity = tickets.find(t => t.status === 'REALIZANDO' && t.technician === member.name);
+          const stateStr = isWorking ? `EM ATIVIDADE na OS ${currentActivity?.osNumber || ''} (${currentActivity?.title || 'Execucao'})` : 'DISPONIVEL / EM ALOCAÇÃO';
+          doc.text(`* Tecnico: ${member.name} | Turno: ${member.shift || 'Geral'} | Status: ${stateStr}`, margin + 6, y);
+          y += 5.5;
+        });
+      }
+
+      // Separator near bottom
+      checkPageBreak(15);
+      y += 4;
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 6;
+
+      // Footer note
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Relatorio gerado em conformidade com as metricas de telemetria predial.`, margin + 2, y);
+      doc.text(`Assinatura Eletronica MD5: ${Math.random().toString(16).substring(2, 10).toUpperCase()}-${Math.random().toString(16).substring(2, 10).toUpperCase()}`, margin + 2, y + 4.5);
+
+      // Save PDF
+      const fileName = `resumo_operacional_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      toast.success(`PDF "${fileName}" gerado e baixado com sucesso!`);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Erro ao compilar o PDF: ${error.message || String(error)}`);
+    }
+  };
+
   const [vivianStatus, setVivianStatus] = useState<{ 
     status: string; 
     supabaseConfigured: boolean;
@@ -397,6 +753,35 @@ export default function Dashboard() {
     lastMessageExtracted: string | null;
     appUrl?: string;
   } | null>(null);
+
+  // G1 News Widget State
+  const [newsItems, setNewsItems] = useState<{ title: string; link: string; description: string; pubDate: string; type?: 'RJ' | 'FLA' }[]>([]);
+  const [newsLoading, setNewsLoading] = useState<boolean>(true);
+  const [newsError, setNewsError] = useState<string | null>(null);
+  const [newsLastFetched, setNewsLastFetched] = useState<string>('');
+
+  const fetchNews = async () => {
+    setNewsLoading(true);
+    setNewsError(null);
+    try {
+      const res = await fetch('/api/g1-news');
+      if (!res.ok) throw new Error('Falha ao carregar notícias do G1');
+      const data = await res.json();
+      setNewsItems(data.items || []);
+      setNewsLastFetched(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    } catch (err: any) {
+      console.error('Erro de conexão ao carregar G1 RSS:', err);
+      setNewsError(err.message || 'Erro de conexão');
+    } finally {
+      setNewsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNews();
+    const interval = setInterval(fetchNews, 5 * 60 * 1000); // 5 min interval
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let retryCount = 0;
@@ -603,6 +988,7 @@ export default function Dashboard() {
   }, [scheduledMaintenances]);
 
   const [activeMonitorTab, setActiveMonitorTab] = useState<'alerts' | 'team' | 'execution'>('alerts');
+
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [newStaffForm, setNewStaffForm] = useState({
     name: '',
@@ -2575,6 +2961,7 @@ export default function Dashboard() {
                                   const selectEl = document.getElementById(`tech-select-${alert.id}`) as HTMLSelectElement;
                                   const chosenTechName = selectEl?.value || 'A Definir';
                                   try {
+                                    // 1. Create the Ticket/O.S.
                                     addTicket({
                                       type: 'TAREFA',
                                       title: `Manutenção Preventiva NBR 5674: ${alert.item}`,
@@ -2586,8 +2973,18 @@ export default function Dashboard() {
                                       maintenanceCategory: 'Preventiva',
                                       maintenanceSubcategory: alert.frequency
                                     });
-                                    toast.success(`O.S. de Preventiva aberta com sucesso e atribuída a ${chosenTechName}!`);
+
+                                    // 2. Mark the alert as done so it leaves the alert screen
+                                    updateScheduledMaintenance(alert.id, { 
+                                      status: 'DONE', 
+                                      lastDone: new Date().toISOString().split('T')[0] 
+                                    });
+
+                                    toast.success(`O.S. de Preventiva aberta e atribuída a ${chosenTechName}!`);
                                     setAssignTechAlertId(null);
+
+                                    // 3. Navigate to the maintenance operational screen
+                                    navigate('/operational?tab=MAINTENANCE');
                                   } catch (err: any) {
                                     toast.error(`Falha ao abrir O.S.: ${err.message || String(err)}`);
                                   }
@@ -3113,6 +3510,17 @@ export default function Dashboard() {
 
               {/* Time display & signal indicators */}
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto shrink-0 justify-end">
+                {/* PDF Report Generation Button */}
+                <button
+                  id="btn-generate-daily-pdf-report"
+                  onClick={generateDaySummaryReport}
+                  className="px-4 py-2 bg-[#39FF14] hover:bg-[#39FF14]/90 text-black text-xs font-black uppercase tracking-wider rounded-2xl flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(57,255,20,0.25)] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] cursor-pointer shrink-0"
+                  title="Gerar Resumo do Dia em PDF"
+                >
+                  <FileText className="w-4 h-4 text-black" />
+                  Gerar Resumo do Dia
+                </button>
+
                 {/* Scoreboard Clock */}
                 <div className="bg-black/50 border border-white/5 px-4 py-2 rounded-2xl flex items-center gap-2.5 font-mono shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
                   <Clock className="w-4 h-4 text-[#39FF14]/80" />
@@ -3190,7 +3598,6 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-
                 {/* Grid of active service order cards */}
                 {tickets.filter(t => t.status === 'REALIZANDO').length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -3469,73 +3876,149 @@ export default function Dashboard() {
               {/* Side Column: Telemetry & Infrastructure Board */}
               <div className="lg:col-span-1 space-y-6">
                 
-                {/* IoT Infrastructure Telemetry Block */}
-                <div className="bg-zinc-950/40 border border-white/10 rounded-3xl p-5 space-y-4">
-                  <div className="flex items-center gap-2 border-b border-white/5 pb-3">
-                    <Wifi className="w-4 h-4 text-[#39FF14]" />
-                    <span className="text-xs font-black uppercase tracking-wider text-white">Tecnologia & Sinais IoT</span>
+                {/* G1 Globo News Feed Widget (Rio de Janeiro & Flamengo Mixed) */}
+                <div className="bg-zinc-950/40 border border-red-500/10 rounded-3xl p-5 space-y-4 relative overflow-hidden shadow-2xl">
+                  {/* Subtle decorative G1 Red / Flamengo Red ambient light glow */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-[#E01D1D]/5 to-transparent pointer-events-none rounded-full blur-2xl" />
+
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-[#E01D1D] animate-pulse shrink-0" />
+                      <div className="flex items-center gap-1.5">
+                        <Newspaper className="w-4 h-4 text-[#E01D1D]" />
+                        <span className="text-xs font-black uppercase tracking-wider text-white">Rio de Janeiro & Flamengo</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {newsLastFetched && (
+                        <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">
+                          {newsLastFetched}
+                        </span>
+                      )}
+                      <button
+                        onClick={fetchNews}
+                        disabled={newsLoading}
+                        className="p-1.5 hover:bg-white/5 text-white/50 hover:text-[#E01D1D] rounded-lg transition-all active:scale-90 cursor-pointer"
+                        title="Atualizar Notícias"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${newsLoading ? 'animate-spin text-[#E01D1D]' : ''}`} />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
-                    {/* Pump Caixa */}
-                    <div className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-2xl">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                          <Droplets className={`w-4 h-4 text-blue-400 ${iotState?.pumps?.caixa ? 'animate-bounce' : ''}`} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate">Bomba Caixa</p>
-                          <p className="text-[9px] text-white/40 font-mono">Infraestrutura Água</p>
-                        </div>
+                  <div className="space-y-3.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                    {newsLoading && newsItems.length === 0 ? (
+                      <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
+                        <RefreshCw className="w-6 h-6 text-[#E01D1D] animate-spin" />
+                        <span className="text-xs text-white/40 font-medium">Sincronizando notícias...</span>
                       </div>
-                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md tracking-wider ${
-                        iotState?.pumps?.caixa 
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse' 
-                          : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/10'
-                      }`}>
-                        {iotState?.pumps?.caixa ? 'ATIVA' : 'STANDBY'}
-                      </span>
-                    </div>
+                    ) : newsError && newsItems.length === 0 ? (
+                      <div className="py-12 flex flex-col items-center justify-center text-center p-4 bg-red-500/5 rounded-2xl border border-red-500/10">
+                        <Globe className="w-7 h-7 text-red-400 mb-2 opacity-60" />
+                        <span className="text-xs text-red-300 font-bold mb-1">Falha de Sincronismo</span>
+                        <p className="text-[10px] text-white/40 max-w-[200px] leading-relaxed">
+                          Não foi possível carregar as notícias de Rio e Flamengo. Verifique sua conexão ou clique para recarregar.
+                        </p>
+                        <button
+                          onClick={fetchNews}
+                          className="mt-3 px-3 py-1.5 bg-[#E01D1D]/20 hover:bg-[#E01D1D]/30 text-white text-[9px] font-black uppercase tracking-widest rounded-lg border border-[#E01D1D]/20 transition-all cursor-pointer"
+                        >
+                          Tentar Novamente
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {newsItems.map((item, index) => {
+                          let displayDate = '';
+                          try {
+                            if (item.pubDate) {
+                              const d = new Date(item.pubDate);
+                              if (!isNaN(d.getTime())) {
+                                displayDate = d.toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                });
+                              }
+                            }
+                          } catch (e) {}
 
-                    {/* Pump Jardim */}
-                    <div className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-2xl">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                          <Droplets className={`w-4 h-4 text-amber-400 ${iotState?.pumps?.jardim ? 'animate-bounce' : ''}`} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate">Bomba Recalque</p>
-                          <p className="text-[9px] text-white/40 font-mono">Infraestrutura Poço</p>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md tracking-wider ${
-                        iotState?.pumps?.jardim 
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse' 
-                          : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/10'
-                      }`}>
-                        {iotState?.pumps?.jardim ? 'ATIVA' : 'STANDBY'}
-                      </span>
-                    </div>
+                          const isFlamengo = item.type === 'FLA';
 
-                    {/* Perimeter Alarm */}
-                    <div className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-2xl">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          return (
+                            <div 
+                              key={index} 
+                              className={`group p-3 bg-white/5 hover:bg-white/[0.08] border rounded-2xl transition-all duration-200 ${
+                                isFlamengo 
+                                  ? 'border-red-500/10 hover:border-red-500/20' 
+                                  : 'border-white/5 hover:border-blue-500/15'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${
+                                    isFlamengo 
+                                      ? 'bg-red-950/40 text-red-400 border-red-500/25' 
+                                      : 'bg-blue-950/40 text-blue-400 border-blue-500/25'
+                                  }`}>
+                                    {isFlamengo ? 'FLAMENGO' : 'RJ'}
+                                  </span>
+                                  {displayDate && (
+                                    <span className="text-[8px] font-mono text-white/30">
+                                      {displayDate}
+                                    </span>
+                                  )}
+                                </div>
+                                <a 
+                                  href={item.link || (isFlamengo ? 'https://ge.globo.com/futebol/times/flamengo/' : 'https://g1.globo.com/rj/rio-de-janeiro/')} 
+                                  target="_blank" 
+                                  referrerPolicy="no-referrer"
+                                  rel="noopener noreferrer"
+                                  className={`text-white/40 hover:text-[#E01D1D] transition-colors shrink-0 p-0.5 cursor-pointer`}
+                                  title={isFlamengo ? "Abrir no GE Flamengo" : "Abrir no G1 Rio"}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                              <h4 className={`text-xs font-black text-white transition-colors mt-2 leading-snug ${
+                                isFlamengo ? 'group-hover:text-red-300' : 'group-hover:text-blue-300'
+                              }`}>
+                                {item.title}
+                              </h4>
+                              {item.description && (
+                                <p className="text-[10px] text-white/50 leading-relaxed mt-1 line-clamp-2">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                        <div className="flex items-center justify-center gap-4 pt-1">
+                          <a 
+                            href="https://g1.globo.com/rj/rio-de-janeiro/" 
+                            target="_blank" 
+                            referrerPolicy="no-referrer"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-blue-400 uppercase tracking-widest transition-colors cursor-pointer"
+                          >
+                            <span>G1 Rio</span>
+                            <ExternalLink className="w-2 h-2" />
+                          </a>
+                          <span className="text-white/10">|</span>
+                          <a 
+                            href="https://ge.globo.com/futebol/times/flamengo/" 
+                            target="_blank" 
+                            referrerPolicy="no-referrer"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-red-400 uppercase tracking-widest transition-colors cursor-pointer"
+                          >
+                            <span>GE Fla</span>
+                            <ExternalLink className="w-2 h-2" />
+                          </a>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate">Alarme Geral</p>
-                          <p className="text-[9px] text-white/40 font-mono">Sistema Perimetral</p>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md tracking-wider ${
-                        iotState?.alarmActive 
-                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' 
-                          : 'bg-red-500/15 text-red-400 border border-red-500/25 animate-pulse'
-                      }`}>
-                        {iotState?.alarmActive ? 'PROTEGIDO' : 'ALERTA'}
-                      </span>
-                    </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

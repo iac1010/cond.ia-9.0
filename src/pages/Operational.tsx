@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useStore } from '../store';
 import { toast } from 'react-hot-toast';
 import { 
@@ -17,6 +18,7 @@ import { ptBR } from 'date-fns/locale';
 type Tab = 'STAFF' | 'KEYS' | 'MAINTENANCE' | 'IOT';
 
 export default function Operational() {
+  const location = useLocation();
   // Maintenance Form State
   const [maintenanceForm, setMaintenanceForm] = useState({
     clientId: '',
@@ -36,7 +38,22 @@ export default function Operational() {
     generateSchedulesForClient, criticalEvents, clients
   } = useStore();
   
-  const [activeTab, setActiveTab] = useState<Tab>('STAFF');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'MAINTENANCE' || tabParam === 'STAFF' || tabParam === 'KEYS' || tabParam === 'IOT') {
+      return tabParam as Tab;
+    }
+    return 'STAFF';
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'MAINTENANCE' || tabParam === 'STAFF' || tabParam === 'KEYS' || tabParam === 'IOT') {
+      setActiveTab(tabParam as Tab);
+    }
+  }, [location.search]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
