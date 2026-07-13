@@ -20,10 +20,11 @@ import {
   Wifi, WifiOff, GripVertical, ClipboardList, LayoutList,
   Eye, EyeOff,
   Bell, Truck, Brain, ExternalLink, Sparkles, LineChart,
-  Phone, Mail, Send, Trash2, Edit, MapPin
+  Phone, Mail, Send, Trash2, Edit, MapPin, Plane, Bus, Search, ArrowRight
 } from 'lucide-react';
 import { KanbanMirror } from '../components/KanbanMirror';
 import { TicketsMirror } from '../components/TicketsMirror';
+import { TravelTicketMonitor } from '../components/TravelTicketMonitor';
 import { SavingsMirror } from '../components/SavingsMirror';
 import { CostsMirror } from '../components/CostsMirror';
 import { ReceiptsMirror } from '../components/ReceiptsMirror';
@@ -760,6 +761,14 @@ export default function Dashboard() {
   const [newsError, setNewsError] = useState<string | null>(null);
   const [newsLastFetched, setNewsLastFetched] = useState<string>('');
 
+  // Market Quotes State
+  const [marketQuotes, setMarketQuotes] = useState<{
+    usd: { rate: number; pct: number; updatedAt: string };
+    ibov: { points: number; pct: number; updatedAt: string };
+  } | null>(null);
+  const [marketLoading, setMarketLoading] = useState<boolean>(true);
+  const [marketError, setMarketError] = useState<string | null>(null);
+
   const fetchNews = async () => {
     setNewsLoading(true);
     setNewsError(null);
@@ -777,10 +786,31 @@ export default function Dashboard() {
     }
   };
 
+  const fetchMarketQuotes = async () => {
+    setMarketLoading(true);
+    setMarketError(null);
+    try {
+      const res = await fetch('/api/market-quotes');
+      if (!res.ok) throw new Error('Falha ao carregar cotações do mercado');
+      const data = await res.json();
+      setMarketQuotes(data);
+    } catch (err: any) {
+      console.error('Erro de conexão ao carregar cotações:', err);
+      setMarketError(err.message || 'Erro de conexão');
+    } finally {
+      setMarketLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchNews();
-    const interval = setInterval(fetchNews, 5 * 60 * 1000); // 5 min interval
-    return () => clearInterval(interval);
+    fetchMarketQuotes();
+    const newsInterval = setInterval(fetchNews, 5 * 60 * 1000); // 5 min interval
+    const marketInterval = setInterval(fetchMarketQuotes, 3 * 60 * 1000); // 3 min interval
+    return () => {
+      clearInterval(newsInterval);
+      clearInterval(marketInterval);
+    };
   }, []);
 
   useEffect(() => {
@@ -3876,7 +3906,109 @@ export default function Dashboard() {
               {/* Side Column: Telemetry & Infrastructure Board */}
               <div className="lg:col-span-1 space-y-6">
                 
-                {/* G1 Globo News Feed Widget (Rio de Janeiro & Flamengo Mixed) */}
+                {/* Real-time Market Quotes Widget */}
+                <div className="bg-zinc-950/40 border border-[#39FF14]/10 rounded-3xl p-5 space-y-4 relative overflow-hidden shadow-2xl">
+                  {/* Subtle decorative Green ambient light glow */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-[#39FF14]/5 to-transparent pointer-events-none rounded-full blur-2xl" />
+
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse shrink-0" />
+                      <div className="flex items-center gap-1.5">
+                        <LineChart className="w-4 h-4 text-[#39FF14]" />
+                        <span className="text-xs font-black uppercase tracking-wider text-white">Mercado Financeiro</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {marketQuotes && (
+                        <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">
+                          {new Date(marketQuotes.usd.updatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                      <button
+                        onClick={fetchMarketQuotes}
+                        disabled={marketLoading}
+                        className="p-1.5 hover:bg-white/5 text-white/50 hover:text-[#39FF14] rounded-lg transition-all active:scale-90 cursor-pointer"
+                        title="Atualizar Cotações"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${marketLoading ? 'animate-spin text-[#39FF14]' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {marketLoading && !marketQuotes ? (
+                    <div className="grid grid-cols-2 gap-3.5 animate-pulse">
+                      {[1, 2].map((idx) => (
+                        <div key={`market-skeleton-${idx}`} className="p-3 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2.5">
+                          <div className="w-16 h-3 bg-white/10 rounded-md" />
+                          <div className="w-24 h-6 bg-white/10 rounded-md" />
+                          <div className="w-12 h-4 bg-white/5 rounded-md" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : marketError && !marketQuotes ? (
+                    <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-2xl text-center">
+                      <span className="text-[10px] text-red-400 font-bold block mb-1">Falha nas Cotações</span>
+                      <button 
+                        onClick={fetchMarketQuotes}
+                        className="text-[9px] font-black uppercase text-white/60 hover:text-white underline cursor-pointer"
+                      >
+                        Tentar Novamente
+                      </button>
+                    </div>
+                  ) : (
+                    marketQuotes && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35 }}
+                        className="grid grid-cols-2 gap-3.5"
+                      >
+                        {/* Dollar Card */}
+                        <div className="p-3.5 bg-white/5 border border-white/5 hover:border-white/10 rounded-2xl transition-all duration-200">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-white/40 block mb-1">Dólar Comercial</span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-sm font-mono font-black text-white">
+                              R$ {marketQuotes.usd.rate.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-2">
+                            <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                              marketQuotes.usd.pct >= 0 
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' 
+                                : 'bg-red-500/10 text-red-400 border border-red-500/10'
+                            }`}>
+                              {marketQuotes.usd.pct >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                              {marketQuotes.usd.pct >= 0 ? '+' : ''}{marketQuotes.usd.pct.toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Ibovespa Card */}
+                        <div className="p-3.5 bg-white/5 border border-white/5 hover:border-white/10 rounded-2xl transition-all duration-200">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-white/40 block mb-1">Ibovespa (IBOV)</span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-sm font-mono font-black text-white">
+                              {Math.round(marketQuotes.ibov.points).toLocaleString('pt-BR')} <span className="text-[10px] text-white/40 font-bold">pts</span>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-2">
+                            <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                              marketQuotes.ibov.pct >= 0 
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' 
+                                : 'bg-red-500/10 text-red-400 border border-red-500/10'
+                            }`}>
+                              {marketQuotes.ibov.pct >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                              {marketQuotes.ibov.pct >= 0 ? '+' : ''}{marketQuotes.ibov.pct.toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  )}
+                </div>
+
+                {/* G1 Globo News Feed Widget (Globo.com Main News & Flamengo Mixed) */}
                 <div className="bg-zinc-950/40 border border-red-500/10 rounded-3xl p-5 space-y-4 relative overflow-hidden shadow-2xl">
                   {/* Subtle decorative G1 Red / Flamengo Red ambient light glow */}
                   <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-[#E01D1D]/5 to-transparent pointer-events-none rounded-full blur-2xl" />
@@ -3886,7 +4018,7 @@ export default function Dashboard() {
                       <div className="w-2 h-2 rounded-full bg-[#E01D1D] animate-pulse shrink-0" />
                       <div className="flex items-center gap-1.5">
                         <Newspaper className="w-4 h-4 text-[#E01D1D]" />
-                        <span className="text-xs font-black uppercase tracking-wider text-white">Rio de Janeiro & Flamengo</span>
+                        <span className="text-xs font-black uppercase tracking-wider text-white">Globo.com & Flamengo</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -3907,17 +4039,37 @@ export default function Dashboard() {
                   </div>
 
                   <div className="space-y-3.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-                    {newsLoading && newsItems.length === 0 ? (
-                      <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
-                        <RefreshCw className="w-6 h-6 text-[#E01D1D] animate-spin" />
-                        <span className="text-xs text-white/40 font-medium">Sincronizando notícias...</span>
+                    {newsLoading ? (
+                      <div className="space-y-3.5">
+                        {[1, 2, 3].map((idx) => (
+                          <div 
+                            key={`news-skeleton-${idx}`}
+                            className="p-3 bg-white/[0.02] border border-white/5 rounded-2xl space-y-3.5 animate-pulse"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-14 h-4 bg-white/10 rounded-md border border-white/5" />
+                                <div className="w-20 h-2.5 bg-white/5 rounded-md" />
+                              </div>
+                              <div className="w-3.5 h-3.5 bg-white/5 rounded-md" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <div className="w-11/12 h-3 bg-white/10 rounded-md" />
+                              <div className="w-3/4 h-3 bg-white/10 rounded-md" />
+                            </div>
+                            <div className="space-y-1.5 pt-0.5">
+                              <div className="w-full h-2 bg-white/5 rounded-md" />
+                              <div className="w-5/6 h-2 bg-white/5 rounded-md" />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ) : newsError && newsItems.length === 0 ? (
                       <div className="py-12 flex flex-col items-center justify-center text-center p-4 bg-red-500/5 rounded-2xl border border-red-500/10">
                         <Globe className="w-7 h-7 text-red-400 mb-2 opacity-60" />
                         <span className="text-xs text-red-300 font-bold mb-1">Falha de Sincronismo</span>
                         <p className="text-[10px] text-white/40 max-w-[200px] leading-relaxed">
-                          Não foi possível carregar as notícias de Rio e Flamengo. Verifique sua conexão ou clique para recarregar.
+                          Não foi possível carregar as notícias principais e do Flamengo. Verifique sua conexão ou clique para recarregar.
                         </p>
                         <button
                           onClick={fetchNews}
@@ -3934,7 +4086,7 @@ export default function Dashboard() {
                             if (item.pubDate) {
                               const d = new Date(item.pubDate);
                               if (!isNaN(d.getTime())) {
-                                displayDate = d.toLocaleDateString('pt-BR', {
+                                  displayDate = d.toLocaleDateString('pt-BR', {
                                   day: '2-digit',
                                   month: '2-digit',
                                   hour: '2-digit',
@@ -3947,8 +4099,11 @@ export default function Dashboard() {
                           const isFlamengo = item.type === 'FLA';
 
                           return (
-                            <div 
+                            <motion.div 
                               key={index} 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.4) }}
                               className={`group p-3 bg-white/5 hover:bg-white/[0.08] border rounded-2xl transition-all duration-200 ${
                                 isFlamengo 
                                   ? 'border-red-500/10 hover:border-red-500/20' 
@@ -3962,7 +4117,7 @@ export default function Dashboard() {
                                       ? 'bg-red-950/40 text-red-400 border-red-500/25' 
                                       : 'bg-blue-950/40 text-blue-400 border-blue-500/25'
                                   }`}>
-                                    {isFlamengo ? 'FLAMENGO' : 'RJ'}
+                                    {isFlamengo ? 'FLAMENGO' : 'G1'}
                                   </span>
                                   {displayDate && (
                                     <span className="text-[8px] font-mono text-white/30">
@@ -3971,12 +4126,12 @@ export default function Dashboard() {
                                   )}
                                 </div>
                                 <a 
-                                  href={item.link || (isFlamengo ? 'https://ge.globo.com/futebol/times/flamengo/' : 'https://g1.globo.com/rj/rio-de-janeiro/')} 
+                                  href={item.link || (isFlamengo ? 'https://ge.globo.com/futebol/times/flamengo/' : 'https://g1.globo.com/')} 
                                   target="_blank" 
                                   referrerPolicy="no-referrer"
                                   rel="noopener noreferrer"
                                   className={`text-white/40 hover:text-[#E01D1D] transition-colors shrink-0 p-0.5 cursor-pointer`}
-                                  title={isFlamengo ? "Abrir no GE Flamengo" : "Abrir no G1 Rio"}
+                                  title={isFlamengo ? "Abrir no GE Flamengo" : "Abrir na Globo.com"}
                                 >
                                   <ExternalLink className="w-3 h-3" />
                                 </a>
@@ -3991,18 +4146,18 @@ export default function Dashboard() {
                                   {item.description}
                                 </p>
                               )}
-                            </div>
+                            </motion.div>
                           );
                         })}
                         <div className="flex items-center justify-center gap-4 pt-1">
                           <a 
-                            href="https://g1.globo.com/rj/rio-de-janeiro/" 
+                            href="https://g1.globo.com/" 
                             target="_blank" 
                             referrerPolicy="no-referrer"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-blue-400 uppercase tracking-widest transition-colors cursor-pointer"
                           >
-                            <span>G1 Rio</span>
+                            <span>Globo.com</span>
                             <ExternalLink className="w-2 h-2" />
                           </a>
                           <span className="text-white/10">|</span>
@@ -4021,6 +4176,9 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
+
+                {/* Travel Ticket Monitor & Deals Widget */}
+                <TravelTicketMonitor />
 
                 {/* Team On-Duty Allocation Block */}
                 <div className="bg-zinc-950/40 border border-white/10 rounded-3xl p-5 space-y-4">
