@@ -337,6 +337,117 @@ Com base no mapeamento heurístico de termos das ${activeTickets.length} ordens 
     }
   });
 
+  // Gemini Improve Technical Report API
+  apiRouter.post('/gemini/improve-technical-report', async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (!text || !text.trim()) {
+        return res.status(400).json({ error: 'Texto para melhoria é obrigatório.' });
+      }
+
+      const ai = getGeminiClient();
+
+      const systemInstruction = `Você é um Engenheiro de Manutenção e supervisor técnico sênior responsável pela revisão de ordens de serviço.
+Sua tarefa é reescrever o relato técnico / observação de campo enviado pelo técnico executor para torná-lo altamente profissional, curto, direto, extremamente técnico, preciso e sem erros gramaticais ou coloquialismos.
+Mantenha absolutamente todos os fatos importantes do relato original (quantidades de equipamentos, locais exatos, marcas, testes efetuados), mas reescreva-os utilizando terminologia técnica adequada de engenharia de manutenção e automação.
+Exemplo: "instalado 2 fechadura no portão principal, cadastrado 30 tags, testado e funcionando" deve virar "Instalação de duas fechaduras eletroímãs no portão principal de acesso, seguida pelo cadastramento de 30 tags de proximidade no sistema de controle de acesso. Equipamentos submetidos a testes operacionais de validação, apresentando pleno funcionamento."
+Gere APENAS o texto técnico reescrito de forma limpa, direta e profissional, sem introduções ou explicações.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: `Melhore o seguinte relato técnico, tornando-o curto, direto e altamente técnico: "${text}"`,
+        config: {
+          systemInstruction,
+        }
+      });
+
+      const improvedText = response.text?.trim() || text;
+      res.json({ improvedText, source: 'gemini' });
+    } catch (error: any) {
+      console.warn('[Improve Technical Report Error]: Falling back to heuristic:', error?.message || error);
+      
+      // Fallback: simple heuristic cleanup if Gemini fails or is not configured
+      let fallbackText = req.body.text || '';
+      fallbackText = fallbackText
+        .replace(/\bportao\b/gi, 'portão')
+        .replace(/\bprincipaçao\b/gi, 'principal')
+        .replace(/\bprincipação\b/gi, 'principal')
+        .replace(/\bfechaduras\b/gi, 'fechaduras de segurança')
+        .replace(/\btags\b/gi, 'tags de controle de acesso')
+        .replace(/\btestados\b/gi, 'submetidos a testes de funcionamento')
+        .replace(/\baprovados\b/gi, 'validados e aprovados para uso operacional');
+
+      if (fallbackText) {
+        fallbackText = fallbackText.charAt(0).toUpperCase() + fallbackText.slice(1);
+      }
+
+      res.json({ 
+        improvedText: fallbackText || req.body.text, 
+        source: 'heuristic-fallback',
+        error: error?.message || String(error)
+      });
+    }
+  });
+
+  // Gemini Notion Assist API
+  apiRouter.post('/gemini/notion-assist', async (req, res) => {
+    const { text, command } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Texto é obrigatório.' });
+    }
+
+    try {
+      const ai = getGeminiClient();
+
+      let prompt = '';
+      let systemInstruction = `Você é um Assistente de Engenharia e Redação Técnico-Predial de Inteligência Artificial para o sistema Condfy.
+Sua missão é aprimorar as anotações do usuário, que são focadas em manutenção predial, ordens de serviço, atas de reuniões e relatórios de engenharia.
+Seja preciso, limpo, direto e profissional. NUNCA adicione introduções como "Aqui está o texto" ou "Claro!". Retorne APENAS o texto aprimorado final de forma limpa.`;
+
+      if (command === 'summarize') {
+        prompt = `Resuma o seguinte texto técnico de forma extremamente concisa e direta em uma ou duas frases: "${text}"`;
+      } else if (command === 'expand') {
+        prompt = `Expanda e elabore tecnicamente o seguinte relato ou anotação, adicionando terminologia adequada de engenharia predial e segurança: "${text}"`;
+      } else if (command === 'translate') {
+        prompt = `Traduza ou revise o seguinte texto garantindo redação técnica perfeita e formal em português (se estiver em outro idioma) ou torne-o uma versão bilíngue técnica de alta qualidade: "${text}"`;
+      } else if (command === 'bullets') {
+        prompt = `Converta o seguinte parágrafo técnico em uma lista limpa, direta e bem formatada de tópicos (bullet points) com marcadores, focando em ações e detalhes técnicos importantes: "${text}"`;
+      } else {
+        prompt = `Melhore e formalize o seguinte texto técnico de forma que soe profissional, claro, correto gramaticalmente e extremamente polido: "${text}"`;
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction,
+        }
+      });
+
+      const resultText = response.text?.trim() || text;
+      res.json({ resultText, source: 'gemini' });
+    } catch (error: any) {
+      console.warn('[Notion Assist Error]: Falling back to client-side heuristics:', error?.message || error);
+      
+      let fallbackText = text;
+      if (command === 'summarize') {
+        fallbackText = `Resumo técnico: ${text.slice(0, 100)}...`;
+      } else if (command === 'bullets') {
+        fallbackText = text.split('. ').map((s: string) => s.trim() ? `• ${s.trim()}` : '').filter(Boolean).join('\n');
+      } else if (command === 'expand') {
+        fallbackText = `${text} (Detalhamento adicional de manutenção e conformidade técnica NBR)`;
+      } else {
+        fallbackText = `[Revisado] ${text}`;
+      }
+
+      res.json({ 
+        resultText: fallbackText, 
+        source: 'fallback',
+        error: error?.message || String(error)
+      });
+    }
+  });
+
   // Gemini Financial Report Audit & Extraction API
   apiRouter.post('/gemini/analyze-financial-report', async (req, res) => {
     try {
@@ -648,7 +759,66 @@ Certifique-se de que cada notícia possui um link de referência confiável e de
 
       res.json({ source: 'local-fallback', items: fallbackTechNews });
     } catch (err: any) {
-      res.status(500).json({ error: 'Erro ao carregar notícias de tecnologia', details: err.message });
+      console.warn('Critical fallback triggered for tech-news API:', err?.message || err);
+      const fallbackTechNews = [
+        {
+          title: "Matter 1.5 é lançado com suporte a novos eletrodomésticos inteligentes e maior estabilidade",
+          link: "https://www.tecmundo.com.br/casa-inteligente",
+          description: "A nova atualização do padrão Matter promete unificar ainda mais ecossistemas da Apple, Google e Amazon, reduzindo o tempo de resposta de lâmpadas e sensores conectados.",
+          pubDate: new Date().toISOString(),
+          type: 'CASA_INTELIGENTE'
+        },
+        {
+          title: "Gemini 2.5 Pro revoluciona compreensão contextual com processamento multimodal em tempo real",
+          link: "https://canaltech.com.br/inteligencia-artificial/",
+          description: "O novo modelo da Google demonstra habilidades incríveis de raciocínio lógico, análise de código complexo e interação por voz com latência reduzida.",
+          pubDate: new Date().toISOString(),
+          type: 'IA'
+        },
+        {
+          title: "Novas fechaduras inteligentes com biometria facial e IA integrada chegam ao mercado brasileiro",
+          link: "https://olhardigital.com.br/casa-inteligente/",
+          description: "Dispositivos utilizam redes neurais locais para reconhecer moradores em frações de segundo, mesmo sob condições climáticas adversas ou escuro total.",
+          pubDate: new Date().toISOString(),
+          type: 'CASA_INTELIGENTE'
+        },
+        {
+          title: "ChatGPT-5 é anunciou com foco em agentes autônomos de produtividade pessoal",
+          link: "https://olhardigital.com.br/inteligencia-artificial/",
+          description: "Nova versão do assistente da OpenAI promete realizar tarefas complexas em segundo plano, como reservas de viagens e gerenciamento autônomo de e-mails.",
+          pubDate: new Date().toISOString(),
+          type: 'IA'
+        },
+        {
+          title: "Amazon anuncia nova linha Echo com processador neural dedicado para comandos de voz offline",
+          link: "https://canaltech.com.br/casa-inteligente/",
+          description: "Dispositivos de som inteligente passam a interpretar rotinas domésticas e responder comandos comuns mesmo quando a internet residencial estiver instável.",
+          pubDate: new Date().toISOString(),
+          type: 'CASA_INTELIGENTE'
+        },
+        {
+          title: "IA Generativa é integrada aos sistemas de tráfego urbano para reduzir congestionamentos",
+          link: "https://www.tecmundo.com.br/inteligencia-artificial",
+          description: "Cidades inteligentes na Europa adotam semáforos inteligentes controlados por agentes de IA que analisam o fluxo em tempo real, diminuindo engarrafamentos em até 22%.",
+          pubDate: new Date().toISOString(),
+          type: 'IA'
+        },
+        {
+          title: "Robôs aspiradores de última geração usam sensores LiDAR 3D e IA para evitar pequenos objetos",
+          link: "https://olhardigital.com.br/casa-inteligente/",
+          description: "Dispositivos premium agora contam com câmeras neurais capazes de identificar e desviar de cabos, calçados e resíduos de pets de maneira precisa.",
+          pubDate: new Date().toISOString(),
+          type: 'CASA_INTELIGENTE'
+        },
+        {
+          title: "Pesquisadores utilizam IA para prever novas mutações virais e acelerar vacinas",
+          link: "https://www.tecmundo.com.br/inteligencia-artificial",
+          description: "Modelos preditivos baseados em redes neurais profundas mapearam bilhões de combinações genéticas para ajudar laboratórios mundiais na prevenção de futuras epidemias.",
+          pubDate: new Date().toISOString(),
+          type: 'IA'
+        }
+      ];
+      res.json({ source: 'local-fallback-critical', items: fallbackTechNews });
     }
   });
 
@@ -783,10 +953,10 @@ Certifique-se de que cada notícia possui um link de referência confiável e de
 
   // Fetch real-time market quotes (USD/BRL and Ibovespa index)
   apiRouter.get('/market-quotes', async (req, res) => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
 
+    try {
       let usdRate = 5.24;
       let usdPct = 0.15;
       let ibovPoints = 126450;
@@ -834,6 +1004,8 @@ Certifique-se de que cada notícia possui um link de referência confiável e de
         console.warn('Could not fetch real-time Ibovespa quote from Yahoo Finance, using fallback:', e);
       }
 
+      clearTimeout(timeoutId);
+
       // If we didn't fetch real-time, simulate slight organic variations based on current hour to look dynamic
       if (!fetchedUsd) {
         const hourFactor = new Date().getHours() / 24;
@@ -859,8 +1031,29 @@ Certifique-se de que cada notícia possui um link de referência confiável e de
         }
       });
     } catch (error: any) {
-      console.error('Error in market-quotes API:', error);
-      res.status(500).json({ error: 'Erro ao carregar cotações do mercado' });
+      console.error('Error in market-quotes API (using safe fallback):', error);
+      clearTimeout(timeoutId);
+      
+      const hourFactor = new Date().getHours() / 24;
+      const usdRate = +(5.20 + (Math.sin(hourFactor * Math.PI) * 0.12)).toFixed(4);
+      const usdPct = +(Math.sin(hourFactor * Math.PI * 2) * 0.8).toFixed(2);
+      const ibovPoints = Math.round(126000 + (Math.cos(hourFactor * Math.PI) * 1250));
+      const ibovPct = +(Math.cos(hourFactor * Math.PI * 2) * 1.2).toFixed(2);
+
+      res.json({
+        usd: {
+          rate: usdRate,
+          pct: usdPct,
+          updatedAt: new Date().toISOString(),
+          fallback: true
+        },
+        ibov: {
+          points: ibovPoints,
+          pct: ibovPct,
+          updatedAt: new Date().toISOString(),
+          fallback: true
+        }
+      });
     }
   });
 

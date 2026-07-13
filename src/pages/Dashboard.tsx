@@ -19,7 +19,7 @@ import {
   X, Download, FileUp, Database as DatabaseIcon, MessageSquare, Target,
   Wifi, WifiOff, GripVertical, ClipboardList, LayoutList,
   Eye, EyeOff,
-  Bell, Truck, Brain, ExternalLink, Sparkles, LineChart,
+  Bell, Truck, Brain, ExternalLink, Sparkles, LineChart, ChevronRight, Layers,
   Phone, Mail, Send, Trash2, Edit, MapPin, Plane, Bus, Search, ArrowRight, Cpu, Home
 } from 'lucide-react';
 import { KanbanMirror } from '../components/KanbanMirror';
@@ -1198,6 +1198,47 @@ export default function Dashboard() {
   };
 
   const initialTiles: TileData[] = [
+    {
+      id: 'notion-workspace',
+      type: 'wide',
+      component: (
+        <Link 
+          to={isEditMode ? '#' : "/notion"} 
+          onClick={(e) => isEditMode && e.preventDefault()}
+          className="w-full h-full bg-gradient-to-br from-zinc-900 to-zinc-950 hover:brightness-110 transition-all p-4 flex flex-col justify-between group relative overflow-hidden border border-white/10 shadow-2xl active:scale-95 text-white rounded-[2rem]"
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 via-transparent to-white/5 pointer-events-none" />
+          <div className="absolute -top-10 -right-10 w-24 h-24 bg-indigo-500/10 blur-2xl rounded-full mix-blend-screen pointer-events-none" />
+          
+          <div className="flex items-start justify-between relative z-10 w-full mb-2">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/25 group-hover:scale-110 transition-transform duration-500 shrink-0 text-indigo-400">
+                <Layers className="w-10 h-10" />
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Espaço de Trabalho</p>
+                <h3 className="font-black text-xl text-white leading-tight">Wiki & Notas Notion</h3>
+                <p className="text-[10px] text-white/50 font-medium">Documentos, atas e rotinas interativas</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col items-end">
+              <span className="text-[8px] font-black uppercase tracking-wider text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 px-2 py-0.5 rounded-full">
+                Notion Live
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between relative z-10 pt-2 border-t border-white/5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Criar Documento Inteligente</span>
+            <div className="flex items-center gap-1 text-xs text-indigo-400 font-bold group-hover:translate-x-1 transition-transform">
+              <span>Acessar Workspace</span>
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </div>
+        </Link>
+      )
+    },
     {
       id: 'execution-center',
       type: 'wide',

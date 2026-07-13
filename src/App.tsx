@@ -118,7 +118,8 @@ function Layout({ children }: { children: React.ReactNode }) {
     '/presentation',
     '/budget-forecast',
     '/financial-brain',
-    '/installation-mindmap'
+    '/installation-mindmap',
+    '/notion'
   ].some(path => location.pathname.startsWith(path));
 
   return (
@@ -252,6 +253,7 @@ import SalesPlanning from './pages/SalesPlanning';
 import { CommercialCenter } from './pages/CommercialCenter';
 import TasksProductivity from './pages/TasksProductivity';
 import InstallationMindMapScreen from './pages/InstallationMindMapScreen';
+import NotionWorkspace from './pages/NotionWorkspace';
 
 export default function App() {
   const { vivianEnabled } = useStore();
@@ -310,6 +312,7 @@ export default function App() {
           <Route path="/sales-planning" element={<SalesPlanning />} />
           <Route path="/commercial" element={<CommercialCenter />} />
           <Route path="/installation-mindmap" element={<InstallationMindMapScreen />} />
+          <Route path="/notion" element={<NotionWorkspace />} />
         </Routes>
       </Layout>
     </HashRouter>

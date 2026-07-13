@@ -5,7 +5,8 @@ import { TicketType, TicketStatus } from '../types';
 import { 
   Save, X, ClipboardList, Info, Wrench, ShieldAlert, Clock, CheckCircle2, 
   AlertCircle, HelpCircle, Camera, Image as ImageIcon, Trash2, Plus,
-  Palette, Upload, Check, RotateCcw, FileImage, FileText, Download, Eye, Paperclip, Paintbrush
+  Palette, Upload, Check, RotateCcw, FileImage, FileText, Download, Eye, Paperclip, Paintbrush,
+  Sparkles, Loader2
 } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -94,6 +95,7 @@ export default function TicketForm() {
   const [reportedProblem, setReportedProblem] = useState('');
   const [productsForQuote, setProductsForQuote] = useState('');
   const [serviceReport, setServiceReport] = useState('');
+  const [isImprovingReport, setIsImprovingReport] = useState(false);
   
   // Materiais
   const [usedMaterials, setUsedMaterials] = useState<{ itemId?: string; name?: string; quantity: number; price?: number }[]>([]);
@@ -119,11 +121,11 @@ export default function TicketForm() {
         setMaintenanceSubcategory(ticket.maintenanceSubcategory || '');
         setType(ticket.type);
         setStatus(ticket.status || 'APROVADO');
-        setClientId(ticket.clientId);
-        setDate(ticket.date);
-        setTechnician(ticket.technician);
-        setBudgetAmount(ticket.budgetAmount !== undefined ? ticket.budgetAmount : '');
-        setObservations(ticket.observations);
+        setClientId(ticket.clientId || '');
+        setDate(ticket.date || new Date().toISOString().split('T')[0]);
+        setTechnician(ticket.technician || '');
+        setBudgetAmount(ticket.budgetAmount !== undefined && ticket.budgetAmount !== null ? ticket.budgetAmount : '');
+        setObservations(ticket.observations || '');
         setColor(ticket.color || '');
         setImages(ticket.images || []);
         
@@ -163,6 +165,40 @@ export default function TicketForm() {
       setSelectedTasks(new Set(filteredChecklistItems.map(i => i.id)));
     }
   }, [type, clientId, filteredChecklistItems, id]);
+
+  const handleImproveReportWithAI = async () => {
+    if (!serviceReport.trim()) return;
+
+    setIsImprovingReport(true);
+    const loadingToast = toast.loading('IA analisando e aprimorando seu relato técnico...');
+
+    try {
+      const response = await fetch('/api/gemini/improve-technical-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: serviceReport }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao processar a melhoria do relato técnico');
+      }
+
+      const data = await response.json();
+      if (data.improvedText) {
+        setServiceReport(data.improvedText);
+        toast.success('Relato técnico aprimorado com sucesso!', { id: loadingToast });
+      } else {
+        throw new Error('Nenhum texto retornado');
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error('Não foi possível aprimorar o texto no momento. Tente novamente.', { id: loadingToast });
+    } finally {
+      setIsImprovingReport(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -731,7 +767,31 @@ export default function TicketForm() {
                     </div>
 
                     <div className="space-y-3">
-                      <label className="block text-sm font-bold uppercase tracking-widest text-white/40 ml-1">Relato Técnico / Observações de Campo</label>
+                      <div className="flex items-center justify-between ml-1">
+                        <label className="block text-sm font-bold uppercase tracking-widest text-white/40">Relato Técnico / Observações de Campo</label>
+                        <button
+                          type="button"
+                          onClick={handleImproveReportWithAI}
+                          disabled={isImprovingReport || !serviceReport.trim()}
+                          className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1 rounded-full transition-all border ${
+                            serviceReport.trim()
+                              ? 'bg-indigo-500/15 hover:bg-indigo-500/30 text-indigo-300 border-indigo-500/30 active:scale-95'
+                              : 'text-white/20 border-white/5 cursor-not-allowed'
+                          }`}
+                        >
+                          {isImprovingReport ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              Melhorando...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5 text-[#39FF14] drop-shadow-[0_0_5px_rgba(57,255,20,0.5)]" />
+                              Melhorar com IA
+                            </>
+                          )}
+                        </button>
+                      </div>
                       <textarea 
                         value={serviceReport}
                         onChange={(e) => setServiceReport(e.target.value)}
