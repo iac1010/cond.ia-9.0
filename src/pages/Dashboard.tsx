@@ -20,7 +20,7 @@ import {
   Wifi, WifiOff, GripVertical, ClipboardList, LayoutList,
   Eye, EyeOff,
   Bell, Truck, Brain, ExternalLink, Sparkles, LineChart,
-  Phone, Mail, Send, Trash2, Edit, MapPin, Plane, Bus, Search, ArrowRight
+  Phone, Mail, Send, Trash2, Edit, MapPin, Plane, Bus, Search, ArrowRight, Cpu, Home
 } from 'lucide-react';
 import { KanbanMirror } from '../components/KanbanMirror';
 import { TicketsMirror } from '../components/TicketsMirror';
@@ -755,8 +755,9 @@ export default function Dashboard() {
     appUrl?: string;
   } | null>(null);
 
-  // G1 News Widget State
-  const [newsItems, setNewsItems] = useState<{ title: string; link: string; description: string; pubDate: string; type?: 'RJ' | 'FLA' }[]>([]);
+  // News Widget State (Toggler between Tech & Globo)
+  const [newsChannel, setNewsChannel] = useState<'TECH' | 'GLOBO'>('TECH');
+  const [newsItems, setNewsItems] = useState<{ title: string; link: string; description: string; pubDate: string; type?: string }[]>([]);
   const [newsLoading, setNewsLoading] = useState<boolean>(true);
   const [newsError, setNewsError] = useState<string | null>(null);
   const [newsLastFetched, setNewsLastFetched] = useState<string>('');
@@ -769,17 +770,18 @@ export default function Dashboard() {
   const [marketLoading, setMarketLoading] = useState<boolean>(true);
   const [marketError, setMarketError] = useState<string | null>(null);
 
-  const fetchNews = async () => {
+  const fetchNews = async (channel: 'TECH' | 'GLOBO' = newsChannel) => {
     setNewsLoading(true);
     setNewsError(null);
     try {
-      const res = await fetch('/api/g1-news');
-      if (!res.ok) throw new Error('Falha ao carregar notícias do G1');
+      const endpoint = channel === 'TECH' ? '/api/tech-news' : '/api/g1-news';
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error(channel === 'TECH' ? 'Falha ao carregar notícias de tecnologia' : 'Falha ao carregar notícias da Globo.com');
       const data = await res.json();
       setNewsItems(data.items || []);
       setNewsLastFetched(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
     } catch (err: any) {
-      console.error('Erro de conexão ao carregar G1 RSS:', err);
+      console.error(`Erro de conexão ao carregar notícias (${channel}):`, err);
       setNewsError(err.message || 'Erro de conexão');
     } finally {
       setNewsLoading(false);
@@ -802,16 +804,20 @@ export default function Dashboard() {
     }
   };
 
+  // Watch newsChannel changes to fetch appropriate news
   useEffect(() => {
-    fetchNews();
+    fetchNews(newsChannel);
+  }, [newsChannel]);
+
+  useEffect(() => {
     fetchMarketQuotes();
-    const newsInterval = setInterval(fetchNews, 5 * 60 * 1000); // 5 min interval
+    const newsInterval = setInterval(() => fetchNews(newsChannel), 5 * 60 * 1000); // 5 min interval
     const marketInterval = setInterval(fetchMarketQuotes, 3 * 60 * 1000); // 3 min interval
     return () => {
       clearInterval(newsInterval);
       clearInterval(marketInterval);
     };
-  }, []);
+  }, [newsChannel]);
 
   useEffect(() => {
     let retryCount = 0;
@@ -2700,12 +2706,6 @@ export default function Dashboard() {
           ? backgroundImage 
           : 'bg-[#004a7c]'
       } text-white overflow-x-hidden relative transition-all duration-700`}
-      style={backgroundImage && !backgroundImage.startsWith('bg-') ? {
-        backgroundImage: `linear-gradient(rgba(0, 74, 124, 0.7), rgba(0, 74, 124, 0.7)), url(${backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      } : {}}
     >
       <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
         <svg className="w-full h-full" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
@@ -4008,32 +4008,78 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {/* G1 Globo News Feed Widget (Globo.com Main News & Flamengo Mixed) */}
-                <div className="bg-zinc-950/40 border border-red-500/10 rounded-3xl p-5 space-y-4 relative overflow-hidden shadow-2xl">
-                  {/* Subtle decorative G1 Red / Flamengo Red ambient light glow */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-[#E01D1D]/5 to-transparent pointer-events-none rounded-full blur-2xl" />
+                {/* Tech & Globo News Feed Widget (Smart Home, AI, G1 & Flamengo) */}
+                <div className={`bg-zinc-950/40 border rounded-3xl p-5 space-y-4 relative overflow-hidden shadow-2xl transition-all duration-500 ${
+                  newsChannel === 'TECH' ? 'border-cyan-500/10' : 'border-red-500/10'
+                }`}>
+                  {/* Subtle decorative tech-cyan / violet / red ambient light glow */}
+                  <div className={`absolute top-0 right-0 w-32 h-32 bg-radial pointer-events-none rounded-full blur-2xl transition-all duration-500 ${
+                    newsChannel === 'TECH' 
+                      ? 'from-cyan-500/5 to-transparent' 
+                      : 'from-red-500/5 to-transparent'
+                  }`} />
 
-                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-[#E01D1D] animate-pulse shrink-0" />
+                  <div className="flex flex-col gap-3 border-b border-white/5 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full animate-pulse shrink-0 transition-colors duration-500 ${
+                          newsChannel === 'TECH' ? 'bg-cyan-400' : 'bg-red-500'
+                        }`} />
+                        <div className="flex items-center gap-1.5">
+                          {newsChannel === 'TECH' ? (
+                            <Cpu className="w-4 h-4 text-cyan-400 transition-colors duration-500" />
+                          ) : (
+                            <Newspaper className="w-4 h-4 text-red-500 transition-colors duration-500" />
+                          )}
+                          <span className="text-xs font-black uppercase tracking-wider text-white">
+                            {newsChannel === 'TECH' ? 'Casa Inteligente & IA' : 'Globo.com & Flamengo'}
+                          </span>
+                        </div>
+                      </div>
                       <div className="flex items-center gap-1.5">
-                        <Newspaper className="w-4 h-4 text-[#E01D1D]" />
-                        <span className="text-xs font-black uppercase tracking-wider text-white">Globo.com & Flamengo</span>
+                        {newsLastFetched && (
+                          <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">
+                            {newsLastFetched}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => fetchNews(newsChannel)}
+                          disabled={newsLoading}
+                          className={`p-1.5 hover:bg-white/5 text-white/50 rounded-lg transition-all active:scale-90 cursor-pointer ${
+                            newsChannel === 'TECH' ? 'hover:text-cyan-400' : 'hover:text-red-500'
+                          }`}
+                          title="Atualizar Notícias"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${newsLoading ? 'animate-spin' : ''} ${
+                            newsChannel === 'TECH' ? (newsLoading ? 'text-cyan-400' : '') : (newsLoading ? 'text-red-500' : '')
+                          }`} />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {newsLastFetched && (
-                        <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">
-                          {newsLastFetched}
-                        </span>
-                      )}
+
+                    {/* Channel Selector Buttons */}
+                    <div className="grid grid-cols-2 gap-1 bg-white/[0.03] p-1 rounded-xl border border-white/5">
                       <button
-                        onClick={fetchNews}
-                        disabled={newsLoading}
-                        className="p-1.5 hover:bg-white/5 text-white/50 hover:text-[#E01D1D] rounded-lg transition-all active:scale-90 cursor-pointer"
-                        title="Atualizar Notícias"
+                        onClick={() => setNewsChannel('TECH')}
+                        className={`flex items-center justify-center gap-1.5 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-200 cursor-pointer ${
+                          newsChannel === 'TECH'
+                            ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                            : 'text-white/50 hover:text-white hover:bg-white/[0.02] border border-transparent'
+                        }`}
                       >
-                        <RefreshCw className={`w-3.5 h-3.5 ${newsLoading ? 'animate-spin text-[#E01D1D]' : ''}`} />
+                        <Cpu className="w-3 h-3" />
+                        <span>Casa Inteligente & IA</span>
+                      </button>
+                      <button
+                        onClick={() => setNewsChannel('GLOBO')}
+                        className={`flex items-center justify-center gap-1.5 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-200 cursor-pointer ${
+                          newsChannel === 'GLOBO'
+                            ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                            : 'text-white/50 hover:text-white hover:bg-white/[0.02] border border-transparent'
+                        }`}
+                      >
+                        <Newspaper className="w-3 h-3" />
+                        <span>Globo & Flamengo</span>
                       </button>
                     </div>
                   </div>
@@ -4066,14 +4112,18 @@ export default function Dashboard() {
                       </div>
                     ) : newsError && newsItems.length === 0 ? (
                       <div className="py-12 flex flex-col items-center justify-center text-center p-4 bg-red-500/5 rounded-2xl border border-red-500/10">
-                        <Globe className="w-7 h-7 text-red-400 mb-2 opacity-60" />
-                        <span className="text-xs text-red-300 font-bold mb-1">Falha de Sincronismo</span>
+                        <Globe className={`w-7 h-7 mb-2 opacity-60 ${newsChannel === 'TECH' ? 'text-cyan-400' : 'text-red-400'}`} />
+                        <span className={`text-xs font-bold mb-1 ${newsChannel === 'TECH' ? 'text-cyan-300' : 'text-red-300'}`}>Falha de Sincronismo</span>
                         <p className="text-[10px] text-white/40 max-w-[200px] leading-relaxed">
-                          Não foi possível carregar as notícias principais e do Flamengo. Verifique sua conexão ou clique para recarregar.
+                          Não foi possível carregar as notícias de {newsChannel === 'TECH' ? 'Casa Inteligente e Inteligência Artificial' : 'Globo.com e Flamengo'}. Verifique sua conexão ou clique para recarregar.
                         </p>
                         <button
-                          onClick={fetchNews}
-                          className="mt-3 px-3 py-1.5 bg-[#E01D1D]/20 hover:bg-[#E01D1D]/30 text-white text-[9px] font-black uppercase tracking-widest rounded-lg border border-[#E01D1D]/20 transition-all cursor-pointer"
+                          onClick={() => fetchNews(newsChannel)}
+                          className={`mt-3 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg border transition-all cursor-pointer ${
+                            newsChannel === 'TECH'
+                              ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-white border-cyan-500/20'
+                              : 'bg-red-500/20 hover:bg-red-500/30 text-white border-red-500/20'
+                          }`}
                         >
                           Tentar Novamente
                         </button>
@@ -4096,7 +4146,55 @@ export default function Dashboard() {
                             }
                           } catch (e) {}
 
-                          const isFlamengo = item.type === 'FLA';
+                          const isTech = newsChannel === 'TECH';
+                          const isSmartHome = isTech && item.type === 'CASA_INTELIGENTE';
+                          const isFlamengo = !isTech && item.type === 'FLA';
+
+                          let cardBorderClass = '';
+                          let badgeClass = '';
+                          let hoverTitleClass = '';
+                          let badgeIcon = null;
+                          let badgeText = '';
+                          let defaultLink = '';
+                          let linkTitle = '';
+
+                          if (isTech) {
+                            if (isSmartHome) {
+                              cardBorderClass = 'border-cyan-500/10 hover:border-cyan-500/20';
+                              badgeClass = 'bg-cyan-950/40 text-cyan-400 border-cyan-500/25';
+                              hoverTitleClass = 'group-hover:text-cyan-300';
+                              badgeIcon = <Home className="w-2 h-2" />;
+                              badgeText = 'CASA INTELIGENTE';
+                              defaultLink = 'https://olhardigital.com.br/casa-inteligente/';
+                              linkTitle = 'Abrir no Olhar Digital';
+                            } else {
+                              cardBorderClass = 'border-violet-500/10 hover:border-violet-500/20';
+                              badgeClass = 'bg-violet-950/40 text-violet-400 border-violet-500/25';
+                              hoverTitleClass = 'group-hover:text-violet-300';
+                              badgeIcon = <Brain className="w-2 h-2" />;
+                              badgeText = 'INTELIGÊNCIA ARTIFICIAL';
+                              defaultLink = 'https://canaltech.com.br/inteligencia-artificial/';
+                              linkTitle = 'Abrir no Canaltech';
+                            }
+                          } else {
+                            if (isFlamengo) {
+                              cardBorderClass = 'border-red-500/10 hover:border-red-500/20';
+                              badgeClass = 'bg-red-950/40 text-red-400 border-red-500/25';
+                              hoverTitleClass = 'group-hover:text-red-300';
+                              badgeIcon = <Zap className="w-2 h-2 text-red-400" />;
+                              badgeText = 'FLAMENGO';
+                              defaultLink = 'https://ge.globo.com/futebol/times/flamengo/';
+                              linkTitle = 'Abrir no GE Flamengo';
+                            } else {
+                              cardBorderClass = 'border-emerald-500/10 hover:border-emerald-500/20';
+                              badgeClass = 'bg-emerald-950/40 text-emerald-400 border-emerald-500/25';
+                              hoverTitleClass = 'group-hover:text-emerald-300';
+                              badgeIcon = <Newspaper className="w-2 h-2 text-emerald-400" />;
+                              badgeText = 'GLOBO.COM';
+                              defaultLink = 'https://g1.globo.com/';
+                              linkTitle = 'Abrir no G1';
+                            }
+                          }
 
                           return (
                             <motion.div 
@@ -4104,20 +4202,13 @@ export default function Dashboard() {
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.4) }}
-                              className={`group p-3 bg-white/5 hover:bg-white/[0.08] border rounded-2xl transition-all duration-200 ${
-                                isFlamengo 
-                                  ? 'border-red-500/10 hover:border-red-500/20' 
-                                  : 'border-white/5 hover:border-blue-500/15'
-                              }`}
+                              className={`group p-3 bg-white/5 hover:bg-white/[0.08] border rounded-2xl transition-all duration-200 ${cardBorderClass}`}
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-1.5">
-                                  <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${
-                                    isFlamengo 
-                                      ? 'bg-red-950/40 text-red-400 border-red-500/25' 
-                                      : 'bg-blue-950/40 text-blue-400 border-blue-500/25'
-                                  }`}>
-                                    {isFlamengo ? 'FLAMENGO' : 'G1'}
+                                  <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border flex items-center gap-1 ${badgeClass}`}>
+                                    {badgeIcon}
+                                    <span>{badgeText}</span>
                                   </span>
                                   {displayDate && (
                                     <span className="text-[8px] font-mono text-white/30">
@@ -4126,19 +4217,17 @@ export default function Dashboard() {
                                   )}
                                 </div>
                                 <a 
-                                  href={item.link || (isFlamengo ? 'https://ge.globo.com/futebol/times/flamengo/' : 'https://g1.globo.com/')} 
+                                  href={item.link || defaultLink} 
                                   target="_blank" 
                                   referrerPolicy="no-referrer"
                                   rel="noopener noreferrer"
-                                  className={`text-white/40 hover:text-[#E01D1D] transition-colors shrink-0 p-0.5 cursor-pointer`}
-                                  title={isFlamengo ? "Abrir no GE Flamengo" : "Abrir na Globo.com"}
+                                  className={`text-white/40 group-hover:text-white transition-colors shrink-0 p-0.5 cursor-pointer`}
+                                  title={linkTitle}
                                 >
                                   <ExternalLink className="w-3 h-3" />
                                 </a>
                               </div>
-                              <h4 className={`text-xs font-black text-white transition-colors mt-2 leading-snug ${
-                                isFlamengo ? 'group-hover:text-red-300' : 'group-hover:text-blue-300'
-                              }`}>
+                              <h4 className={`text-xs font-black text-white transition-colors mt-2 leading-snug ${hoverTitleClass}`}>
                                 {item.title}
                               </h4>
                               {item.description && (
@@ -4150,27 +4239,55 @@ export default function Dashboard() {
                           );
                         })}
                         <div className="flex items-center justify-center gap-4 pt-1">
-                          <a 
-                            href="https://g1.globo.com/" 
-                            target="_blank" 
-                            referrerPolicy="no-referrer"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-blue-400 uppercase tracking-widest transition-colors cursor-pointer"
-                          >
-                            <span>Globo.com</span>
-                            <ExternalLink className="w-2 h-2" />
-                          </a>
-                          <span className="text-white/10">|</span>
-                          <a 
-                            href="https://ge.globo.com/futebol/times/flamengo/" 
-                            target="_blank" 
-                            referrerPolicy="no-referrer"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-red-400 uppercase tracking-widest transition-colors cursor-pointer"
-                          >
-                            <span>GE Fla</span>
-                            <ExternalLink className="w-2 h-2" />
-                          </a>
+                          {newsChannel === 'TECH' ? (
+                            <>
+                              <a 
+                                href="https://olhardigital.com.br/casa-inteligente/" 
+                                target="_blank" 
+                                referrerPolicy="no-referrer"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-cyan-400 uppercase tracking-widest transition-colors cursor-pointer"
+                              >
+                                <span>IoT (Olhar Digital)</span>
+                                <ExternalLink className="w-2 h-2" />
+                              </a>
+                              <span className="text-white/10">|</span>
+                              <a 
+                                href="https://canaltech.com.br/inteligencia-artificial/" 
+                                target="_blank" 
+                                referrerPolicy="no-referrer"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-violet-400 uppercase tracking-widest transition-colors cursor-pointer"
+                              >
+                                <span>IA (Canaltech)</span>
+                                <ExternalLink className="w-2 h-2" />
+                              </a>
+                            </>
+                          ) : (
+                            <>
+                              <a 
+                                href="https://g1.globo.com/" 
+                                target="_blank" 
+                                referrerPolicy="no-referrer"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-emerald-400 uppercase tracking-widest transition-colors cursor-pointer"
+                              >
+                                <span>Globo.com</span>
+                                <ExternalLink className="w-2 h-2" />
+                              </a>
+                              <span className="text-white/10">|</span>
+                              <a 
+                                href="https://ge.globo.com/futebol/times/flamengo/" 
+                                target="_blank" 
+                                referrerPolicy="no-referrer"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-red-400 uppercase tracking-widest transition-colors cursor-pointer"
+                              >
+                                <span>GE Flamengo</span>
+                                <ExternalLink className="w-2 h-2" />
+                              </a>
+                            </>
+                          )}
                         </div>
                       </>
                     )}

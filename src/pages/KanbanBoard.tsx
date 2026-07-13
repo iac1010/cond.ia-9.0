@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../store';
 import { TicketStatus, Ticket } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
-import { Clock, Wrench, CheckCircle, AlertCircle, Calendar, User, Edit, Plus, MoreVertical, ExternalLink, X, Trash2, Settings, ZoomIn, ZoomOut, HelpCircle, Palette, Upload, Image as ImageIcon, Check, RotateCcw, FileImage, Paintbrush, DollarSign } from 'lucide-react';
+import { Clock, Wrench, CheckCircle, AlertCircle, Calendar, User, Edit, Plus, MoreVertical, ExternalLink, X, Trash2, Settings, ZoomIn, ZoomOut, HelpCircle, Palette, Upload, Image as ImageIcon, Check, RotateCcw, FileImage, Paintbrush, DollarSign, Search } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -144,6 +144,7 @@ export default function KanbanBoard() {
   const [newColumnGlow, setNewColumnGlow] = useState('shadow-blue-500/20');
 
   const [isEditColumnsModalOpen, setIsEditColumnsModalOpen] = useState(false);
+  const [kanbanSearchTerm, setKanbanSearchTerm] = useState('');
   const [editingColumnNames, setEditingColumnNames] = useState<{ [key: string]: string }>({});
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
@@ -296,6 +297,23 @@ export default function KanbanBoard() {
     }
   };
 
+  const filteredTickets = useMemo(() => {
+    if (!kanbanSearchTerm.trim()) return tickets;
+    const term = kanbanSearchTerm.toLowerCase();
+    return tickets.filter(t => {
+      const client = clients.find(c => c.id === t.clientId);
+      const clientName = client?.name || '';
+      return (
+        (t.title || '').toLowerCase().includes(term) ||
+        (t.osNumber || '').toLowerCase().includes(term) ||
+        (t.technician || '').toLowerCase().includes(term) ||
+        (t.maintenanceCategory || '').toLowerCase().includes(term) ||
+        (t.observations || '').toLowerCase().includes(term) ||
+        clientName.toLowerCase().includes(term)
+      );
+    });
+  }, [tickets, kanbanSearchTerm, clients]);
+
   const activeBtnTextClass = bgType === 'color' 
     ? (bgValue.includes('orange') ? 'text-amber-600' : bgValue.includes('green') ? 'text-emerald-700' : 'text-blue-900') 
     : 'text-zinc-900';
@@ -415,9 +433,32 @@ export default function KanbanBoard() {
         </div>
       </header>
 
+      {/* Modern Kanban Search Bar */}
+      <div className="mb-8 max-w-xl relative z-10">
+        <div className="relative">
+          <Search className="w-5 h-5 text-white/40 absolute left-4.5 top-1/2 -translate-y-1/2" />
+          <input 
+            type="text"
+            value={kanbanSearchTerm}
+            onChange={(e) => setKanbanSearchTerm(e.target.value)}
+            placeholder="Pesquisar cards por título, nº O.S., técnico, cliente, categoria..."
+            className="w-full bg-slate-800/65 hover:bg-slate-800/80 border border-white/10 hover:border-white/20 rounded-2xl pl-12 pr-11 py-4 text-sm text-white placeholder-white/40 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all font-semibold shadow-xl backdrop-blur-md"
+          />
+          {kanbanSearchTerm && (
+            <button 
+              onClick={() => setKanbanSearchTerm('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+              title="Limpar pesquisa"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="flex-1 flex gap-8 overflow-x-auto pb-8 snap-x relative z-10 custom-scrollbar">
         {columns.map((column, colIndex) => {
-          const columnTickets = tickets.filter(t => (t.status || 'APROVADO') === column.id);
+          const columnTickets = filteredTickets.filter(t => (t.status || 'APROVADO') === column.id);
           const Icon = ICON_MAP[column.iconName] || CheckCircle;
 
           // Dynamic configurations based on ZOOM state

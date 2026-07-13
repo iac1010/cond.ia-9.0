@@ -15,6 +15,8 @@ interface TravelDeal {
   duration: string;
   departureDate: string;
   opportunityType: string;
+  chosenDate?: string;
+  directLink?: string;
 }
 
 interface PriceAlert {
@@ -28,8 +30,13 @@ interface PriceAlert {
 }
 
 export function TravelTicketMonitor() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
+  const [chosenDate, setChosenDate] = useState(tomorrowStr);
   const [type, setType] = useState<'ALL' | 'FLIGHT' | 'BUS'>('ALL');
   const [deals, setDeals] = useState<TravelDeal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,6 +46,18 @@ export function TravelTicketMonitor() {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [alertTargetPrice, setAlertTargetPrice] = useState('200');
   const [showAlertModal, setShowAlertModal] = useState(false);
+
+  // Slugify helper for ClickBus and Buser links
+  const slugify = (text: string) => {
+    const cleanText = text.replace(/\s*\(.*?\)\s*/g, '').trim();
+    return cleanText
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  };
 
   // Load alerts from localStorage on mount
   useEffect(() => {
@@ -82,6 +101,7 @@ export function TravelTicketMonitor() {
       if (origin) queryParams.append('origin', origin);
       if (destination) queryParams.append('destination', destination);
       if (type !== 'ALL') queryParams.append('type', type);
+      if (chosenDate) queryParams.append('date', chosenDate);
 
       const response = await fetch(`/api/travel-deals?${queryParams.toString()}`);
       if (!response.ok) {
@@ -113,10 +133,10 @@ export function TravelTicketMonitor() {
     }
   };
 
-  // Fetch on mount or type change
+  // Fetch on mount, type change, or date change
   useEffect(() => {
     fetchDeals();
-  }, [type]);
+  }, [type, chosenDate]);
 
   // Handle Search
   const handleSearch = (e: React.FormEvent) => {
@@ -128,6 +148,7 @@ export function TravelTicketMonitor() {
   const handleClear = () => {
     setOrigin('');
     setDestination('');
+    setChosenDate(tomorrowStr);
     setType('ALL');
     setTimeout(() => {
       fetchDeals();
@@ -265,7 +286,7 @@ export function TravelTicketMonitor() {
       </div>
 
       {/* Interactive Search Fields */}
-      <form onSubmit={handleSearch} className="grid grid-cols-2 gap-2 bg-white/5 p-2.5 rounded-2xl border border-white/5">
+      <form onSubmit={handleSearch} className="grid grid-cols-3 gap-2 bg-white/5 p-2.5 rounded-2xl border border-white/5">
         <div className="space-y-1">
           <label className="text-[8px] font-bold text-white/40 uppercase tracking-wider pl-1">Origem</label>
           <div className="relative flex items-center">
@@ -290,13 +311,25 @@ export function TravelTicketMonitor() {
             />
           </div>
         </div>
-        <div className="col-span-2 flex gap-1.5 pt-1">
+        <div className="space-y-1">
+          <label className="text-[8px] font-bold text-white/40 uppercase tracking-wider pl-1">Data Partida</label>
+          <div className="relative flex items-center">
+            <input 
+              type="date"
+              value={chosenDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={(e) => setChosenDate(e.target.value)}
+              className="w-full text-[10px] font-bold bg-zinc-950/50 border border-white/5 focus:border-blue-500/30 rounded-xl px-2 py-1.5 text-white focus:outline-none transition-all cursor-pointer"
+            />
+          </div>
+        </div>
+        <div className="col-span-3 flex gap-1.5 pt-1">
           <button
             type="submit"
             className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-[9px] uppercase tracking-wider py-1.5 rounded-xl transition-all shadow-lg shadow-blue-900/10 active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Search className="w-3 h-3" />
-            <span>Buscar Menor Preço</span>
+            <span>Buscar Cotação Real</span>
           </button>
           {(origin || destination || type !== 'ALL') && (
             <button
@@ -497,7 +530,7 @@ export function TravelTicketMonitor() {
                       </div>
                     </div>
 
-                    {/* Price and Action Section */}
+                     {/* Price and Action Section */}
                     <div className="flex items-center justify-between mt-2 pt-1">
                       <div>
                         <span className="text-[8px] font-mono text-white/30 line-through leading-none block">
@@ -510,7 +543,13 @@ export function TravelTicketMonitor() {
                       </div>
 
                       <a
-                        href={isFlight ? "https://www.google.com/travel/flights" : "https://www.buser.com.br/"}
+                        href={
+                          deal.directLink || (isFlight
+                            ? `https://www.google.com/travel/flights?q=Voos%20de%20${encodeURIComponent(deal.origin)}%20para%20${encodeURIComponent(deal.destination)}%20no%20dia%20${deal.chosenDate || chosenDate}`
+                            : deal.company.toLowerCase().includes('buser')
+                              ? `https://www.buser.com.br/onibus/${slugify(deal.origin)}/${slugify(deal.destination)}?partida=${deal.chosenDate || chosenDate}`
+                              : `https://www.clickbus.com.br/onibus/${slugify(deal.origin)}/${slugify(deal.destination)}?dep=${deal.chosenDate || chosenDate}`)
+                        }
                         target="_blank"
                         referrerPolicy="no-referrer"
                         rel="noopener noreferrer"

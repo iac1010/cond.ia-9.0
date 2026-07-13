@@ -7,7 +7,7 @@ import {
   ChevronRight, Package, DollarSign, 
   Plus, Minus, X, AlertTriangle,
   ArrowRight, Info, Pin, Trash2, Search, Palette, Check, Edit2,
-  Sparkles, Brain, CheckCircle
+  Sparkles, Brain, CheckCircle, Eye, Copy, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -66,6 +66,10 @@ export default function ExecutionCenter() {
   const [checklistProgress, setChecklistProgress] = useState<{ [taskId: string]: boolean }>({});
   const [searchParams, setSearchParams] = useSearchParams();
   const playId = searchParams.get('play');
+  
+  // Custom states for modern report preview and editing
+  const [reportTab, setReportTab] = useState<'edit' | 'preview'>('preview');
+  const [copiedReport, setCopiedReport] = useState(false);
 
   // Gemini AI state variables
   const [isAnalyzingPriorities, setIsAnalyzingPriorities] = useState(false);
@@ -296,6 +300,7 @@ export default function ExecutionCenter() {
   });
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [cardSearchTerm, setCardSearchTerm] = useState('');
   const [isExpanding, setIsExpanding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
@@ -453,60 +458,66 @@ export default function ExecutionCenter() {
       .filter(([_, ok]) => !ok)
       .map(([taskId]) => checklistItems.find(ci => ci.id === taskId)?.task || taskId);
 
-    let report = `RELATÓRIO DE EXECUÇÃO TÉCNICA - O.S. ${selectedTicket.osNumber || ''}\n`;
-    report += `==================================================\n`;
-    report += `Cliente: ${clientName}\n`;
-    report += `Local: ${clientAddress}\n`;
-    report += `Tipo de Serviço: ${selectedTicket.type}\n`;
-    report += `Técnico Responsável: ${selectedTicket.technician || 'Equipe Técnica'}\n`;
-    report += `Data de Início: ${selectedTicket.startedAt ? new Date(selectedTicket.startedAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR')}\n`;
-    report += `Data de Conclusão: ${new Date().toLocaleString('pt-BR')}\n\n`;
+    let report = `📝 *RELATÓRIO DE EXECUÇÃO TÉCNICA - O.S. #${selectedTicket.osNumber || ''}*\n`;
+    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    report += `🏢 *Cliente:* ${clientName}\n`;
+    report += `📍 *Local:* ${clientAddress}\n`;
+    report += `🔧 *Tipo de Serviço:* ${selectedTicket.type}\n`;
+    report += `👤 *Técnico Responsável:* ${selectedTicket.technician || 'Equipe Técnica'}\n`;
+    report += `📅 *Data de Início:* ${selectedTicket.startedAt ? new Date(selectedTicket.startedAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR')}\n`;
+    report += `✅ *Data de Conclusão:* ${new Date().toLocaleString('pt-BR')}\n\n`;
 
-    report += `CHECKLIST DE PASSOS:\n`;
+    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    report += `📋 *CHECKLIST DE PASSOS / TAREFAS:*\n`;
     if (completedTasks.length > 0) {
-      report += `[CONCLUÍDO]:\n`;
-      completedTasks.forEach((t) => { report += `  - ${t}\n`; });
+      completedTasks.forEach((t) => { report += `  ✔️ *${t}* [OK]\n`; });
     }
     if (pendingTasks.length > 0) {
-      report += `[PENDENTE/NÃO REALIZADO]:\n`;
-      pendingTasks.forEach((t) => { report += `  - ${t}\n`; });
+      pendingTasks.forEach((t) => { report += `  ❌ _${t}_ [PENDENTE]\n`; });
     }
     if (completedTasks.length === 0 && pendingTasks.length === 0) {
-      report += `  Nenhuma tarefa definida.\n`;
+      report += `  _Nenhuma tarefa definida._\n`;
     }
     report += `\n`;
 
-    report += `MATERIAIS UTILIZADOS:\n`;
+    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    report += `📦 *MATERIAIS UTILIZADOS:*\n`;
     if (usedMaterials.length > 0) {
       usedMaterials.forEach(m => {
         const item = supplyItems.find(i => i.id === m.itemId || i.name === m.name);
         const displayName = m.name || item?.name || 'Material';
         const price = m.price || item?.lastPrice || 0;
-        report += `  - ${displayName} x${m.quantity} (Preço unitário: R$ ${price.toFixed(2)} | Total: R$ ${(price * m.quantity).toFixed(2)})\n`;
+        report += `  🔹 ${displayName} x${m.quantity} (R$ ${price.toFixed(2)} | Total: R$ ${(price * m.quantity).toFixed(2)})\n`;
       });
-      report += `  Total Materiais: R$ ${materialsCostTotal.toFixed(2)}\n`;
+      report += `  *Total Materiais:* R$ ${materialsCostTotal.toFixed(2)}\n`;
     } else {
-      report += `  Nenhum material utilizado.\n`;
+      report += `  _Nenhum material utilizado._\n`;
     }
     report += `\n`;
 
-    report += `CUSTOS DE INSTALAÇÃO:\n`;
+    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    report += `💰 *CUSTOS DE INSTALAÇÃO / DESPESAS:*\n`;
     if (extraCosts.length > 0) {
       extraCosts.forEach(c => {
-        report += `  - ${c.description} [${c.category}]: R$ ${c.value.toFixed(2)}\n`;
+        report += `  🔸 ${c.description} [${c.category}]: R$ ${c.value.toFixed(2)}\n`;
       });
-      report += `  Total Custos de Instalação: R$ ${extraCostsTotal.toFixed(2)}\n`;
+      report += `  *Total Custos de Instalação:* R$ ${extraCostsTotal.toFixed(2)}\n`;
     } else {
-      report += `  Nenhum custo de instalação registrado.\n`;
+      report += `  _Nenhum custo operacional extra._\n`;
     }
     report += `\n`;
 
-    report += `RESUMO FINANCEIRO DA O.S.:\n`;
-    report += `  Custo Total da Instalação: R$ ${totalExecutionCost.toFixed(2)}\n`;
-    report += `  Valor Orçado do Serviço: R$ ${(selectedTicket.budgetAmount || 0).toFixed(2)}\n`;
-    report += `==================================================\n`;
-    report += `Observações Finais do Técnico:\n`;
-    report += `Atendimento realizado com sucesso seguindo todas as normas técnicas vigentes. Sistema testado e operando 100%.`;
+    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    report += `📊 *RESUMO FINANCEIRO DA O.S.:*\n`;
+    report += `  💵 *Custo de Materiais:* R$ ${materialsCostTotal.toFixed(2)}\n`;
+    report += `  💸 *Custo das Despesas:* R$ ${extraCostsTotal.toFixed(2)}\n`;
+    report += `  📈 *Custo Total da Instalação:* R$ ${totalExecutionCost.toFixed(2)}\n`;
+    report += `  💰 *Valor Orçado do Serviço:* R$ ${(selectedTicket.budgetAmount || 0).toFixed(2)}\n`;
+    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    report += `💬 *Observações Finais do Técnico:*\n`;
+    report += `_"Atendimento realizado com sucesso seguindo todas as normas técnicas vigentes. Sistema testado e operando 100%."_\n\n`;
+    report += `─────────────────────────────────────────\n`;
+    report += `👍 *Sistema testado, higienizado e operando em perfeito estado (100% de performance).*`;
     
     return report;
   };
@@ -519,9 +530,25 @@ export default function ExecutionCenter() {
   // Filter active tickets for execution
   const activeTickets = useMemo(() => {
     const activeStatuses: TicketStatus[] = ['PENDENTE_APROVACAO', 'APROVADO', 'EM_ROTA', 'AGUARDANDO_MATERIAL', 'REALIZANDO'];
-    return tickets.filter(t => t.status && activeStatuses.includes(t.status))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [tickets]);
+    const active = tickets.filter(t => t.status && activeStatuses.includes(t.status));
+    
+    if (!cardSearchTerm.trim()) {
+      return active.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }
+    
+    const term = cardSearchTerm.toLowerCase();
+    return active.filter(t => {
+      const clientName = clients.find(c => c.id === t.clientId)?.name || '';
+      return (
+        (t.title || '').toLowerCase().includes(term) ||
+        (t.osNumber || '').toLowerCase().includes(term) ||
+        (t.technician || '').toLowerCase().includes(term) ||
+        (t.maintenanceCategory || '').toLowerCase().includes(term) ||
+        (t.observations || '').toLowerCase().includes(term) ||
+        clientName.toLowerCase().includes(term)
+      );
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [tickets, cardSearchTerm, clients]);
 
   // Statistics calculations for today's tickets
   const todayTickets = useMemo(() => {
@@ -1177,7 +1204,39 @@ export default function ExecutionCenter() {
         </div>
       </div>
 
-      {/* Target Active execution cards section */}
+      {/* Target Active execution cards section with search */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 pb-2 border-b border-black/15">
+        <div>
+          <h2 className="text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
+            Ordens de Serviço Ativas
+            <span className="text-[10.5px] bg-black text-[#39FF14] px-2 py-0.5 rounded-full font-mono font-bold shadow-[0_0_8px_rgba(57,255,20,0.2)]">
+              {activeTickets.length}
+            </span>
+          </h2>
+          <p className="text-xs text-black/60 uppercase tracking-wider mt-1">Gerencie a execução em tempo real das ordens sob sua responsabilidade</p>
+        </div>
+        
+        {/* Card Search Input */}
+        <div className="relative w-full sm:w-80 shrink-0">
+          <Search className="w-4 h-4 text-black/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input 
+            type="text"
+            value={cardSearchTerm}
+            onChange={(e) => setCardSearchTerm(e.target.value)}
+            placeholder="Pesquisar O.S. ativas..."
+            className="w-full bg-black/5 hover:bg-black/10 border border-black/15 rounded-full pl-10 pr-9 py-2.5 text-xs text-black placeholder-black/40 outline-none focus:border-black/30 focus:ring-1 focus:ring-black/10 transition-all font-semibold"
+          />
+          {cardSearchTerm && (
+            <button 
+              onClick={() => setCardSearchTerm('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black/40 hover:text-black p-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
           {activeTickets.length > 0 ? (
@@ -2094,23 +2153,135 @@ export default function ExecutionCenter() {
         glass={true}
       >
         <div className="space-y-6 p-2 text-white">
-          <p className="text-xs text-white/60 uppercase tracking-wider">
-            Revise as informações coletadas automaticamente e complemente as observações técnicas antes de finalizar o atendimento.
-          </p>
-
-          <div className="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-4">
-            <label className="block text-xs font-black uppercase tracking-widest text-[#39FF14]">
-              Relatório Técnico Final
-            </label>
-            <textarea
-              className="w-full h-96 bg-zinc-950/80 border border-white/10 rounded-xl p-4 text-xs font-mono text-white/95 leading-relaxed focus:outline-none focus:border-[#39FF14]/50"
-              value={reportNotes}
-              onChange={(e) => setReportNotes(e.target.value)}
-            />
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <p className="text-xs text-white/60 uppercase tracking-wider">
+              Revise o atendimento, copie o texto formatado para o WhatsApp ou envie diretamente ao cliente.
+            </p>
+            
+            {/* Tabs for switching between Chat preview and raw editor */}
+            <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 shrink-0 self-stretch md:self-auto">
+              <button
+                type="button"
+                onClick={() => setReportTab('preview')}
+                className={`flex-1 md:flex-initial px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  reportTab === 'preview'
+                    ? 'bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/15'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                <Eye size={14} />
+                Visualização WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportTab('edit')}
+                className={`flex-1 md:flex-initial px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  reportTab === 'edit'
+                    ? 'bg-[#39FF14] text-black shadow-lg'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                <Edit2 size={14} />
+                Editar Texto (Código)
+              </button>
+            </div>
           </div>
+
+          {reportTab === 'preview' ? (
+            <div className="space-y-4">
+              <div className="relative bg-zinc-950/90 border border-white/10 rounded-2xl p-6 shadow-2xl overflow-hidden max-h-[500px] overflow-y-auto custom-scrollbar">
+                {/* Visual decoration like a WhatsApp message container */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-[#39FF14] to-blue-500 opacity-80" />
+                
+                <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Prévia de Mensagem Formatada</span>
+                  </div>
+                  <span className="text-[10px] text-white/30 font-mono">Compatível com WhatsApp e Email</span>
+                </div>
+
+                {/* Styled Chat Bubble Area */}
+                <div className="space-y-1.5 bg-black/40 border border-white/5 p-5 rounded-xl font-mono">
+                  {reportNotes.split('\n').map((line, i) => {
+                    // Custom parser for WhatsApp Bold *text* and Italic _text_
+                    let formattedLine = line
+                      .replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;');
+                    
+                    // Replace *text* with bold high-contrast span
+                    formattedLine = formattedLine.replace(/\*(.*?)\*/g, '<strong class="font-extrabold text-[#39FF14]">$1</strong>');
+                    // Replace _text_ with italicized span
+                    formattedLine = formattedLine.replace(/_(.*?)_/g, '<em class="italic text-zinc-300 opacity-90">$1</em>');
+                    // Replace ~text~ with strike
+                    formattedLine = formattedLine.replace(/~(.*?)~/g, '<span class="line-through text-zinc-500">$1</span>');
+
+                    return (
+                      <div key={i} className="min-h-[1.5rem] font-sans text-sm leading-relaxed text-zinc-100" dangerouslySetInnerHTML={{ __html: formattedLine || '&nbsp;' }} />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Instant Clipboard / Share Helpers */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(reportNotes);
+                    setCopiedReport(true);
+                    toast.success('Relatório copiado com formatação WhatsApp!');
+                    setTimeout(() => setCopiedReport(false), 2000);
+                  }}
+                  className="w-full py-3.5 px-6 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 flex items-center justify-center gap-2.5 text-xs font-black uppercase tracking-widest text-white transition-all active:scale-95"
+                >
+                  {copiedReport ? (
+                    <>
+                      <Check className="w-4 h-4 text-[#39FF14]" />
+                      Copiado com Sucesso!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 text-zinc-400" />
+                      Copiar Texto Formatado
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const encodedText = encodeURIComponent(reportNotes);
+                    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedText}`;
+                    window.open(whatsappUrl, '_blank');
+                    toast.success('Iniciando compartilhamento via WhatsApp...');
+                  }}
+                  className="w-full py-3.5 px-6 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 flex items-center justify-center gap-2.5 text-xs font-black uppercase tracking-widest text-[#25D366] transition-all active:scale-95"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Enviar para WhatsApp
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-4">
+              <label className="block text-xs font-black uppercase tracking-widest text-[#39FF14]">
+                Editor de Relatório Técnico Final (Código Fonte)
+              </label>
+              <textarea
+                className="w-full h-96 bg-zinc-950/80 border border-white/10 rounded-xl p-4 text-xs font-mono text-white/95 leading-relaxed focus:outline-none focus:border-[#39FF14]/50 resize-none custom-scrollbar"
+                value={reportNotes}
+                onChange={(e) => setReportNotes(e.target.value)}
+              />
+              <span className="text-[10px] text-white/30 block">
+                Você pode editar o texto bruto diretamente. Os símbolos como * e _ funcionam como negrito e itálico quando enviados ao WhatsApp ou renderizados na prévia.
+              </span>
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-3 justify-between items-center pt-4 border-t border-white/5">
             <button
+              type="button"
               onClick={() => {
                 const win = window.open('', '_blank');
                 if (win) {
@@ -2140,17 +2311,19 @@ export default function ExecutionCenter() {
               }}
               className="w-full sm:w-auto px-6 py-3 bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-white/5 flex items-center justify-center gap-2"
             >
-              Imprimir / Copiar
+              Imprimir Relatório
             </button>
 
             <div className="flex gap-2 w-full sm:w-auto">
               <button
+                type="button"
                 onClick={() => setIsReportPreviewOpen(false)}
                 className="flex-1 sm:flex-initial px-6 py-3 bg-black/40 hover:bg-black/60 text-white/70 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-white/5"
               >
                 Voltar
               </button>
               <button
+                type="button"
                 onClick={() => handleFinishProject(reportNotes)}
                 className="flex-1 sm:flex-initial px-10 py-3 bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest rounded-xl hover:bg-[#39FF14]/90 transition-all active:scale-95 shadow-lg shadow-[#39FF14]/15"
               >
