@@ -142,6 +142,32 @@ const COMMAND_CATEGORIES = [
         examples: ['Qual a projeção financeira para os próximos 3 meses?']
       }
     ]
+  },
+  {
+    id: 'programming',
+    title: '💻 Biblioteca de Programação & Rotinas',
+    commands: [
+      {
+        name: 'Programar Rotina de Automação',
+        desc: 'Programe horários ou condições automáticas para bombas, iluminação e sensores do condomínio.',
+        examples: ['Programar Bomba 1 para ligar diariamente às 08h e desligar às 18h', 'Configurar rotina de dimerização do jardim para 50% às 18h']
+      },
+      {
+        name: 'Programar Regras de Segurança',
+        desc: 'Crie lógicas automáticas de proteção perimetral e monitoramento.',
+        examples: ['Programar alarme geral para ativar automaticamente às 22h', 'Configurar rotina: se alarme disparar, ligar todas as luzes']
+      },
+      {
+        name: 'Programar Irrigação Inteligente',
+        desc: 'Programe o funcionamento dos aspersores com base nos níveis de reservatório.',
+        examples: ['Programar bomba do jardim para ligar se reservatório estiver acima de 60%', 'Agendar rega do jardim para segundas e quartas às 07h']
+      },
+      {
+        name: 'Rotinas Customizadas / Scripts',
+        desc: 'Crie agrupamentos de ações (cenas) executadas em lote sob demanda.',
+        examples: ['Criar rotina "Modo Econômico": desligar todas as luzes e bombas', 'Programar cena "Modo Festas": ligar luzes do jardim 100% e luzes da sala']
+      }
+    ]
   }
 ];
 
