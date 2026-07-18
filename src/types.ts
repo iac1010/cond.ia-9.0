@@ -205,6 +205,29 @@ export type SupplyQuotation = {
 
 export type PaymentStatus = 'PAID' | 'PENDING' | 'OVERDUE';
 
+export type AccountPayable = {
+  id: string;
+  description: string;
+  value: number;
+  dueDate: string;
+  category: string;
+  status: PaymentStatus;
+  paymentDate?: string;
+  notes?: string;
+};
+
+export type AccountReceivable = {
+  id: string;
+  description: string;
+  value: number;
+  dueDate: string;
+  category: string;
+  status: PaymentStatus;
+  paymentDate?: string;
+  clientId?: string;
+  notes?: string;
+};
+
 export type Payment = {
   id: string;
   clientId: string;
@@ -522,6 +545,8 @@ export interface AppState {
   supplyItems: SupplyItem[];
   supplyQuotations: SupplyQuotation[];
   payments: Payment[];
+  accountsPayable: AccountPayable[];
+  accountsReceivable: AccountReceivable[];
   legalAgreements: LegalAgreement[];
   contracts: Contract[];
   renovations: Renovation[];
@@ -711,6 +736,14 @@ export interface AppState {
   addKey: (key: Omit<KeyControl, 'id'>) => void;
   updateKey: (id: string, key: Partial<KeyControl>) => void;
   deleteKey: (id: string) => void;
+
+  addAccountPayable: (account: Omit<AccountPayable, 'id'>) => void;
+  updateAccountPayable: (id: string, account: Partial<AccountPayable>) => void;
+  deleteAccountPayable: (id: string) => void;
+
+  addAccountReceivable: (account: Omit<AccountReceivable, 'id'>) => void;
+  updateAccountReceivable: (id: string, account: Partial<AccountReceivable>) => void;
+  deleteAccountReceivable: (id: string) => void;
 
   addCostCategory: (category: string) => void;
   deleteCostCategory: (category: string) => void;

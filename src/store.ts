@@ -81,6 +81,8 @@ export const useStore = create<AppState>()(
       supplyItems: [],
       supplyQuotations: [],
       payments: [],
+      accountsPayable: [],
+      accountsReceivable: [],
       legalAgreements: [],
       contracts: [],
       renovations: [],
@@ -2492,6 +2494,44 @@ export const useStore = create<AppState>()(
           console.error(e);
           toast.error('Erro de conexão ao deletar pagamento.');
         }
+      },
+
+      addAccountPayable: (account) => {
+        const id = uuidv4();
+        const newAccount = { ...account, id };
+        set((state) => ({ accountsPayable: [...(state.accountsPayable || []), newAccount] }));
+        toast.success('Conta a pagar cadastrada!');
+      },
+      updateAccountPayable: (id, updated) => {
+        set((state) => ({
+          accountsPayable: (state.accountsPayable || []).map(a => a.id === id ? { ...a, ...updated } : a)
+        }));
+        toast.success('Conta a pagar atualizada!');
+      },
+      deleteAccountPayable: (id) => {
+        set((state) => ({
+          accountsPayable: (state.accountsPayable || []).filter(a => a.id !== id)
+        }));
+        toast.success('Conta a pagar removida!');
+      },
+
+      addAccountReceivable: (account) => {
+        const id = uuidv4();
+        const newAccount = { ...account, id };
+        set((state) => ({ accountsReceivable: [...(state.accountsReceivable || []), newAccount] }));
+        toast.success('Conta a receber cadastrada!');
+      },
+      updateAccountReceivable: (id, updated) => {
+        set((state) => ({
+          accountsReceivable: (state.accountsReceivable || []).map(a => a.id === id ? { ...a, ...updated } : a)
+        }));
+        toast.success('Conta a receber atualizada!');
+      },
+      deleteAccountReceivable: (id) => {
+        set((state) => ({
+          accountsReceivable: (state.accountsReceivable || []).filter(a => a.id !== id)
+        }));
+        toast.success('Conta a receber removida!');
       },
 
       addLegalAgreement: async (agreement) => {

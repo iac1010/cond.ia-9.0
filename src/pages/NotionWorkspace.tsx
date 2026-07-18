@@ -7,7 +7,8 @@ import {
   Copy, Printer, Table, Layers, GripVertical, Check, 
   Loader2, Sparkle, AlertCircle, HelpCircle, Flame, Wrench,
   BookOpen, Compass, Terminal, FileCode, CheckCircle2, ChevronDown, 
-  Info, CornerRightDown, RefreshCw, Layers3, Settings, ClipboardList
+  Info, CornerRightDown, RefreshCw, Layers3, Settings, ClipboardList,
+  Paperclip, File, UploadCloud, Download, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -17,7 +18,7 @@ import { Modal } from '../components/Modal';
 // Define Notion Block Type
 export interface NotionBlock {
   id: string;
-  type: 'h1' | 'h2' | 'h3' | 'paragraph' | 'todo' | 'bullet' | 'code' | 'callout' | 'table' | 'quote';
+  type: 'h1' | 'h2' | 'h3' | 'paragraph' | 'todo' | 'bullet' | 'code' | 'callout' | 'table' | 'quote' | 'file';
   content: string;
   properties?: {
     checked?: boolean;
@@ -26,6 +27,10 @@ export interface NotionBlock {
     headers?: string[];
     rows?: string[][];
     colorTheme?: 'default' | 'indigo' | 'emerald' | 'amber' | 'rose' | 'cyan' | 'blueprint';
+    fileName?: string;
+    fileSize?: string;
+    fileType?: string;
+    fileUrl?: string;
   };
 }
 
@@ -426,6 +431,53 @@ export default function NotionWorkspace() {
     toast.success('Estilo visual atualizado!');
   };
 
+  const handleFileUpload = (blockId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    processFile(blockId, file);
+  };
+
+  const handleFileDrop = (blockId: string, event: React.DragEvent<HTMLDivElement>) => {
+    const file = event.dataTransfer.files?.[0];
+    if (!file) return;
+    processFile(blockId, file);
+  };
+
+  const processFile = (blockId: string, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64Content = reader.result as string;
+      const formattedSize = file.size > 1024 * 1024 
+        ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` 
+        : `${(file.size / 1024).toFixed(1)} KB`;
+
+      setPages(prev => prev.map(p => {
+        if (p.id === selectedPageId) {
+          const updatedBlocks = p.blocks.map(b => {
+            if (b.id === blockId) {
+              return {
+                ...b,
+                content: file.name,
+                properties: {
+                  ...b.properties,
+                  fileName: file.name,
+                  fileSize: formattedSize,
+                  fileType: file.type,
+                  fileUrl: base64Content
+                }
+              };
+            }
+            return b;
+          });
+          return { ...p, blocks: updatedBlocks, updatedAt: new Date().toISOString() };
+        }
+        return p;
+      }));
+      toast.success(`Arquivo "${file.name}" anexado com sucesso!`);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // AI Assist action function calling server-side Gemini
   const handleAIAssist = async (blockId: string, command: 'improve' | 'summarize' | 'translate' | 'expand' | 'bullets') => {
     const targetBlock = activePage?.blocks.find(b => b.id === blockId);
@@ -539,6 +591,7 @@ export default function NotionWorkspace() {
     { type: 'callout', label: 'Alerta de Atenção / Dica', icon: Sparkles, desc: 'Bloco em destaque com ícone' },
     { type: 'quote', label: 'Citação / Norma Técnica', icon: Quote, desc: 'Citação de normas ou diretrizes' },
     { type: 'table', label: 'Tabela Organizacional', icon: Table, desc: 'Tabela interativa de colunas' },
+    { type: 'file', label: 'Anexo de Arquivo / Documento', icon: Paperclip, desc: 'Arraste ou selecione fotos, PDFs, etc.' },
   ];
 
   const filteredSlashCommands = slashCommands.filter(cmd =>
@@ -835,6 +888,10 @@ export default function NotionWorkspace() {
                             <span className="text-xl">{block.properties?.icon || '💡'}</span>
                           ) : block.type === 'quote' ? (
                             <div className="w-1.5 h-10 bg-rose-500/40 rounded-full" />
+                          ) : block.type === 'file' ? (
+                            <div className="w-5 h-5 flex items-center justify-center text-amber-400">
+                              <Paperclip className="w-4 h-4" />
+                            </div>
                           ) : (
                             <div className="w-5 h-5 flex items-center justify-center">
                               <GripVertical className="w-3.5 h-3.5 text-white/10 group-hover:text-white/40 cursor-grab" />
@@ -969,6 +1026,110 @@ export default function NotionWorkspace() {
                                     className="w-full bg-transparent border-none outline-none p-4 text-xs font-mono leading-relaxed text-indigo-300 focus:ring-0 focus:outline-none resize-none"
                                     placeholder="// Digite aqui códigos, scripts SQL de auditoria, ou comandos técnicos..."
                                   />
+                                </div>
+                              )}
+
+                              {/* File / Attachment Block */}
+                              {block.type === 'file' && (
+                                <div className="mt-1">
+                                  {!block.properties?.fileName ? (
+                                    <div className="relative">
+                                      <input
+                                        type="file"
+                                        id={`file-input-${block.id}`}
+                                        className="hidden"
+                                        onChange={(e) => handleFileUpload(block.id, e)}
+                                      />
+                                      <div
+                                        onDragOver={(e) => { e.preventDefault(); }}
+                                        onDrop={(e) => { e.preventDefault(); handleFileDrop(block.id, e); }}
+                                        onClick={() => document.getElementById(`file-input-${block.id}`)?.click()}
+                                        className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/10 hover:border-indigo-500/40 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] transition-all cursor-pointer text-center group"
+                                      >
+                                        <div className="p-3 bg-white/5 border border-white/10 rounded-2xl mb-3 text-white/60 group-hover:text-indigo-400 group-hover:border-indigo-500/20 group-hover:bg-indigo-500/5 transition-all">
+                                          <UploadCloud className="w-6 h-6 animate-pulse" />
+                                        </div>
+                                        <p className="text-xs font-bold text-white/90">Arraste seus documentos aqui</p>
+                                        <p className="text-[10px] text-white/40 mt-1">ou clique para selecionar do computador</p>
+                                        <p className="text-[9px] text-white/20 mt-2 font-mono uppercase">PDF, PNG, JPG, XLS, DOC (Máx 5MB)</p>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-white/[0.03] border border-white/10 rounded-2xl group/file">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
+                                          <File className="w-5 h-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="text-sm font-black text-white/95 truncate leading-tight">{block.properties.fileName}</p>
+                                          <div className="flex items-center gap-2 mt-1 text-xs text-white/40">
+                                            <span>{block.properties.fileSize}</span>
+                                            <span>•</span>
+                                            <span className="uppercase text-[9px] bg-white/5 px-1.5 py-0.5 rounded font-mono font-extrabold text-white/60 tracking-wider">
+                                              {block.properties.fileType?.split('/')[1] || 'DOC'}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 self-end sm:self-auto print:hidden">
+                                        {block.properties.fileType?.startsWith('image/') && (
+                                          <button
+                                            onClick={() => {
+                                              const win = window.open();
+                                              if (win) {
+                                                win.document.write(`<iframe src="${block.properties?.fileUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                                              } else {
+                                                toast.error("Bloqueador de popups impediu a visualização direta.");
+                                              }
+                                            }}
+                                            className="p-2.5 bg-white/5 hover:bg-indigo-500/20 border border-white/5 text-white/60 hover:text-indigo-300 rounded-xl transition-all"
+                                            title="Visualizar Imagem"
+                                          >
+                                            <Eye className="w-4 h-4" />
+                                          </button>
+                                        )}
+                                        <a
+                                          href={block.properties.fileUrl}
+                                          download={block.properties.fileName}
+                                          className="p-2.5 bg-white/5 hover:bg-emerald-500/20 border border-white/5 text-white/60 hover:text-emerald-300 rounded-xl transition-all flex items-center justify-center"
+                                          title="Baixar Arquivo"
+                                        >
+                                          <Download className="w-4 h-4" />
+                                        </a>
+                                        <button
+                                          onClick={() => {
+                                            setPages(prev => prev.map(p => {
+                                              if (p.id === selectedPageId) {
+                                                const updatedBlocks = p.blocks.map(b => {
+                                                  if (b.id === block.id) {
+                                                    return {
+                                                      ...b,
+                                                      content: '',
+                                                      properties: {
+                                                        ...b.properties,
+                                                        fileName: undefined,
+                                                        fileSize: undefined,
+                                                        fileType: undefined,
+                                                        fileUrl: undefined
+                                                      }
+                                                    };
+                                                  }
+                                                  return b;
+                                                });
+                                                return { ...p, blocks: updatedBlocks, updatedAt: new Date().toISOString() };
+                                              }
+                                              return p;
+                                            }));
+                                            toast.success("Anexo removido.");
+                                          }}
+                                          className="p-2.5 bg-white/5 hover:bg-red-500/20 border border-white/5 text-white/30 hover:text-red-400 rounded-xl transition-all"
+                                          title="Excluir Anexo"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
@@ -1184,6 +1345,13 @@ export default function NotionWorkspace() {
                   >
                     <Table className="w-4 h-4" />
                     Tabela de Atividades
+                  </button>
+                  <button
+                    onClick={() => handleAddNewBlock(activePage.blocks[activePage.blocks.length - 1]?.id, 'file')}
+                    className="flex items-center gap-2 px-5 py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    Anexar Arquivo
                   </button>
                 </div>
 

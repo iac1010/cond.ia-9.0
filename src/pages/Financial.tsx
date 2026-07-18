@@ -36,7 +36,10 @@ export default function Financial() {
     updateCost, updateReceipt, clients, payments, savingsGoals, 
     addSavingsGoal, updateSavingsGoal, deleteSavingsGoal,
     showBalance, setShowBalance, costCategories, addCostCategory, addClient,
-    clearFinancialData
+    clearFinancialData,
+    accountsPayable, accountsReceivable,
+    addAccountPayable, updateAccountPayable, deleteAccountPayable,
+    addAccountReceivable, updateAccountReceivable, deleteAccountReceivable
   } = useStore();
   
   const [isAIProcessing, setIsAIProcessing] = useState(false);
@@ -46,13 +49,20 @@ export default function Financial() {
   
   const [isAddingCost, setIsAddingCost] = useState(false);
   const [isAddingIncome, setIsAddingIncome] = useState(false);
+  const [isAddingPayable, setIsAddingPayable] = useState(false);
+  const [isAddingReceivable, setIsAddingReceivable] = useState(false);
+  const [payableNotes, setPayableNotes] = useState('');
+  const [receivableNotes, setReceivableNotes] = useState('');
+  const [payableStatus, setPayableStatus] = useState<'PENDING' | 'PAID' | 'OVERDUE'>('PENDING');
+  const [receivableStatus, setReceivableStatus] = useState<'PENDING' | 'PAID' | 'OVERDUE'>('PENDING');
+
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [isAddingMoneyToGoal, setIsAddingMoneyToGoal] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [moneyToAdd, setMoneyToAdd] = useState(0);
-  const [editingTransaction, setEditingTransaction] = useState<{ type: 'cost' | 'income' | 'goal', id: string } | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<{ type: 'cost' | 'income' | 'goal' | 'payable' | 'receivable', id: string } | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ type: 'income' | 'cost' | 'goal', id: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ type: 'income' | 'cost' | 'goal' | 'payable' | 'receivable', id: string } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -79,7 +89,7 @@ export default function Financial() {
     }
   }, [location, costs, receipts, savingsGoals]);
   
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'REPORTS'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'PAYABLE' | 'RECEIVABLE' | 'REPORTS'>('DASHBOARD');
   
   // Form states
   const [description, setDescription] = useState('');
@@ -111,7 +121,7 @@ export default function Financial() {
   const [selectedTransactions, setSelectedTransactions] = useState<Record<number, boolean>>({});
   const [editableTransactions, setEditableTransactions] = useState<any[]>([]);
 
-  const handleEdit = (type: 'cost' | 'income' | 'goal', id: string) => {
+  const handleEdit = (type: 'cost' | 'income' | 'goal' | 'payable' | 'receivable', id: string) => {
     if (type === 'goal') {
       const goal = savingsGoals.find(g => g.id === id);
       if (goal) {
@@ -122,6 +132,35 @@ export default function Financial() {
         setGoalCategory(goal.category);
         setGoalIcon(goal.icon);
         setGoalStatus(goal.status);
+        setEditingTransaction({ type, id });
+      }
+      return;
+    }
+
+    if (type === 'payable') {
+      const payable = (accountsPayable || []).find(p => p.id === id);
+      if (payable) {
+        setDescription(payable.description);
+        setValue(payable.value);
+        setDate(payable.dueDate);
+        setCategory(payable.category);
+        setPayableStatus(payable.status);
+        setPayableNotes(payable.notes || '');
+        setEditingTransaction({ type, id });
+      }
+      return;
+    }
+
+    if (type === 'receivable') {
+      const receivable = (accountsReceivable || []).find(r => r.id === id);
+      if (receivable) {
+        setDescription(receivable.description);
+        setValue(receivable.value);
+        setDate(receivable.dueDate);
+        setCategory(receivable.category);
+        setReceivableStatus(receivable.status);
+        setClientId(receivable.clientId || '');
+        setReceivableNotes(receivable.notes || '');
         setEditingTransaction({ type, id });
       }
       return;
@@ -171,19 +210,42 @@ export default function Financial() {
         icon: goalIcon,
         status: goalStatus
       });
+    } else if (editingTransaction.type === 'payable') {
+      updateAccountPayable(editingTransaction.id, {
+        description,
+        value,
+        dueDate: date,
+        category,
+        status: payableStatus,
+        notes: payableNotes
+      });
+    } else if (editingTransaction.type === 'receivable') {
+      updateAccountReceivable(editingTransaction.id, {
+        description,
+        value,
+        dueDate: date,
+        category,
+        status: receivableStatus,
+        clientId,
+        notes: receivableNotes
+      });
     }
 
     setEditingTransaction(null);
     resetForm();
   };
 
-  const handleDelete = (type: 'income' | 'cost' | 'goal', id: string) => {
+  const handleDelete = (type: 'income' | 'cost' | 'goal' | 'payable' | 'receivable', id: string) => {
     if (type === 'income') {
       deleteReceipt(id);
     } else if (type === 'cost') {
       deleteCost(id);
     } else if (type === 'goal') {
       deleteSavingsGoal(id);
+    } else if (type === 'payable') {
+      deleteAccountPayable(id);
+    } else if (type === 'receivable') {
+      deleteAccountReceivable(id);
     }
   };
 
@@ -200,6 +262,51 @@ export default function Financial() {
     setGoalCategory('Reserva');
     setGoalIcon('Target');
     setGoalStatus('IN_PROGRESS');
+    setPayableNotes('');
+    setReceivableNotes('');
+    setPayableStatus('PENDING');
+    setReceivableStatus('PENDING');
+  };
+
+  const handleAddPayable = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!description || value <= 0 || !date) {
+      toast.error('Preencha descrição, valor e data de vencimento.');
+      return;
+    }
+
+    addAccountPayable({
+      description,
+      value,
+      dueDate: date,
+      category,
+      status: payableStatus,
+      notes: payableNotes
+    });
+
+    resetForm();
+    setIsAddingPayable(false);
+  };
+
+  const handleAddReceivable = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!description || value <= 0 || !date) {
+      toast.error('Preencha descrição, valor e data de vencimento.');
+      return;
+    }
+
+    addAccountReceivable({
+      description,
+      value,
+      dueDate: date,
+      category,
+      status: receivableStatus,
+      clientId: clientId || undefined,
+      notes: receivableNotes
+    });
+
+    resetForm();
+    setIsAddingReceivable(false);
   };
 
   const handleAddGoal = async () => {
@@ -245,9 +352,26 @@ export default function Financial() {
   const balance = totalIncome - totalCosts;
   const profitMargin = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
 
-  const accountsReceivable = payments
-    .filter(p => p.status === 'PENDING' || p.status === 'OVERDUE')
-    .reduce((sum, p) => sum + p.amount, 0);
+  const accountsPayableList = useMemo(() => accountsPayable || [], [accountsPayable]);
+  const accountsReceivableList = useMemo(() => accountsReceivable || [], [accountsReceivable]);
+
+  const arPendingSum = useMemo(() => {
+    const arListPending = accountsReceivableList
+      .filter(r => r.status === 'PENDING' || r.status === 'OVERDUE')
+      .reduce((sum, r) => sum + (Number(r.value) || 0), 0);
+    const paymentsPending = payments
+      .filter(p => p.status === 'PENDING' || p.status === 'OVERDUE')
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    return arListPending + paymentsPending;
+  }, [accountsReceivableList, payments]);
+
+  const apPendingSum = useMemo(() => {
+    return accountsPayableList
+      .filter(p => p.status === 'PENDING' || p.status === 'OVERDUE')
+      .reduce((sum, p) => sum + (Number(p.value) || 0), 0);
+  }, [accountsPayableList]);
+
+  const projectedBalance = balance + arPendingSum - apPendingSum;
 
   const categoryData = useMemo(() => {
     const categories: { [key: string]: number } = {};
@@ -546,7 +670,7 @@ export default function Financial() {
         estimatedTax,
         balance,
         profitMargin,
-        accountsReceivable,
+        accountsReceivable: arPendingSum,
         expensesByCategory,
         topClients
       };
@@ -683,6 +807,46 @@ export default function Financial() {
       .map(key => dataByMonth[key]);
   }, [transactions]);
 
+  const monthlyAccountsData = useMemo(() => {
+    const dataByMonth: Record<string, { name: string, pagar: number, receber: number }> = {};
+    const listPayables = accountsPayable || [];
+    const listReceivables = accountsReceivable || [];
+
+    listPayables.forEach(item => {
+      if (!item.dueDate) return;
+      const date = new Date(item.dueDate + 'T12:00:00');
+      if (isNaN(date.getTime())) return;
+      
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = safeFormatDate(item.dueDate, { month: 'short', year: 'numeric' });
+      
+      if (!dataByMonth[monthYear]) {
+        dataByMonth[monthYear] = { name: monthName, pagar: 0, receber: 0 };
+      }
+      
+      dataByMonth[monthYear].pagar += Number(item.value || 0);
+    });
+
+    listReceivables.forEach(item => {
+      if (!item.dueDate) return;
+      const date = new Date(item.dueDate + 'T12:00:00');
+      if (isNaN(date.getTime())) return;
+      
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = safeFormatDate(item.dueDate, { month: 'short', year: 'numeric' });
+      
+      if (!dataByMonth[monthYear]) {
+        dataByMonth[monthYear] = { name: monthName, pagar: 0, receber: 0 };
+      }
+      
+      dataByMonth[monthYear].receber += Number(item.value || 0);
+    });
+
+    return Object.keys(dataByMonth)
+      .sort()
+      .map(key => dataByMonth[key]);
+  }, [accountsPayable, accountsReceivable]);
+
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
     costs.forEach(c => {
@@ -729,6 +893,306 @@ export default function Financial() {
       growth
     };
   }, [monthlyData, expensesByCategory]);
+
+  const renderPayableTab = () => {
+    const list = accountsPayable || [];
+    const totalCount = list.length;
+    const totalVal = list.reduce((sum, item) => sum + Number(item.value || 0), 0);
+    const pendingVal = list.filter(item => item.status === 'PENDING' || item.status === 'OVERDUE').reduce((sum, item) => sum + Number(item.value || 0), 0);
+    const paidVal = list.filter(item => item.status === 'PAID').reduce((sum, item) => sum + Number(item.value || 0), 0);
+
+    return (
+      <div className="space-y-8 relative z-10">
+        {/* Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <GlassCard title="Total Cadastrado">
+            <p className="text-2xl font-black text-white">{totalCount} contas</p>
+            <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">Volume de lançamentos</p>
+          </GlassCard>
+          <GlassCard title="Valor Total">
+            <p className="text-2xl font-black text-white">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalVal)}
+            </p>
+            <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">Soma de todas as contas</p>
+          </GlassCard>
+          <GlassCard title="Total Pendente">
+            <p className="text-2xl font-black text-orange-400">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingVal)}
+            </p>
+            <p className="text-orange-400/60 text-[10px] font-bold uppercase tracking-widest mt-1">A vencer ou atrasado</p>
+          </GlassCard>
+          <GlassCard title="Total Pago">
+            <p className="text-2xl font-black text-emerald-400">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paidVal)}
+            </p>
+            <p className="text-emerald-400/60 text-[10px] font-bold uppercase tracking-widest mt-1">Lançamentos baixados</p>
+          </GlassCard>
+        </div>
+
+        {/* List of Accounts Payable */}
+        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-3xl shadow-2xl">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-2xl font-black text-white">Lista de Contas a Pagar</h3>
+              <p className="text-white/40 text-xs font-medium mt-1">Gerencie suas obrigações financeiras futuras.</p>
+            </div>
+            <button 
+              onClick={() => {
+                resetForm();
+                setIsAddingPayable(true);
+              }}
+              className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 px-6 py-3 flex items-center gap-2 border border-orange-500/30 transition-all rounded-2xl backdrop-blur-2xl font-black uppercase tracking-widest text-[10px]"
+            >
+              <Plus className="w-4 h-4" /> Novo Lançamento
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {list.map((item, index) => {
+              const isOverdue = item.status === 'OVERDUE' || (item.status === 'PENDING' && new Date(item.dueDate) < new Date());
+              return (
+                <div 
+                  key={item.id}
+                  className="bg-white/5 border border-white/5 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-white/10 transition-all duration-300"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                        item.status === 'PAID' 
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                          : isOverdue 
+                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse' 
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                      }`}>
+                        {item.status === 'PAID' ? (
+                          <>
+                            <Check className="w-3 h-3" />
+                            Pago
+                          </>
+                        ) : isOverdue ? (
+                          <>
+                            <AlertCircle className="w-3 h-3" />
+                            Atrasado
+                          </>
+                        ) : (
+                          <>
+                            <Calendar className="w-3 h-3" />
+                            Pendente
+                          </>
+                        )}
+                      </span>
+                      <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">{item.category}</span>
+                    </div>
+                    <h4 className="text-lg font-black text-white">{item.description}</h4>
+                    {item.notes && <p className="text-xs text-white/40 italic">{item.notes}</p>}
+                  </div>
+
+                  <div className="flex flex-wrap md:flex-nowrap items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                    <div className="text-right">
+                      <p className="text-sm text-white/40 font-bold uppercase tracking-widest">Vencimento</p>
+                      <p className="text-sm font-black text-white">{safeFormatDate(item.dueDate)}</p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-sm text-white/40 font-bold uppercase tracking-widest">Valor</p>
+                      <p className="text-xl font-black text-white">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.value)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {item.status !== 'PAID' && (
+                        <button 
+                          onClick={() => updateAccountPayable(item.id, { status: 'PAID' })}
+                          className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                        >
+                          Marcar como Pago
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => handleEdit('payable', item.id)}
+                        className="p-3 text-white/40 hover:text-cyan-400 hover:bg-cyan-500/20 rounded-xl transition-all border border-white/5"
+                        title="Editar"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setConfirmDelete({ type: 'payable', id: item.id })}
+                        className="p-3 text-white/40 hover:text-rose-400 hover:bg-rose-500/20 rounded-xl transition-all border border-white/5"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {list.length === 0 && (
+              <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl">
+                <TrendingDown className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                <p className="text-white/40 font-bold text-sm uppercase tracking-widest">Nenhuma conta a pagar cadastrada</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderReceivableTab = () => {
+    const list = accountsReceivable || [];
+    const totalCount = list.length;
+    const totalVal = list.reduce((sum, item) => sum + Number(item.value || 0), 0);
+    const pendingVal = list.filter(item => item.status === 'PENDING' || item.status === 'OVERDUE').reduce((sum, item) => sum + Number(item.value || 0), 0);
+    const paidVal = list.filter(item => item.status === 'PAID').reduce((sum, item) => sum + Number(item.value || 0), 0);
+
+    return (
+      <div className="space-y-8 relative z-10">
+        {/* Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <GlassCard title="Total Cadastrado">
+            <p className="text-2xl font-black text-white">{totalCount} recebíveis</p>
+            <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">Volume de lançamentos</p>
+          </GlassCard>
+          <GlassCard title="Valor Total">
+            <p className="text-2xl font-black text-white">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalVal)}
+            </p>
+            <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">Soma de todas as contas</p>
+          </GlassCard>
+          <GlassCard title="Total Pendente">
+            <p className="text-2xl font-black text-cyan-400">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingVal)}
+            </p>
+            <p className="text-cyan-400/60 text-[10px] font-bold uppercase tracking-widest mt-1">A receber ou em atraso</p>
+          </GlassCard>
+          <GlassCard title="Total Recebido">
+            <p className="text-2xl font-black text-emerald-400">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paidVal)}
+            </p>
+            <p className="text-emerald-400/60 text-[10px] font-bold uppercase tracking-widest mt-1">Lançamentos baixados</p>
+          </GlassCard>
+        </div>
+
+        {/* List of Accounts Receivable */}
+        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-3xl shadow-2xl">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-2xl font-black text-white">Lista de Contas a Receber</h3>
+              <p className="text-white/40 text-xs font-medium mt-1">Acompanhe suas receitas agendadas e recebíveis.</p>
+            </div>
+            <button 
+              onClick={() => {
+                resetForm();
+                setIsAddingReceivable(true);
+              }}
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-6 py-3 flex items-center gap-2 border border-emerald-500/30 transition-all rounded-2xl backdrop-blur-2xl font-black uppercase tracking-widest text-[10px]"
+            >
+              <Plus className="w-4 h-4" /> Novo Recebível
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {list.map((item, index) => {
+              const clientObj = clients.find(c => c.id === item.clientId);
+              const isOverdue = item.status === 'OVERDUE' || (item.status === 'PENDING' && new Date(item.dueDate) < new Date());
+              return (
+                <div 
+                  key={item.id}
+                  className="bg-white/5 border border-white/5 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-white/10 transition-all duration-300"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                        item.status === 'PAID' 
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                          : isOverdue 
+                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse' 
+                            : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                      }`}>
+                        {item.status === 'PAID' ? (
+                          <>
+                            <Check className="w-3 h-3" />
+                            Pago
+                          </>
+                        ) : isOverdue ? (
+                          <>
+                            <AlertCircle className="w-3 h-3" />
+                            Atrasado
+                          </>
+                        ) : (
+                          <>
+                            <Calendar className="w-3 h-3" />
+                            Pendente
+                          </>
+                        )}
+                      </span>
+                      <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">{item.category}</span>
+                    </div>
+                    <h4 className="text-lg font-black text-white">{item.description}</h4>
+                    {clientObj && (
+                      <p className="text-xs text-cyan-400/80 font-semibold uppercase tracking-wider">
+                        Cliente: {clientObj.name}
+                      </p>
+                    )}
+                    {item.notes && <p className="text-xs text-white/40 italic">{item.notes}</p>}
+                  </div>
+
+                  <div className="flex flex-wrap md:flex-nowrap items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                    <div className="text-right">
+                      <p className="text-sm text-white/40 font-bold uppercase tracking-widest">Expectativa</p>
+                      <p className="text-sm font-black text-white">{safeFormatDate(item.dueDate)}</p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-sm text-white/40 font-bold uppercase tracking-widest">Valor</p>
+                      <p className="text-xl font-black text-white">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.value)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {item.status !== 'PAID' && (
+                        <button 
+                          onClick={() => updateAccountReceivable(item.id, { status: 'PAID' })}
+                          className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                        >
+                          Marcar como Recebido
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => handleEdit('receivable', item.id)}
+                        className="p-3 text-white/40 hover:text-cyan-400 hover:bg-cyan-500/20 rounded-xl transition-all border border-white/5"
+                        title="Editar"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setConfirmDelete({ type: 'receivable', id: item.id })}
+                        className="p-3 text-white/40 hover:text-rose-400 hover:bg-rose-500/20 rounded-xl transition-all border border-white/5"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {list.length === 0 && (
+              <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl">
+                <TrendingUp className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                <p className="text-white/40 font-bold text-sm uppercase tracking-widest">Nenhum recebível cadastrado</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderReports = () => (
     <div className="space-y-8 relative z-10">
@@ -964,7 +1428,7 @@ export default function Financial() {
           <div className="flex bg-black/20 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner ml-8">
             <button 
               onClick={() => setActiveTab('DASHBOARD')}
-              className={`px-8 py-3 rounded-xl transition-all flex items-center gap-3 text-[10px] font-black uppercase tracking-widest ${
+              className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${
                 activeTab === 'DASHBOARD' 
                   ? 'bg-white text-[#004a7c] shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' 
                   : 'text-white/40 hover:text-white hover:bg-white/5'
@@ -973,8 +1437,28 @@ export default function Financial() {
               <BarChart3 className="w-4 h-4" /> Dashboard
             </button>
             <button 
+              onClick={() => setActiveTab('PAYABLE')}
+              className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${
+                activeTab === 'PAYABLE' 
+                  ? 'bg-white text-[#004a7c] shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' 
+                  : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <TrendingDown className="w-4 h-4" /> Contas a Pagar
+            </button>
+            <button 
+              onClick={() => setActiveTab('RECEIVABLE')}
+              className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${
+                activeTab === 'RECEIVABLE' 
+                  ? 'bg-white text-[#004a7c] shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' 
+                  : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" /> Contas a Receber
+            </button>
+            <button 
               onClick={() => setActiveTab('REPORTS')}
-              className={`px-8 py-3 rounded-xl transition-all flex items-center gap-3 text-[10px] font-black uppercase tracking-widest ${
+              className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${
                 activeTab === 'REPORTS' 
                   ? 'bg-white text-[#004a7c] shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' 
                   : 'text-white/40 hover:text-white hover:bg-white/5'
@@ -1065,13 +1549,39 @@ export default function Financial() {
               <Plus className="w-4 h-4" /> 
               <span>Custo</span>
             </motion.button>
+
+            <motion.button 
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                resetForm();
+                setIsAddingPayable(true);
+              }}
+              className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 px-6 py-3 flex items-center gap-2 border border-orange-500/30 transition-all rounded-2xl backdrop-blur-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(245,158,11,0.1)]"
+            >
+              <Plus className="w-4 h-4" /> 
+              <span>Conta a Pagar</span>
+            </motion.button>
+
+            <motion.button 
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                resetForm();
+                setIsAddingReceivable(true);
+              }}
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-6 py-3 flex items-center gap-2 border border-emerald-500/30 transition-all rounded-2xl backdrop-blur-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(16,185,129,0.1)]"
+            >
+              <Plus className="w-4 h-4" /> 
+              <span>Conta a Receber</span>
+            </motion.button>
           </div>
         </header>
 
         {activeTab === 'DASHBOARD' ? (
           <>
             {/* High-Fidelity Dashboard Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-16 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-16 relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1079,7 +1589,7 @@ export default function Financial() {
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-500/20 transition-all duration-700" />
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Receitas Totais</h3>
+            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Receitas Realizadas</h3>
             <div className="p-2 bg-cyan-500/10 text-cyan-400 rounded-xl border border-cyan-500/20">
               <TrendingUp className="w-4 h-4" />
             </div>
@@ -1089,7 +1599,7 @@ export default function Financial() {
           </p>
           <div className="flex items-center gap-2 text-cyan-400/60 text-[8px] font-bold uppercase tracking-widest">
             <ArrowUpRight className="w-2 h-2" />
-            <span>+12.5% vs last month</span>
+            <span>Entradas efetivas</span>
           </div>
         </motion.div>
 
@@ -1101,7 +1611,7 @@ export default function Financial() {
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-rose-500/20 transition-all duration-700" />
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Despesas Totais</h3>
+            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Despesas Realizadas</h3>
             <div className="p-2 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
               <TrendingDown className="w-4 h-4" />
             </div>
@@ -1111,7 +1621,7 @@ export default function Financial() {
           </p>
           <div className="flex items-center gap-2 text-rose-400/60 text-[8px] font-bold uppercase tracking-widest">
             <ArrowDownRight className="w-2 h-2" />
-            <span>-4.2% optimized</span>
+            <span>Custos efetivos</span>
           </div>
         </motion.div>
 
@@ -1123,7 +1633,7 @@ export default function Financial() {
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/20 transition-all duration-700" />
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Saldo Líquido</h3>
+            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Saldo de Caixa (Real)</h3>
             <div className={`p-2 rounded-xl border ${balance >= 0 ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-orange-500/10 text-orange-400 border-orange-500/20'}`}>
               <Wallet className="w-4 h-4" />
             </div>
@@ -1133,7 +1643,29 @@ export default function Financial() {
           </p>
           <div className="flex items-center gap-2 text-white/20 text-[8px] font-bold uppercase tracking-widest">
             <ShieldCheck className="w-2 h-2" />
-            <span>Healthy Cashflow</span>
+            <span>Disponibilidade imediata</span>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="bg-white/5 rounded-[2.5rem] p-6 border border-white/10 shadow-2xl backdrop-blur-3xl relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-500/20 transition-all duration-700" />
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Fluxo de Caixa Projetado</h3>
+            <div className={`p-2 rounded-xl border ${projectedBalance >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <p className={`text-2xl font-black tracking-tighter mb-2 transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'} ${projectedBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(projectedBalance)}
+          </p>
+          <div className="flex items-center gap-2 text-emerald-400/60 text-[8px] font-bold uppercase tracking-widest">
+            <TrendingUp className="w-2 h-2" />
+            <span>Previsão de caixa futuro</span>
           </div>
         </motion.div>
 
@@ -1143,26 +1675,48 @@ export default function Financial() {
           transition={{ delay: 0.3 }}
           className="bg-white/5 rounded-[2.5rem] p-6 border border-white/10 shadow-2xl backdrop-blur-3xl relative overflow-hidden group"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/20 transition-all duration-700" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-500/20 transition-all duration-700" />
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Imposto Estimado (8%)</h3>
-            <div className="p-2 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20">
-              <ShieldAlert className="w-4 h-4" />
+            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Contas a Receber</h3>
+            <div className="p-2 bg-cyan-500/10 text-cyan-400 rounded-xl border border-cyan-500/20">
+              <Plus className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-2xl font-black text-white tracking-tighter mb-2 transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'}`}>
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estimatedTax)}
+          <p className={`text-2xl font-black tracking-tighter mb-2 text-white transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'}`}>
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(arPendingSum)}
           </p>
-          <div className="flex items-center gap-2 text-orange-400/60 text-[8px] font-bold uppercase tracking-widest">
-            <AlertCircle className="w-2 h-2" />
-            <span>Provisão de Impostos</span>
+          <div className="flex items-center gap-2 text-cyan-400/60 text-[8px] font-bold uppercase tracking-widest">
+            <ArrowUpRight className="w-2 h-2" />
+            <span>Previsão de entradas pendentes</span>
           </div>
         </motion.div>
 
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.35 }}
+          className="bg-white/5 rounded-[2.5rem] p-6 border border-white/10 shadow-2xl backdrop-blur-3xl relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-rose-500/20 transition-all duration-700" />
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Contas a Pagar</h3>
+            <div className="p-2 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
+              <TrendingDown className="w-4 h-4" />
+            </div>
+          </div>
+          <p className={`text-2xl font-black tracking-tighter mb-2 text-white transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'}`}>
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(apPendingSum)}
+          </p>
+          <div className="flex items-center gap-2 text-rose-400/60 text-[8px] font-bold uppercase tracking-widest">
+            <ArrowDownRight className="w-2 h-2" />
+            <span>Saídas e vencimentos agendados</span>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
           className="bg-white/5 rounded-[2.5rem] p-6 border border-white/10 shadow-2xl backdrop-blur-3xl relative overflow-hidden group"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/20 transition-all duration-700" />
@@ -1206,28 +1760,6 @@ export default function Financial() {
               <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-0.5">Status</p>
               <p className="text-xs font-bold text-white uppercase tracking-tighter">Excelente</p>
             </div>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white/5 rounded-[2.5rem] p-6 border border-white/10 shadow-2xl backdrop-blur-3xl relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-[50px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-500/20 transition-all duration-700" />
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-white/30 font-black uppercase tracking-[0.2em] text-[10px]">Contas a Receber</h3>
-            <div className="p-2 bg-cyan-500/10 text-cyan-400 rounded-xl border border-cyan-500/20">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <p className={`text-2xl font-black tracking-tighter mb-2 text-white transition-[opacity,color,transform] duration-300 ${!showBalance && 'blur-xl select-none'}`}>
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(accountsReceivable)}
-          </p>
-          <div className="flex items-center gap-2 text-cyan-400/60 text-[8px] font-bold uppercase tracking-widest">
-            <ArrowUpRight className="w-2 h-2" />
-            <span>Previsão de entrada</span>
           </div>
         </motion.div>
 
@@ -1666,6 +2198,81 @@ export default function Financial() {
           </GlassCard>
         </div>
       )}
+
+      {/* Contas a Pagar vs Contas a Receber Bar Chart */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full bg-white/5 rounded-[3rem] p-10 border border-white/10 shadow-2xl backdrop-blur-3xl mb-16 relative z-10"
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-4">
+          <div>
+            <h2 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
+              <BarChart3 className="w-8 h-8 text-cyan-400" />
+              Previsão Mensal de Fluxo: Contas a Pagar vs. Contas a Receber
+            </h2>
+            <p className="text-white/40 text-sm font-medium mt-1">Análise preditiva mensal comparando obrigações futuras e receitas programadas.</p>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">A Receber</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.5)]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">A Pagar</span>
+            </div>
+          </div>
+        </div>
+
+        {monthlyAccountsData.length === 0 ? (
+          <div className="py-24 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10">
+              <BarChart3 className="w-8 h-8 text-white/20" />
+            </div>
+            <p className="text-sm text-white/40 italic font-medium uppercase tracking-widest">Nenhuma conta cadastrada para comparação futura</p>
+          </div>
+        ) : (
+          <div className="h-[380px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyAccountsData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 900 }} 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 900 }} 
+                  tickFormatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
+                />
+                <Tooltip 
+                  content={<CustomTooltip />}
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.02)' }}
+                />
+                <Bar 
+                  dataKey="receber" 
+                  name="A Receber" 
+                  fill="#10b981" 
+                  radius={[8, 8, 0, 0]}
+                  maxBarSize={50}
+                />
+                <Bar 
+                  dataKey="pagar" 
+                  name="A Pagar" 
+                  fill="#f97316" 
+                  radius={[8, 8, 0, 0]}
+                  maxBarSize={50}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </motion.div>
       
       {/* Goals Section - Integrated into Financial View */}
       <div className="relative z-10 mb-16">
@@ -1859,7 +2466,13 @@ export default function Financial() {
         </div>
       </div>
       </>
-      ) : renderReports()}
+      ) : activeTab === 'PAYABLE' ? (
+        renderPayableTab()
+      ) : activeTab === 'RECEIVABLE' ? (
+        renderReceivableTab()
+      ) : (
+        renderReports()
+      )}
 
       </div>
 
@@ -1867,7 +2480,17 @@ export default function Financial() {
       <Modal 
         isOpen={!!editingTransaction} 
         onClose={() => setEditingTransaction(null)} 
-        title={`Editar ${editingTransaction?.type === 'cost' ? 'Custo' : editingTransaction?.type === 'income' ? 'Receita' : 'Meta'}`}
+        title={`Editar ${
+          editingTransaction?.type === 'cost' 
+            ? 'Custo' 
+            : editingTransaction?.type === 'income' 
+              ? 'Receita' 
+              : editingTransaction?.type === 'payable' 
+                ? 'Conta a Pagar' 
+                : editingTransaction?.type === 'receivable' 
+                  ? 'Conta a Receber' 
+                  : 'Meta'
+        }`}
         maxWidth="sm"
         glass={true}
       >
@@ -2041,6 +2664,78 @@ export default function Financial() {
                         </button>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {(editingTransaction?.type === 'payable' || editingTransaction?.type === 'receivable') && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Categoria</label>
+                    <select 
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+                    >
+                      <option value="Serviços" className="bg-[#004a7c]">Serviços</option>
+                      <option value="Impostos" className="bg-[#004a7c]">Impostos</option>
+                      <option value="Fornecedores" className="bg-[#004a7c]">Fornecedores</option>
+                      <option value="Infraestrutura" className="bg-[#004a7c]">Infraestrutura</option>
+                      <option value="Equipamentos" className="bg-[#004a7c]">Equipamentos</option>
+                      <option value="Marketing" className="bg-[#004a7c]">Marketing</option>
+                      <option value="Outros" className="bg-[#004a7c]">Outros</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Status</label>
+                    <select 
+                      value={editingTransaction?.type === 'payable' ? payableStatus : receivableStatus}
+                      onChange={(e) => {
+                        if (editingTransaction?.type === 'payable') {
+                          setPayableStatus(e.target.value as any);
+                        } else {
+                          setReceivableStatus(e.target.value as any);
+                        }
+                      }}
+                      className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+                    >
+                      <option value="PENDING" className="bg-[#004a7c]">Pendente</option>
+                      <option value="PAID" className="bg-[#004a7c]">{editingTransaction?.type === 'payable' ? 'Pago' : 'Recebido'}</option>
+                      <option value="OVERDUE" className="bg-[#004a7c]">Atrasado</option>
+                    </select>
+                  </div>
+
+                  {editingTransaction?.type === 'receivable' && (
+                    <div>
+                      <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Cliente</label>
+                      <select 
+                        value={clientId}
+                        onChange={(e) => setClientId(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+                      >
+                        <option value="" className="bg-[#004a7c]">Nenhum cliente associado</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id} className="bg-[#004a7c]">{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Observações / Notas</label>
+                    <textarea 
+                      value={editingTransaction?.type === 'payable' ? payableNotes : receivableNotes}
+                      onChange={(e) => {
+                        if (editingTransaction?.type === 'payable') {
+                          setPayableNotes(e.target.value);
+                        } else {
+                          setReceivableNotes(e.target.value);
+                        }
+                      }}
+                      className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30 h-20 resize-none"
+                      placeholder="Alguma anotação importante..."
+                    />
                   </div>
                 </div>
               )}
@@ -2344,6 +3039,232 @@ export default function Financial() {
               className="bg-white/20 hover:bg-white/30 text-white px-10 py-3 rounded-xl font-bold border border-white/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
             >
               SALVAR RECEITA
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Account Payable Modal */}
+      <Modal 
+        isOpen={isAddingPayable} 
+        onClose={() => setIsAddingPayable(false)} 
+        title="Adicionar Conta a Pagar"
+        maxWidth="sm"
+        glass={true}
+      >
+        <form onSubmit={handleAddPayable} className="space-y-6 p-2">
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Descrição *</label>
+            <input 
+              type="text" 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
+              placeholder="Ex: Aluguel da sede, fatura de servidor..."
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Valor (R$) *</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 font-bold">R$</span>
+              <input 
+                type="number" 
+                value={value || ''}
+                onChange={(e) => setValue(parseFloat(e.target.value) || 0)}
+                className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl pl-12 pr-4 py-3 outline-none transition-all text-white"
+                min="0.01"
+                step="0.01"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Vencimento *</label>
+            <input 
+              type="date" 
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white [color-scheme:dark]"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Categoria</label>
+            <select 
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+            >
+              <option value="Serviços" className="bg-[#004a7c]">Serviços</option>
+              <option value="Impostos" className="bg-[#004a7c]">Impostos</option>
+              <option value="Fornecedores" className="bg-[#004a7c]">Fornecedores</option>
+              <option value="Infraestrutura" className="bg-[#004a7c]">Infraestrutura</option>
+              <option value="Equipamentos" className="bg-[#004a7c]">Equipamentos</option>
+              <option value="Marketing" className="bg-[#004a7c]">Marketing</option>
+              <option value="Outros" className="bg-[#004a7c]">Outros</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Status Inicial</label>
+            <select 
+              value={payableStatus}
+              onChange={(e) => setPayableStatus(e.target.value as any)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+            >
+              <option value="PENDING" className="bg-[#004a7c]">Pendente</option>
+              <option value="PAID" className="bg-[#004a7c]">Pago</option>
+              <option value="OVERDUE" className="bg-[#004a7c]">Atrasado</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Observações / Notas</label>
+            <textarea 
+              value={payableNotes}
+              onChange={(e) => setPayableNotes(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30 h-20 resize-none"
+              placeholder="Ex: Fatura referente ao provedor AWS..."
+            />
+          </div>
+
+          <div className="pt-6 flex justify-end gap-3">
+            <button 
+              type="button"
+              onClick={() => setIsAddingPayable(false)}
+              className="px-6 py-3 text-white/60 hover:text-white transition-colors font-medium"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit"
+              className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 px-10 py-3 rounded-xl font-bold border border-orange-500/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
+            >
+              SALVAR OBRIGAÇÃO
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Account Receivable Modal */}
+      <Modal 
+        isOpen={isAddingReceivable} 
+        onClose={() => setIsAddingReceivable(false)} 
+        title="Adicionar Conta a Receber"
+        maxWidth="sm"
+        glass={true}
+      >
+        <form onSubmit={handleAddReceivable} className="space-y-6 p-2">
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Cliente</label>
+            <select 
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+            >
+              <option value="" className="bg-[#004a7c]">Nenhum cliente associado</option>
+              {clients.map(c => (
+                <option key={c.id} value={c.id} className="bg-[#004a7c]">{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Descrição *</label>
+            <input 
+              type="text" 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30"
+              placeholder="Ex: Recebimento de mensalidade, projeto..."
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Valor (R$) *</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 font-bold">R$</span>
+              <input 
+                type="number" 
+                value={value || ''}
+                onChange={(e) => setValue(parseFloat(e.target.value) || 0)}
+                className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl pl-12 pr-4 py-3 outline-none transition-all text-white"
+                min="0.01"
+                step="0.01"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Expectativa de Recebimento *</label>
+            <input 
+              type="date" 
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white [color-scheme:dark]"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Categoria</label>
+            <select 
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+            >
+              <option value="Serviços" className="bg-[#004a7c]">Serviços</option>
+              <option value="Impostos" className="bg-[#004a7c]">Impostos</option>
+              <option value="Fornecedores" className="bg-[#004a7c]">Fornecedores</option>
+              <option value="Infraestrutura" className="bg-[#004a7c]">Infraestrutura</option>
+              <option value="Equipamentos" className="bg-[#004a7c]">Equipamentos</option>
+              <option value="Marketing" className="bg-[#004a7c]">Marketing</option>
+              <option value="Outros" className="bg-[#004a7c]">Outros</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Status Inicial</label>
+            <select 
+              value={receivableStatus}
+              onChange={(e) => setReceivableStatus(e.target.value as any)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white appearance-none cursor-pointer"
+            >
+              <option value="PENDING" className="bg-[#004a7c]">Pendente</option>
+              <option value="PAID" className="bg-[#004a7c]">Recebido</option>
+              <option value="OVERDUE" className="bg-[#004a7c]">Atrasado</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold uppercase tracking-wider text-white/60 mb-2">Observações / Notas</label>
+            <textarea 
+              value={receivableNotes}
+              onChange={(e) => setReceivableNotes(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl px-4 py-3 outline-none transition-all text-white placeholder:text-white/30 h-20 resize-none"
+              placeholder="Ex: Referente à consultoria de software de Junho..."
+            />
+          </div>
+
+          <div className="pt-6 flex justify-end gap-3">
+            <button 
+              type="button"
+              onClick={() => setIsAddingReceivable(false)}
+              className="px-6 py-3 text-white/60 hover:text-white transition-colors font-medium"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit"
+              className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-10 py-3 rounded-xl font-bold border border-emerald-500/30 transition-all active:scale-95 shadow-lg backdrop-blur-md"
+            >
+              SALVAR RECEBÍVEL
             </button>
           </div>
         </form>

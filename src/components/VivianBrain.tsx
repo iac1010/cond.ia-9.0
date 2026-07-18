@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useStore } from '../store';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { GoogleGenAI, Type } from "@google/genai";
 import { sendWhatsAppMessage } from '../services/whatsappService';
 import { toast } from 'react-hot-toast';
@@ -19,10 +19,84 @@ export const VivianBrain: React.FC = () => {
     processCommandRef.current = processCommand;
   });
 
+  // Automated notification checker for upcoming accounts (3 days before due date)
+  useEffect(() => {
+    const payables = store.accountsPayable || [];
+    const receivables = store.accountsReceivable || [];
+    const notifications = store.notifications || [];
+
+    const getDaysDiff = (dateStr: string) => {
+      const target = new Date(dateStr + 'T12:00:00');
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      const diffTime = target.getTime() - today.getTime();
+      return Math.round(diffTime / (1000 * 60 * 60 * 24));
+    };
+
+    // Check accounts payable
+    payables.forEach((item) => {
+      if (item.status === 'PENDING' || item.status === 'OVERDUE') {
+        const diffDays = getDaysDiff(item.dueDate);
+        if (diffDays === 3) {
+          const message = `A conta a pagar "${item.description}" no valor de R$ ${Number(item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} vence em 3 dias (${new Date(item.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}).`;
+          const alreadyNotified = notifications.some(
+            (n) => n.message.includes(item.description) && n.message.includes('vence em 3 dias')
+          );
+          if (!alreadyNotified) {
+            store.addNotification({
+              title: 'Vivian AI: Conta Próxima ao Vencimento ⚠️',
+              message,
+              type: 'WARNING'
+            });
+            toast(`Vivian AI: ${item.description} vence em 3 dias!`, { icon: '🤖' });
+          }
+        }
+      }
+    });
+
+    // Check accounts receivable
+    receivables.forEach((item) => {
+      if (item.status === 'PENDING' || item.status === 'OVERDUE') {
+        const diffDays = getDaysDiff(item.dueDate);
+        if (diffDays === 3) {
+          const message = `O recebível "${item.description}" no valor de R$ ${Number(item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} está agendado para ser recebido em 3 dias (${new Date(item.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}).`;
+          const alreadyNotified = notifications.some(
+            (n) => n.message.includes(item.description) && n.message.includes('recebido em 3 dias')
+          );
+          if (!alreadyNotified) {
+            store.addNotification({
+              title: 'Vivian AI: Recebível Próximo 📅',
+              message,
+              type: 'INFO'
+            });
+            toast(`Vivian AI: Recebível ${item.description} agendado para 3 dias!`, { icon: '🤖' });
+          }
+        }
+      }
+    });
+  }, [store.accountsPayable, store.accountsReceivable, store.notifications]);
+
   useEffect(() => {
     // Expose a test function to the window for debugging
     (window as any).testVivian = async (message: string = "Vivian, qual o nosso saldo?") => {
       console.log('VivianBrain: Manually triggering test command:', message);
+      if (!isSupabaseConfigured) {
+        console.warn('VivianBrain: Supabase not configured. Simulating command locally...');
+        toast.success('Simulando recebimento de comando de teste localmente (offline)...');
+        const mockCommand = {
+          id: uuidv4(),
+          sender_name: 'Teste Manual',
+          sender_number: '5521982240134@s.whatsapp.net',
+          message_text: message,
+          processed: false,
+          created_at: new Date().toISOString()
+        };
+        if (processCommandRef.current) {
+          processCommandRef.current(mockCommand);
+        }
+        return;
+      }
+
       const { data, error } = await supabase.from('whatsapp_commands').insert([{
         sender_name: 'Teste Manual',
         sender_number: '5521982240134@s.whatsapp.net',
@@ -40,82 +114,94 @@ export const VivianBrain: React.FC = () => {
       }
     };
 
-    // 1. Listen for new messages in the 'whatsapp_commands' table
-    console.log('VivianBrain: Starting to listen for WhatsApp commands via Supabase Realtime...');
+    let channel: any = null;
+    let pollingInterval: any = null;
+
     store.setVivianOnline(true);
-    
-    const channel = supabase
-      .channel('whatsapp-commands')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'whatsapp_commands' },
-        (payload) => {
-          const newCommand = payload.new;
-          console.log('VivianBrain: [REALTIME] New command received:', JSON.stringify(newCommand, null, 2));
-          
-          if (!newCommand.processed) {
-            console.log('VivianBrain: Processing new command...');
-            toast.success(`Vivian recebeu um comando: "${newCommand.message_text.substring(0, 20)}..."`, {
-              icon: '🤖',
-              duration: 4000
-            });
-            if (processCommandRef.current) {
-              processCommandRef.current(newCommand);
+
+    if (isSupabaseConfigured) {
+      // 1. Listen for new messages in the 'whatsapp_commands' table via Supabase Realtime
+      console.log('VivianBrain: Starting to listen for WhatsApp commands via Supabase Realtime...');
+      
+      channel = supabase
+        .channel('whatsapp-commands')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'whatsapp_commands' },
+          (payload) => {
+            const newCommand = payload.new;
+            console.log('VivianBrain: [REALTIME] New command received:', JSON.stringify(newCommand, null, 2));
+            
+            if (!newCommand.processed) {
+              console.log('VivianBrain: Processing new command...');
+              toast.success(`Vivian recebeu um comando: "${newCommand.message_text.substring(0, 20)}..."`, {
+                icon: '🤖',
+                duration: 4000
+              });
+              if (processCommandRef.current) {
+                processCommandRef.current(newCommand);
+              } else {
+                console.error('VivianBrain: processCommandRef is null, cannot process command.');
+              }
             } else {
-              console.error('VivianBrain: processCommandRef is null, cannot process command.');
+              console.log('VivianBrain: Command already processed, skipping.');
             }
-          } else {
-            console.log('VivianBrain: Command already processed, skipping.');
           }
+        )
+        .subscribe((status, err) => {
+          console.log(`VivianBrain: Realtime subscription status: ${status}`);
+          if (err) console.error('VivianBrain: Subscription error:', err);
+        });
+
+      // 2. Fallback polling for new commands (in case Realtime is not enabled)
+      pollingInterval = setInterval(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('whatsapp_commands')
+            .select('*')
+            .eq('processed', false)
+            .order('created_at', { ascending: true });
+
+          if (error) {
+            console.warn('VivianBrain Polling (Table check): "whatsapp_commands" might not exist yet or connection is offline. Skipping.', error.message || error);
+            return;
+          }
+
+          if (data && data.length > 0) {
+            console.log(`VivianBrain Polling: Found ${data.length} unprocessed commands.`);
+            for (const command of data) {
+              if (processCommandRef.current) {
+                // Mark as processing immediately to avoid duplicate processing during poll
+                await supabase.from('whatsapp_commands').update({ processed: true, action_taken: 'PROCESSING' }).eq('id', command.id);
+                await processCommandRef.current(command);
+                // Add a small delay between commands to be safe
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('VivianBrain Polling Exception:', err);
         }
-      )
-      .subscribe((status, err) => {
-        console.log(`VivianBrain: Realtime subscription status: ${status}`);
-        if (err) console.error('VivianBrain: Subscription error:', err);
-      });
+      }, 5000); // Poll every 5 seconds
+    } else {
+      console.log('VivianBrain: Supabase not configured. Offline mode active - commands can only be simulated locally.');
+    }
 
     // Heartbeat to show Vivian is alive
     const heartbeatInterval = setInterval(() => {
       console.log('VivianBrain Heartbeat: Still listening... 🤖');
     }, 60000); // Every minute
 
-    // 2. Fallback polling for new commands (in case Realtime is not enabled)
-    const pollingInterval = setInterval(async () => {
-      try {
-        const { data, error } = await supabase
-          .from('whatsapp_commands')
-          .select('*')
-          .eq('processed', false)
-          .order('created_at', { ascending: true });
-
-        if (error) {
-          console.error('VivianBrain Polling Error:', error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          console.log(`VivianBrain Polling: Found ${data.length} unprocessed commands.`);
-          for (const command of data) {
-            if (processCommandRef.current) {
-              // Mark as processing immediately to avoid duplicate processing during poll
-              await supabase.from('whatsapp_commands').update({ processed: true, action_taken: 'PROCESSING' }).eq('id', command.id);
-              await processCommandRef.current(command);
-              // Add a small delay between commands to be safe
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-          }
-        }
-      } catch (err) {
-        console.error('VivianBrain Polling Exception:', err);
-      }
-    }, 5000); // Poll every 5 seconds
-
     return () => {
       console.log('VivianBrain: Cleaning up Realtime subscription and polling.');
       store.setVivianOnline(false);
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
       clearInterval(heartbeatInterval);
-      clearInterval(pollingInterval);
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
     };
   }, []);
 
