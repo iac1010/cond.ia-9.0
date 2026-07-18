@@ -95,7 +95,7 @@ export default function FinancialBrain() {
       `;
 
       const result = await genAI.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json"

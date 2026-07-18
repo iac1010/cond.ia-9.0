@@ -678,7 +678,7 @@ export default function Financial() {
       while (retries > 0) {
         try {
           const result = await genAI.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3.5-flash",
             contents: `
               Você é o Analista Financeiro IA do CONDFY.IA. Analise os seguintes dados financeiros de um condomínio e forneça um relatório interativo com insights, alertas e recomendações:
               

@@ -36,6 +36,20 @@ const SLIDES = [
     ]
   },
   {
+    id: 'pillars',
+    title: 'Os 4 Pilares da Gestão',
+    subtitle: 'Governança e Sustentabilidade Integrada',
+    content: 'Nossa plataforma se apoia em quatro pilares fundamentais, permitindo uma administração de condomínio de alto desempenho de ponta a ponta.',
+    icon: <ShieldCheck className="w-12 h-12 text-emerald-500" />,
+    image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=2070',
+    benefits: [
+      'Pilar Financeiro: Previsibilidade, transparência e controle de inadimplência',
+      'Pilar Operacional: Manutenção NBR 5674 e telemetria predial IoT ativa',
+      'Pilar Jurídico & Governança: Modelos de atas legais e conformidade civil',
+      'Pilar Comunicação & Convivência: Alertas via WhatsApp e mural interativo'
+    ]
+  },
+  {
     id: 'maintenance',
     title: 'Manutenção Inteligente',
     subtitle: 'Manutenção Preventiva (NBR 5674)',

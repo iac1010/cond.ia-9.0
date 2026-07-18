@@ -215,10 +215,10 @@ export const VivianBrain: React.FC = () => {
       return;
     }
     
-    console.log(`Vivian received message: "${message_text}" from ${sender_name} (${sender_number})`);
+    console.log(`LUMI received message: "${message_text}" from ${sender_name} (${sender_number})`);
 
-    // Check if message is for Vivian (starts with Vivian or contains Vivian)
-    const isTriggered = message_text.toLowerCase().includes('vivian');
+    // Check if message is for LUMI/Vivian (starts with or contains Lumi or Vivian)
+    const isTriggered = message_text.toLowerCase().includes('vivian') || message_text.toLowerCase().includes('lumi');
     
     if (!isTriggered) {
       // If not triggered, just mark as processed but with no action
@@ -226,17 +226,17 @@ export const VivianBrain: React.FC = () => {
       return;
     }
 
-    // Remove the "Vivian, " or "Vivian " prefix for the AI
-    const cleanMessage = message_text.replace(/vivian/gi, '').trim();
+    // Remove the "Vivian, " or "Lumi, " prefixes for the AI
+    const cleanMessage = message_text.replace(/vivian/gi, '').replace(/lumi/gi, '').trim();
 
     if (!cleanMessage) {
-      console.log('Vivian: Message is just "Vivian", sending greeting.');
+      console.log('LUMI: Message is just a call, sending greeting.');
       await supabase.from('whatsapp_commands').update({ processed: true, action_taken: 'GREETING' }).eq('id', id);
-      await sendWhatsAppMessage(sender_number, "Olá! Sou a Vivian, sua assistente. Como posso te ajudar hoje? Você pode me pedir para cadastrar moradores, encomendas, visitantes, agendar mudanças, abrir chamados, fazer orçamentos ou lançamentos financeiros.");
+      await sendWhatsAppMessage(sender_number, "Olá! Sou o LUMI, seu assistente. Como posso te ajudar hoje? Você pode me pedir para cadastrar moradores, encomendas, visitantes, agendar mudanças, abrir chamados, fazer orçamentos ou lançamentos financeiros.");
       return;
     }
 
-    console.log(`Vivian is thinking about: "${cleanMessage}"`);
+    console.log(`LUMI is thinking about: "${cleanMessage}"`);
 
     // Send an initial "thinking" message to show Vivian is working
     if (sender_number !== 'test@s.whatsapp.net') {
@@ -279,7 +279,7 @@ export const VivianBrain: React.FC = () => {
       };
 
       const prompt = `
-        Você é a Vivian, a assistente virtual inteligente do sistema de gestão condominial CONDFY.IA.
+        Você é o LUMI, o assistente virtual inteligente do sistema de gestão condominial CONDFY.IA.
         Sua tarefa é interpretar comandos de voz ou texto vindos do WhatsApp e transformá-los em ações no sistema.
 
         Comando do usuário: "${cleanMessage}"
@@ -300,9 +300,9 @@ export const VivianBrain: React.FC = () => {
 
         Exemplos de entrada e saída:
         - "aviso para todos: amanhã falta água das 14h às 16h" -> { "action": "ADD_ANNOUNCEMENT", "data": { "title": "Falta de Água", "content": "Amanhã faltará água das 14h às 16h para manutenção.", "category": "MANUTENCAO", "priority": "HIGH" }, "reply": "Comunicado criado! Todos os moradores serão avisados sobre a falta de água." }
-        - "Vivian, como você está?" -> { "action": "REPLY_ONLY", "data": {}, "reply": "Estou ótima e pronta para te ajudar a gerenciar o condomínio! O que vamos fazer hoje?" }
+        - "Lumi, como você está?" -> { "action": "REPLY_ONLY", "data": {}, "reply": "Estou ótimo e pronto para te ajudar a gerenciar o condomínio! O que vamos fazer hoje?" }
         - "chegou uma encomenda da Amazon para o apto 101 torre A" -> { "action": "ADD_PACKAGE", "data": { "carrier": "Amazon", "apartment": "101", "tower": "A" }, "reply": "Recebido! Registrei a encomenda da Amazon para o apto 101A." }
-        - "Vivian, qual o nosso saldo?" -> { "action": "GET_SUMMARY", "data": { "topic": "financeiro" }, "reply": "Vou verificar o saldo para você agora mesmo." }
+        - "Lumi, qual o nosso saldo?" -> { "action": "GET_SUMMARY", "data": { "topic": "financeiro" }, "reply": "Vou verificar o saldo para você agora mesmo." }
         
         Responda APENAS em formato JSON seguindo o schema fornecido.
       `;
@@ -314,7 +314,7 @@ export const VivianBrain: React.FC = () => {
       while (retries > 0) {
         try {
           response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
               responseMimeType: "application/json",

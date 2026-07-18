@@ -100,7 +100,7 @@ Descrição original do técnico:
 Gere apenas o conteúdo do relatório em Markdown.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.5-flash',
         contents: prompt,
       });
 

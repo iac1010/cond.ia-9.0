@@ -538,6 +538,10 @@ export default function KanbanBoard() {
                     const footerSpacingClass = zoom === 'sm' ? 'space-y-1.5' : zoom === 'lg' ? 'space-y-4' : 'space-y-3';
                     const detailsLinkMargin = zoom === 'sm' ? 'mt-3' : zoom === 'lg' ? 'mt-8' : 'mt-6';
 
+                    const totalChecklists = ticket.checklistResults?.length || 0;
+                    const completedChecklists = ticket.checklistResults?.filter(r => r.status === 'OK' || r.status === 'NOK').length || 0;
+                    const progressPct = totalChecklists > 0 ? Math.round((completedChecklists / totalChecklists) * 100) : 0;
+
                     return (
                       <motion.div
                         layout
@@ -599,6 +603,29 @@ export default function KanbanBoard() {
                         </h3>
                         {ticket.title && client?.name && (
                           <p className={cardClientClass}>{client.name}</p>
+                        )}
+
+                        {totalChecklists > 0 && (
+                          <div className={`mt-3 mb-4 space-y-1.5 ${zoom === 'sm' ? 'text-[10px]' : zoom === 'lg' ? 'text-sm' : 'text-xs'}`}>
+                            <div className="flex justify-between items-center text-white/60 font-bold">
+                              <span>Checklist de Manutenção</span>
+                              <span className="text-blue-400 font-extrabold">{completedChecklists}/{totalChecklists} ({progressPct}%)</span>
+                            </div>
+                            <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden border border-white/5 relative">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progressPct}%` }}
+                                transition={{ duration: 0.5, ease: 'easeOut' }}
+                                className={`h-full rounded-full bg-gradient-to-r ${
+                                  progressPct === 100 
+                                    ? 'from-emerald-500 to-green-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' 
+                                    : progressPct >= 50 
+                                    ? 'from-indigo-500 to-blue-400 shadow-[0_0_8px_rgba(99,102,241,0.5)]' 
+                                    : 'from-amber-500 to-orange-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
+                                }`}
+                              />
+                            </div>
+                          </div>
                         )}
                         
                         <div className={`border-t border-white/10 ${footerSpacingClass} ${cardDividerClass}`}>

@@ -4297,7 +4297,7 @@ export const useStore = create<AppState>()(
         try {
           const base64Data = await fileToBase64(file);
           const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3.5-flash",
             contents: {
               parts: [
                 {
@@ -4341,7 +4341,7 @@ export const useStore = create<AppState>()(
         while (retries > 0) {
           try {
             const response = await ai.models.generateContent({
-              model: "gemini-3-flash-preview",
+              model: "gemini-3.5-flash",
               contents: `Com base nestes dados históricos de custos de um condomínio: ${JSON.stringify(historicalData)}. Gere uma previsão orçamentária detalhada para os próximos 6 meses. Retorne um objeto JSON com as chaves: month (mês da previsão), monthlyProjections (array com month e value), categories (array com name e value), insights (array de strings), confidence (0-1).`,
               config: {
                 responseMimeType: "application/json",

@@ -1374,6 +1374,54 @@ Seja extremamente preciso com os preços reais pesquisados. Se as empresas reais
     }
   });
 
+  // WhatsApp Webhook Receiver and Simulator
+  apiRouter.post('/webhook/whatsapp', async (req, res) => {
+    try {
+      console.log('[WhatsApp Webhook] Received payload:', JSON.stringify(req.body, null, 2));
+      lastWebhookReceived = new Date().toISOString();
+
+      const messages = req.body?.data?.messages;
+      if (Array.isArray(messages) && messages.length > 0) {
+        const msg = messages[0];
+        const pushName = msg.pushName || 'Desconhecido';
+        const messageObj = msg.message;
+        
+        let text = '';
+        if (messageObj) {
+          text = messageObj.conversation || 
+                 messageObj.extendedTextMessage?.text || 
+                 messageObj.imageMessage?.caption || 
+                 '';
+        }
+
+        if (text) {
+          lastMessageExtracted = `${pushName}: ${text}`;
+          console.log(`[WhatsApp Webhook] Extracted message: "${lastMessageExtracted}"`);
+        }
+      } else if (req.body?.event === 'messages.upsert' && req.body?.data?.message) {
+        // Alternative payload structure
+        const msg = req.body.data;
+        const pushName = msg.pushName || 'Desconhecido';
+        const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+        if (text) {
+          lastMessageExtracted = `${pushName}: ${text}`;
+        }
+      } else if (req.body?.text) {
+        // Direct payload structure if simple text
+        lastMessageExtracted = req.body.text;
+      }
+
+      res.status(200).json({ success: true, received: true, lastMessageExtracted });
+    } catch (error: any) {
+      console.error('[WhatsApp Webhook] Error processing webhook:', error);
+      res.status(500).json({ error: 'Failed to process webhook', details: error?.message });
+    }
+  });
+
+  apiRouter.get('/webhook/whatsapp', (req, res) => {
+    res.json({ status: 'active', message: 'WhatsApp webhook receiver is running.', lastWebhookReceived, lastMessageExtracted });
+  });
+
   app.use('/api', apiRouter);
 
   // Prevent API requests from falling through to SPA fallback

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { Ticket, TicketStatus, SupplyItem } from '../types';
@@ -7,7 +7,7 @@ import {
   ChevronRight, Package, DollarSign, 
   Plus, Minus, X, AlertTriangle,
   ArrowRight, Info, Pin, Trash2, Search, Palette, Check, Edit2,
-  Sparkles, Brain, CheckCircle, Eye, Copy, ExternalLink
+  Sparkles, Brain, CheckCircle, Eye, Copy, ExternalLink, Mic, MicOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -301,6 +301,121 @@ export default function ExecutionCenter() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [cardSearchTerm, setCardSearchTerm] = useState('');
+
+  // --- VOICE-CONTROLLED SEARCH SPEECH-TO-TEXT ---
+  const [isListeningVoiceSearch, setIsListeningVoiceSearch] = useState(false);
+  const [voiceSearchSupported, setVoiceSearchSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setVoiceSearchSupported(true);
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = 'pt-BR'; // Match the primary locale of the app
+
+      rec.onstart = () => {
+        setIsListeningVoiceSearch(true);
+        toast.dismiss();
+        toast.loading('Ouvindo seu comando de voz... Diga o número da O.S. ou o status de prioridade.', { id: 'voice-search-status' });
+      };
+
+      rec.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript || '';
+        let cleanedTranscript = transcript.trim().toLowerCase();
+        console.log('[Voice Search] Detected raw transcript:', transcript);
+        toast.dismiss('voice-search-status');
+        toast.success(`Detectado: "${transcript}"`, { id: 'voice-search-detected' });
+
+        // Normalization and smart keyword mapping
+        // Priority checks in Portuguese and English
+        if (
+          cleanedTranscript.includes('crítica') || 
+          cleanedTranscript.includes('crítico') || 
+          cleanedTranscript.includes('urgente') || 
+          cleanedTranscript.includes('critical')
+        ) {
+          setCardSearchTerm('crítica');
+          toast.success('Filtro aplicado: Prioridade Crítica 🚨', { id: 'voice-result-toast' });
+        } else if (
+          cleanedTranscript.includes('alta') || 
+          cleanedTranscript.includes('alto') || 
+          cleanedTranscript.includes('high')
+        ) {
+          setCardSearchTerm('alta');
+          toast.success('Filtro aplicado: Prioridade Alta ⚡', { id: 'voice-result-toast' });
+        } else if (
+          cleanedTranscript.includes('média') || 
+          cleanedTranscript.includes('médio') || 
+          cleanedTranscript.includes('medium')
+        ) {
+          setCardSearchTerm('média');
+          toast.success('Filtro aplicado: Prioridade Média 🔹', { id: 'voice-result-toast' });
+        } else if (
+          cleanedTranscript.includes('baixa') || 
+          cleanedTranscript.includes('baixo') || 
+          cleanedTranscript.includes('low')
+        ) {
+          setCardSearchTerm('baixa');
+          toast.success('Filtro aplicado: Prioridade Baixa 🟢', { id: 'voice-result-toast' });
+        } else {
+          // Extract numbers for service order ID (e.g., "O.S. 1001", "OS-12", "número 15")
+          const matchNumber = cleanedTranscript.match(/\d+/);
+          if (matchNumber) {
+            const osNumString = matchNumber[0];
+            setCardSearchTerm(osNumString);
+            toast.success(`Filtro aplicado: O.S. contendo "${osNumString}" 🔍`, { id: 'voice-result-toast' });
+          } else {
+            // General query fallback
+            setCardSearchTerm(transcript);
+            toast.success(`Filtro aplicado: "${transcript}" 🔍`, { id: 'voice-result-toast' });
+          }
+        }
+      };
+
+      rec.onerror = (event: any) => {
+        console.error('[Voice Search] Speech Recognition Error:', event.error);
+        toast.dismiss('voice-search-status');
+        if (event.error === 'no-speech') {
+          toast.error('Nenhuma fala foi detectada. Tente novamente.', { id: 'voice-search-error' });
+        } else if (event.error === 'not-allowed') {
+          toast.error('Acesso ao microfone recusado pelo navegador.', { id: 'voice-search-error' });
+        } else {
+          toast.error(`Falha na busca por voz: ${event.error}`, { id: 'voice-search-error' });
+        }
+        setIsListeningVoiceSearch(false);
+      };
+
+      rec.onend = () => {
+        setIsListeningVoiceSearch(false);
+      };
+
+      recognitionRef.current = rec;
+    }
+  }, []);
+
+  const handleToggleVoiceSearch = () => {
+    if (!voiceSearchSupported) {
+      toast.error('O reconhecimento de voz não é suportado ou está desativado no seu navegador.');
+      return;
+    }
+
+    if (isListeningVoiceSearch) {
+      try {
+        recognitionRef.current?.stop();
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      try {
+        recognitionRef.current?.start();
+      } catch (err) {
+        console.error('[Voice Search] Failed to start recognition:', err);
+      }
+    }
+  };
   const [isExpanding, setIsExpanding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
@@ -539,12 +654,23 @@ export default function ExecutionCenter() {
     const term = cardSearchTerm.toLowerCase();
     return active.filter(t => {
       const clientName = clients.find(c => c.id === t.clientId)?.name || '';
+      
+      // Determine priority string matches in both Portuguese and English
+      const priorityText = t.priority === 'CRITICAL' 
+        ? 'crítica crítico critical urgente red' 
+        : t.priority === 'HIGH' 
+        ? 'alta alto high orange' 
+        : t.priority === 'MEDIUM' 
+        ? 'média médio medium blue' 
+        : 'baixa baixo low gray zinc';
+
       return (
         (t.title || '').toLowerCase().includes(term) ||
         (t.osNumber || '').toLowerCase().includes(term) ||
         (t.technician || '').toLowerCase().includes(term) ||
         (t.maintenanceCategory || '').toLowerCase().includes(term) ||
         (t.observations || '').toLowerCase().includes(term) ||
+        priorityText.includes(term) ||
         clientName.toLowerCase().includes(term)
       );
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -1213,25 +1339,58 @@ export default function ExecutionCenter() {
               {activeTickets.length}
             </span>
           </h2>
-          <p className="text-xs text-black/60 uppercase tracking-wider mt-1">Gerencie a execução em tempo real das ordens sob sua responsabilidade</p>
+          <p className="text-xs text-black/60 uppercase tracking-wider mt-1">
+            Gerencie a execução em tempo real das ordens sob sua responsabilidade
+            {voiceSearchSupported && (
+              <span className="hidden md:inline-block ml-2 text-[10px] text-zinc-500 font-normal lowercase">
+                • dica: clique no <span className="text-[#39FF14] font-bold">🎙️</span> e diga "crítica", "alta" ou o número da O.S.
+              </span>
+            )}
+          </p>
         </div>
         
-        {/* Card Search Input */}
-        <div className="relative w-full sm:w-80 shrink-0">
-          <Search className="w-4 h-4 text-black/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text"
-            value={cardSearchTerm}
-            onChange={(e) => setCardSearchTerm(e.target.value)}
-            placeholder="Pesquisar O.S. ativas..."
-            className="w-full bg-black/5 hover:bg-black/10 border border-black/15 rounded-full pl-10 pr-9 py-2.5 text-xs text-black placeholder-black/40 outline-none focus:border-black/30 focus:ring-1 focus:ring-black/10 transition-all font-semibold"
-          />
-          {cardSearchTerm && (
-            <button 
-              onClick={() => setCardSearchTerm('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black/40 hover:text-black p-0.5"
+        {/* Card Search Input + Voice search button */}
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="relative w-full sm:w-80 shrink-0">
+            <Search className="w-4 h-4 text-black/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text"
+              value={cardSearchTerm}
+              onChange={(e) => setCardSearchTerm(e.target.value)}
+              placeholder="Pesquisar ou usar voz..."
+              className="w-full bg-black/5 hover:bg-black/10 border border-black/15 rounded-full pl-10 pr-9 py-2.5 text-xs text-black placeholder-black/40 outline-none focus:border-black/30 focus:ring-1 focus:ring-black/10 transition-all font-semibold"
+            />
+            {cardSearchTerm && (
+              <button 
+                onClick={() => setCardSearchTerm('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black/40 hover:text-black p-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {voiceSearchSupported && (
+            <button
+              onClick={handleToggleVoiceSearch}
+              className={`p-2.5 rounded-full border transition-all duration-300 relative group flex items-center justify-center shrink-0 cursor-pointer ${
+                isListeningVoiceSearch
+                  ? 'bg-red-500 border-red-600 text-white animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.5)]'
+                  : 'bg-black/5 border-black/15 hover:bg-black text-black hover:text-white hover:border-black'
+              }`}
+              title={isListeningVoiceSearch ? "Parar de ouvir" : "Pesquisar por Voz (ID ou prioridade)"}
             >
-              <X className="w-3.5 h-3.5" />
+              {isListeningVoiceSearch ? (
+                <MicOff className="w-4 h-4 text-white animate-bounce" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+              {isListeningVoiceSearch && (
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+              )}
             </button>
           )}
         </div>

@@ -1429,7 +1429,7 @@ export default function Dashboard() {
                     ? 'bg-black text-white shadow-xl' 
                     : 'bg-zinc-700 text-zinc-400'
                 }`}
-                title={vivianEnabled ? "Desativar Vivian" : "Ativar Vivian"}
+                title={vivianEnabled ? "Desativar LUMI" : "Ativar LUMI"}
               >
                 {vivianEnabled ? 'ON' : 'OFF'}
               </button>
@@ -1690,7 +1690,7 @@ export default function Dashboard() {
                 <p className="font-black text-xl truncate text-white leading-tight">Inteligência de Dados</p>
                 <div className="flex items-center gap-2 text-purple-300">
                   <Sparkles className="w-4 h-4" />
-                  <p className="text-sm font-bold">Insights da Vivian Ativos</p>
+                  <p className="text-sm font-bold">Insights do LUMI Ativos</p>
                 </div>
               </div>
             </div>
@@ -2822,7 +2822,7 @@ export default function Dashboard() {
             onClick={async () => {
               const loadingToast = toast.loading('Enviando mensagem de teste...');
               try {
-                await sendWhatsAppMessage('21982240134', 'Olá! Eu sou a Vivian, sua assistente virtual do CONDFY.IA. Recebi seu comando e estou pronta para ajudar! 🚀');
+                await sendWhatsAppMessage('21982240134', 'Olá! Eu sou o LUMI, seu assistente virtual do CONDFY.IA. Recebi seu comando e estou pronto para ajudar! 🚀');
                 toast.success('Mensagem enviada com sucesso!', { id: loadingToast });
               } catch (error) {
                 toast.error('Erro ao enviar mensagem.', { id: loadingToast });
@@ -3616,7 +3616,7 @@ export default function Dashboard() {
                       : 'bg-white/5 text-white/40 border-white/10'
                   }`}>
                     <Brain className="w-2.5 h-2.5" />
-                    VIVIAN.AI: {vivianOnline ? 'ATIVADA' : 'OFFLINE'}
+                    LUMI.AI: {vivianOnline ? 'ATIVADO' : 'OFFLINE'}
                   </span>
                 </div>
               </div>

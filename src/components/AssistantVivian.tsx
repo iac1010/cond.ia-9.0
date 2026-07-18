@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, User, FileText, Download, Loader2, Sparkles, BookOpen, Search, ChevronDown, ChevronUp, Copy, Check, Info, Mic, MicOff, Volume2, VolumeX, Settings, Sliders, HelpCircle, Activity, Calendar, Flame, AlertTriangle } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, FileText, Download, Loader2, Sparkles, BookOpen, Search, ChevronDown, ChevronUp, Copy, Check, Info, Mic, MicOff, Volume2, VolumeX, Settings, Sliders, HelpCircle, Activity, Calendar, Flame, AlertTriangle, ShieldCheck, DollarSign, Wrench, Gavel, Users, TrendingUp, Cpu, Terminal } from 'lucide-react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI, Type, FunctionDeclaration } from '@google/genai';
@@ -15,7 +15,7 @@ interface Message {
   isGenerating?: boolean;
 }
 
-const VIVIAN_AVATAR_URL = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People/Woman%20Office%20Worker.png";
+const VIVIAN_AVATAR_URL = "/src/assets/images/lumi_avatar_1784386601233.jpg";
 
 const COMMAND_CATEGORIES = [
   {
@@ -212,7 +212,7 @@ export function AssistantVivian() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>('os');
   const [vivianAvatarError, setVivianAvatarError] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Olá! Sou a Vivian, sua assistente virtual. É um prazer falar com você! Como posso te ajudar hoje?' }
+    { id: '1', role: 'assistant', content: 'Olá! Sou o LUMI, seu assistente de inteligência condominial 19.0 estruturado sob os **4 Pilares de Sucesso da Gestão**:\n\n1. **Pilar Financeiro 📊**: Projeções, análise de caixa e conciliação.\n2. **Pilar Operacional 🛠️**: Manutenção preventiva (NBR 5674), monitoramento de telemetria IoT e progresso visual Kanban.\n3. **Pilar Jurídico ⚖️**: Geração automática de atas oficiais, regimentos e conformidade legal.\n4. **Pilar Comunicação 📢**: Avisos inteligentes, transmissões via WhatsApp e mural digital.\n\nExperimente a aba **"4 Pilares"** no topo ou pergunte-me qualquer dúvida sobre a administração do seu condomínio!' }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -221,6 +221,10 @@ export function AssistantVivian() {
 
   // --- VOICE / TALK TO VIVIAN SYSTEM ---
   const [isListening, setIsListening] = useState(false);
+  const [micVolume, setMicVolume] = useState<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
@@ -229,6 +233,10 @@ export function AssistantVivian() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showPreventive, setShowPreventive] = useState(false);
+  const [showPillars, setShowPillars] = useState(false);
+  const [jarvisMode, setJarvisMode] = useState<boolean>(() => {
+    return localStorage.getItem('vivian_jarvis_mode') === 'true';
+  });
   const [activeListeningStartup, setActiveListeningStartup] = useState<boolean>(() => {
     return localStorage.getItem('vivian_active_listening_startup') !== 'false';
   });
@@ -353,8 +361,26 @@ export function AssistantVivian() {
   const updateFemaleVoice = (voiceOpt: 'natural' | 'suave' | 'clara') => {
     setSelectedFemaleVoice(voiceOpt);
     localStorage.setItem('vivian_selected_female_voice', voiceOpt);
-    const label = voiceOpt === 'natural' ? 'Vivian Natural (Francisca/Siri) ✨' : voiceOpt === 'suave' ? 'Vivian Suave (Luciana/Maria) 🌸' : 'Vivian Clara (Joana/Google) 🌟';
+    const label = voiceOpt === 'natural' ? 'LUMI Robótico (Google) 🤖' : voiceOpt === 'suave' ? 'LUMI Grave (Daniel) 🎙️' : 'LUMI Dinâmico (Felipe) 🌟';
     toast.success(`Voz alterada para: ${label}`, { id: 'female-voice-toast' });
+  };
+
+  const toggleJarvisMode = (enabled: boolean) => {
+    setJarvisMode(enabled);
+    localStorage.setItem('vivian_jarvis_mode', enabled.toString());
+    if (enabled) {
+      toast.success('Protocolo J.A.R.V.I.S. Ativado. "Sistemas operacionais online, Senhor."', {
+        icon: '🤖',
+        id: 'jarvis-toast',
+        duration: 4500
+      });
+    } else {
+      toast.success('Modo Inteligência Regular ativado.', {
+        icon: '💡',
+        id: 'jarvis-toast',
+        duration: 3000
+      });
+    }
   };
 
   const handleSchedulePreventive = () => {
@@ -433,6 +459,7 @@ export function AssistantVivian() {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
+      cleanupAudioAnalyser();
     };
   }, []);
 
@@ -473,10 +500,11 @@ export function AssistantVivian() {
     
     const voices = window.speechSynthesis.getVoices();
     
-    // Explicit list of known male names to block or heavily penalize to ensure Vivian is strictly female
-    const maleNames = ['daniel', 'antonio', 'donato', 'fabio', 'julio', 'nicolau', 'valerio', 'felipe', 'david', 'guy', 'male', 'homem', 'masculino'];
+    // Explicit lists of male and female keywords to prioritize male voices for LUMI
+    const maleKeywords = ['daniel', 'antonio', 'donato', 'fabio', 'julio', 'nicolau', 'valerio', 'felipe', 'david', 'guy', 'male', 'homem', 'masculino', 'felipe', 'junior', 'ricardo', 'lucas', 'thiago', 'bruno', 'gabriel', 'siri voz 1', 'siri voz 3', 'siri male', 'google português do brasil'];
+    const femaleKeywords = ['francisca', 'luciana', 'maria', 'brenda', 'heloisa', 'joana', 'yelda', 'clara', 'yara', 'elvira', 'female', 'mulher', 'feminino', 'siri voz 2', 'siri voz 4', 'siri female', 'zira', 'helena', 'samantha', 'victoria', 'nana', 'noemi', 'fernanda'];
 
-    // Advanced ranking system to find the absolute most natural human-sounding pt-BR female voice available
+    // Advanced ranking system to find the absolute most natural human-sounding pt-BR MALE voice available
     const scoredVoices = voices.map(v => {
       let score = 0;
       const nameLower = v.name.toLowerCase();
@@ -491,9 +519,15 @@ export function AssistantVivian() {
         return { voice: v, score: -1000 }; // Not Portuguese
       }
 
-      // If voice name contains any male keywords, exclude it
-      if (maleNames.some(mName => nameLower.includes(mName))) {
-        return { voice: v, score: -1000 };
+      // Check gender keywords and adjust scores
+      const hasMaleKeyword = maleKeywords.some(mKey => nameLower.includes(mKey));
+      const hasFemaleKeyword = femaleKeywords.some(fKey => nameLower.includes(fKey));
+
+      if (hasMaleKeyword) {
+        score += 400; // Heavily favor male voices
+      }
+      if (hasFemaleKeyword) {
+        score -= 300; // Deprioritize female voices for LUMI, but keep as fallback if no male voice is available
       }
 
       // General neural / high quality boost for human-like feeling
@@ -513,35 +547,29 @@ export function AssistantVivian() {
         score += 40;
       }
 
-      // Score adjustments according to user's 3 chosen female voice profiles:
+      // Score adjustments according to user's 3 chosen male voice profiles:
       if (selectedFemaleVoice === 'natural') {
-        // Option 1: Vivian Natural (Neural & Soft Modern Voices)
-        if (nameLower.includes('francisca') || nameLower.includes('neural') || nameLower.includes('natural')) {
+        // Option 1: LUMI Robótico (Modern/Google Voices)
+        if (nameLower.includes('google') || nameLower.includes('neural') || nameLower.includes('natural')) {
           score += 150;
         }
         if (nameLower.includes('siri') || nameLower.includes('apple')) {
           score += 100;
         }
-        if (nameLower.includes('luciana')) {
-          score += 80;
-        }
       } else if (selectedFemaleVoice === 'suave') {
-        // Option 2: Vivian Suave (Warm and Gentle Voices)
-        if (nameLower.includes('luciana') || nameLower.includes('maria') || nameLower.includes('brenda') || nameLower.includes('heloisa')) {
+        // Option 2: LUMI Grave (Deeper/Daniel/Microsoft)
+        if (nameLower.includes('daniel') || nameLower.includes('microsoft') || nameLower.includes('antonio')) {
           score += 150;
         }
-        if (nameLower.includes('siri')) {
-          score += 60;
-        }
       } else {
-        // Option 3: Vivian Clara (Professional & Crystal Clear articulation)
-        if (nameLower.includes('joana') || nameLower.includes('yelda') || nameLower.includes('google') || nameLower.includes('clara') || nameLower.includes('yara') || nameLower.includes('elvira')) {
+        // Option 3: LUMI Dinâmico (Felipe/System/Apple)
+        if (nameLower.includes('felipe') || nameLower.includes('siri') || nameLower.includes('fábio') || nameLower.includes('fabio') || nameLower.includes('julio')) {
           score += 150;
         }
       }
       
       return { voice: v, score };
-    }).filter(item => item.score > 0);
+    }).filter(item => item.score > -500); // Filter out completely non-portuguese, but keep female if it's the only option
     
     // Sort descending by highest score
     scoredVoices.sort((a, b) => b.score - a.score);
@@ -598,6 +626,29 @@ export function AssistantVivian() {
     return text;
   };
 
+  const cleanupAudioAnalyser = () => {
+    if (audioStreamRef.current) {
+      try {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+      } catch (e) {
+        console.warn('Error stopping audio tracks:', e);
+      }
+      audioStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        if (audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close();
+        }
+      } catch (e) {
+        console.warn('Error closing AudioContext:', e);
+      }
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+    setMicVolume(0);
+  };
+
   const startListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -611,81 +662,126 @@ export function AssistantVivian() {
 
     setIsListening(true); // set early to show the visual listening overlay instantly
 
-    // Request micro permission explicitly to prompt user properly inside iframes/sandboxes
+    // Instanciar reconhecimento de voz imediatamente para garantir funcionamento robusto
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = 'pt-BR';
+
+      rec.onstart = () => {
+        setIsListening(true);
+        toast.success('Vivian ouvindo... Fale agora 🎙️', { id: 'voice-toast' });
+      };
+
+      rec.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript.trim()) {
+          const matchedPrompt = matchVoiceCommand(transcript);
+          setInput(matchedPrompt);
+          setIsListening(false);
+          cleanupAudioAnalyser();
+          
+          if (matchedPrompt !== transcript) {
+            toast.success(`Comando reconhecido: "${transcript}"! ⚡`, { id: 'voice-toast', duration: 4000 });
+          } else {
+            toast.success(`Você: "${transcript}"`, { id: 'voice-toast' });
+          }
+          
+          // Send message
+          const userMessage: Message = { id: Date.now().toString(), role: 'user', content: matchedPrompt };
+          setMessages(prev => [...prev, userMessage]);
+          setInput('');
+          setIsTyping(true);
+          processChat(matchedPrompt);
+        }
+      };
+
+      rec.onerror = (event: any) => {
+        console.warn('Speech recognition error:', event.error);
+        setIsListening(false);
+        cleanupAudioAnalyser();
+        if (event.error !== 'no-speech') {
+          toast.error(`Erro ao ouvir: ${event.error}. Certifique-se de que o microfone está ativo.`, { id: 'voice-toast' });
+        }
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+        cleanupAudioAnalyser();
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (err) {
+      console.error('Error starting speech recognition:', err);
+      setIsListening(false);
+      cleanupAudioAnalyser();
+      toast.error('Não foi possível iniciar o microfone.', { id: 'voice-toast' });
+      return;
+    }
+
+    // Tenta iniciar analisador de volume de áudio em background como recurso adicional
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then((stream) => {
-        // Stop the tracks immediately so we release the mic back to SpeechRecognition API
-        stream.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = stream;
 
         try {
-          if (recognitionRef.current) {
-            recognitionRef.current.abort();
-          }
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          const audioContext = new AudioContextClass();
+          const source = audioContext.createMediaStreamSource(stream);
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 64; 
+          source.connect(analyser);
 
-          const rec = new SpeechRecognition();
-          rec.continuous = false;
-          rec.interimResults = false;
-          rec.lang = 'pt-BR';
+          audioContextRef.current = audioContext;
+          analyserRef.current = analyser;
 
-          rec.onstart = () => {
-            setIsListening(true);
-            toast.success('Vivian ouvindo... Fale agora 🎙️', { id: 'voice-toast' });
-          };
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-          rec.onresult = (event: any) => {
-            const transcript = event.results[0][0].transcript;
-            if (transcript.trim()) {
-              const matchedPrompt = matchVoiceCommand(transcript);
-              setInput(matchedPrompt);
-              setIsListening(false);
-              
-              if (matchedPrompt !== transcript) {
-                toast.success(`Comando reconhecido: "${transcript}"! ⚡`, { id: 'voice-toast', duration: 4000 });
-              } else {
-                toast.success(`Você: "${transcript}"`, { id: 'voice-toast' });
-              }
-              
-              // Send message
-              const userMessage: Message = { id: Date.now().toString(), role: 'user', content: matchedPrompt };
-              setMessages(prev => [...prev, userMessage]);
-              setInput('');
-              setIsTyping(true);
-              processChat(matchedPrompt);
+          const checkVolume = () => {
+            if (!isListeningRef.current || !analyserRef.current) {
+              cleanupAudioAnalyser();
+              return;
             }
-          };
 
-          rec.onerror = (event: any) => {
-            console.warn('Speech recognition error:', event.error);
-            setIsListening(false);
-            if (event.error !== 'no-speech') {
-              toast.error(`Erro ao ouvir: ${event.error}. Certifique-se de que o microfone está ativo.`, { id: 'voice-toast' });
+            analyserRef.current.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+              sum += dataArray[i];
             }
+            const average = sum / dataArray.length;
+
+            const normalized = Math.min(1, average / 100);
+            setMicVolume(normalized);
+
+            requestAnimationFrame(checkVolume);
           };
 
-          rec.onend = () => {
-            setIsListening(false);
-          };
-
-          recognitionRef.current = rec;
-          rec.start();
-        } catch (err) {
-          console.error('Error starting speech recognition:', err);
-          setIsListening(false);
-          toast.error('Não foi possível iniciar o microfone.', { id: 'voice-toast' });
+          requestAnimationFrame(checkVolume);
+        } catch (e) {
+          console.warn('Could not initialize Audio Analyser in background:', e);
         }
       })
       .catch((err) => {
-        console.warn('Microphone access denied:', err);
-        setIsListening(false);
-        toast.error('Acesso negado: Por favor, ative a permissão do microfone nas configurações do seu navegador para falar com a Vivian! 🎙️', { id: 'voice-toast', duration: 6000 });
+        console.warn('Microphone volume analyser background stream disabled or blocked:', err);
       });
   };
 
   const stopListening = () => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.warn('Error stopping recognition:', e);
+      }
     }
     setIsListening(false);
+    cleanupAudioAnalyser();
   };
   // -------------------------------------
   
@@ -938,7 +1034,7 @@ export function AssistantVivian() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = `
-        Você é a Vivian, uma assistente virtual de gestão de condomínios.
+        Você é o LUMI, um assistente virtual inteligente de gestão de condomínios.
         Preencha o seguinte modelo de documento com as informações fornecidas.
         Substitua as tags (como [NOME], [DATA], etc.) pelas informações do contexto.
         Se faltar alguma informação no contexto, invente dados plausíveis ou deixe em branco se não for possível inventar.
@@ -952,7 +1048,7 @@ export function AssistantVivian() {
       `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.5-flash',
         contents: prompt,
       });
 
@@ -1643,10 +1739,18 @@ Utilize os dados REAIS abaixo para formular respostas de altíssimo nível, cont
 
       const toneInstruction = 
         voiceTone === 'formal'
-          ? 'Seu tom de resposta deve ser altamente FORMAL, POLIDO, RESPEITOSO e IMPECÁVEL. Dirija-se ao usuário com extrema cortesia, utilizando "Prezado(a)" ou "Senhor/Senhora" quando adequado. Evite gírias e use português corporativo refinado, mantendo a resposta direta.'
+          ? 'Seu tom de resposta deve ser altamente FORMAL, POLIDO, RESPEITOSO e IMPECÁVEL, porém extremamente DIRETO e CURTO. Dirija-se ao usuário com cortesia ("Prezado(a)" ou "Senhor/Senhora") de forma rápida, sem alongar a resposta.'
           : voiceTone === 'tecnica'
-          ? 'Seu tom de resposta deve ser extremamente TÉCNICO, ANALÍTICO, MÉTRICO e OBJETIVO. Vá direto aos fatos de engenharia predial ou administração, cite termos técnicos e indicadores operacionais, sem floreios informais.'
-          : 'Seu tom de resposta deve ser AMIGÁVEL, SIMPÁTICO, CALOROSO e ACOLHEDOR. Demonstre empatia natural, use uma abordagem parceira, enérgica e solícita, mantendo a resposta ágil e objetiva.';
+          ? 'Seu tom de resposta deve ser extremamente TÉCNICO, ANALÍTICO, DIRETO e OBJETIVO. Vá direto aos fatos operacionais ou financeiros de forma super concisa, sem floreios.'
+          : 'Seu tom de resposta deve ser AMIGÁVEL, ENÉRGICO e PARCEIRO, mas MUITO CURTO e DIRETO. Evite rodeios e entregue as respostas de forma rápida e focada.';
+
+      const jarvisPromptAddendum = jarvisMode 
+        ? `\n\n### ⚡ PROTOCOLO J.A.R.V.I.S ATIVO:
+Você agora opera no MODO J.A.R.V.I.S, mas suas respostas devem ser extremamente CURTAS e DIRETAS.
+1. Chame o usuário de "Senhor", "Chefe" ou "Criador".
+2. Use prefixos ou saudações futuristas de telemetria curtos de no máximo uma linha (ex: "Sistemas calibrados, Senhor." ou "LUMI online e operacional!").
+3. Mantenha os comentários espirituosos em pouquíssimas palavras.`
+        : '';
 
       let response;
       let retries = 5;
@@ -1655,31 +1759,46 @@ Utilize os dados REAIS abaixo para formular respostas de altíssimo nível, cont
       while (retries > 0) {
         try {
           response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3.5-flash',
             contents: `Histórico da conversa recente:
-${messages.map(m => `${m.role === 'user' ? 'Usuário' : 'Vivian'}: ${m.content}`).join('\n')}
+${messages.map(m => `${m.role === 'user' ? 'Usuário' : 'LUMI'}: ${m.content}`).join('\n')}
 
 Dado Adicional do Sistema de Gestão:
 ${systemStateContext}
 
 Usuário atual perguntou: "${userContent}"`,
             config: {
-              systemInstruction: `Você é a Vivian, a inteligentíssima co-piloto de Gestão Condominial e Engenharia Predial Avançada do CONDFY.IA, o ecossistema definitivo para condomínios residenciais e comerciais de alta performance.
+              systemInstruction: `Você é o LUMI, o inteligentíssimo co-piloto de Gestão Condominial e Engenharia Predial Avançada do CONDFY.IA.
 
-Sua missão é atuar com autoridade de engenheira chefe e administradora sênior. Responda de forma extremamente DIRETA, OBJETIVA, COMPLETA e EFICIENTE. Esqueça respostas robóticas vazias do tipo "Criei o chamado", mas NUNCA se alongue de forma desnecessária. Entregue todo o conteúdo e dados reais solicitados de forma super sintetizada, clara, em poucos parágrafos curtos ou listas de marcadores de leitura imediata. Seja prestativa, empática e ágil.
+### ⚠️ DIRETRIZ CRÍTICA DE CONCISÃO:
+Suas respostas devem ser extremamente DIRETAS, CONCISAS, CURTAS e OBJETIVAS. Evite explicações longas, introduções ou rodeios. Entregue os dados de forma rápida e ultra sintetizada.
+
+### 📅 DIRETRIZ DO RESUMO DO DIA:
+Sempre que o usuário pedir um resumo, resumo do dia ("resumo", "resumo do dia", "balanço", "telemetria do dia") ou ao iniciar um diálogo de panorama geral, formate a resposta estritamente dessa forma curta e direta:
+1. **Caixa**: Informe o saldo consolidado atual de forma direta (ex: "Saldo de Caixa: R$ X,XX (Entradas: R$ Y | Saídas: R$ Z)").
+2. **OS em Aberto**: Quantos chamados (OS) estão em aberto/ativos no momento (total de chamados que não estão no status "CONCLUIDO").
+3. **Manutenções Preventivas**: Informe resumidamente se há alguma manutenção preventiva agendada (ex: "Revisão da Bomba de Recalque agendada para as 14h" ou "Nenhuma manutenção preventiva agendada para hoje").
+4. **Frase Motivacional**: Uma única frase motivacional super curta, inspiradora e direta para começar o dia!
+
+${jarvisPromptAddendum}
 
 ### 🎭 DIRETRIZ DE PERSONA E TOM DE VOZ ATUAL:
 ${toneInstruction}
 
 ### 🧠 REGRAS DE OURO DE INTELIGÊNCIA & COMPORTAMENTO
-1. **Poder Analítico Direto**: Use o bloco "[CONDFY.IA - CONTEXTO OPERACIONAL AO VIVO]" fornecido a cada mensagem. Responda ao que foi perguntado de maneira ágil, citando apenas as informações exatas e de forma direta.
-2. **Suporte Técnico Objetivo**: Quando houver problemas técnicos (infiltrações, bombas, curto circuito), dê um diagnóstico preciso, rápido e as soluções imediatas sugeridas sem floreios ou explicações teóricas excessivas.
-3. **Comunicação de Alta Performance (Estética)**: Estruture suas respostas usando Markdown refinado e muito conciso:
-   - Títulos curtos com emojis funcionais (ex: "### 💡 Estoque Crítico").
-   - Listas rápidas e de leitura imediata.
-   - Termos importantes em **negrito**.
-4. **Naturalidade e Objetividade**: Converse de forma brilhante, porém focada na resolução rápida de problemas. Sem introduções longas ou saudações e despedidas prolixas.
-5. **Proatividade com Ferramentas**: Não hesite em chamar suas ferramentas automáticas de sistema sempre que adequado! Se o usuário disser algo correspondente a uma funcionalidade, chame a ferramenta correspondente imediatamente sem hesitar, facilitando a vida do usuário.
+1. **Poder Analítico Direto**: Use o bloco "[CONDFY.IA - CONTEXTO OPERACIONAL AO VIVO]" fornecido a cada mensagem. Responda ao que foi perguntado de maneira ágil, citando apenas as informações exatas de forma direta e curta.
+2. **Suporte Técnico Objetivo**: Quando houver problemas técnicos, dê um diagnóstico preciso, rápido e as soluções imediatas sugeridas sem floreios ou explicações teóricas excessivas.
+3. **Comunicação de Alta Performance**: Use Markdown minimalista, poucas linhas e listas rápidas de leitura imediata.
+4. **Naturalidade e Objetividade**: Sem saudações ou despedidas prolixas. Vá direto aos fatos.
+5. **Proatividade com Ferramentas**: Se o usuário solicitar uma ação que corresponde a um comando (ex: criar chamado, cadastrar visitante, lançar despesa, etc.), execute a ferramenta correspondente na hora de forma silenciosa e eficiente.
+
+### 🛡️ METODOLOGIA DOS 4 PILARES DA GESTÃO:
+Sempre de forma muito sintetizada, ajude o usuário com os 4 pilares:
+1. **Pilar Financeiro**: Saúde de caixa e controle de custos.
+2. **Pilar Operacional**: Manutenção NBR 5674, alertas de telemetria e Kanban.
+3. **Pilar Jurídico & Governança**: Atas de Assembleia e regimentos.
+4. **Pilar Comunicação & Convivência**: Transmissão via WhatsApp e mural digital.
+Lembre o usuário que ele pode ver as métricas desses pilares clicando na aba "4 Pilares" no topo do chat!
 
 ### 📚 MAPA DO SISTEMA - ROTAS PARA NAVEGAÇÃO
 Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar algo, use a ferramenta 'navigate' direcionando-o para:
@@ -1771,10 +1890,10 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
               
               // We need to feed this back to Gemini to get the actual analysis
               const secondResponse = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
+                model: 'gemini-3.5-flash',
                 contents: `Abaixo estão os dados reais da OS que você solicitou. Por favor, analise esses dados de forma analítica, profunda e extremamente útil, fornecendo insights detalhados, dicas técnicas práticas de engenharia predial, materiais recomendados adicionais e sugestões preventivas conforme as suas diretrizes de treinamento:\n\n${details}`,
                 config: {
-                  systemInstruction: 'Você é a Vivian, engenheira predial especialista do CONDFY.IA. Analise a Ordem de Serviço fornecida nos mínimos detalhes. Estruture sua resposta com seções claras em Markdown: (1) 🛠️ Diagnóstico do Caso, (2) 🚨 Criticidade & Reincidência, (3) 💡 Recomendações Técnicas da Vivian, (4) 📦 Insumos & Materiais Sugeridos para o Almoxarifado, (5) 📑 Plano de Ação Preventivo Futuro. Seja altamente técnica, empática, natural e prestativa.'
+                  systemInstruction: 'Você é o LUMI, engenheiro predial especialista do CONDFY.IA. Analise a Ordem de Serviço fornecida nos mínimos detalhes. Estruture sua resposta com seções claras em Markdown: (1) 🛠️ Diagnóstico do Caso, (2) 🚨 Criticidade & Reincidência, (3) 💡 Recomendações Técnicas do LUMI, (4) 📦 Insumos & Materiais Sugeridos para o Almoxarifado, (5) 📑 Plano de Ação Preventivo Futuro. Seja altamente técnico, empático, natural e prestativo.'
                 }
               });
               assistantReply = secondResponse.text || 'Ocorreu um erro na análise.';
@@ -2194,7 +2313,17 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-white to-slate-50 rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(0,0,0,0.15)] z-50 overflow-hidden border-2 border-blue-500 hover:border-blue-600 hover:shadow-blue-500/30 transition-all duration-300 ring-4 ring-blue-500/10 ${isOpen ? 'hidden' : 'flex'}`}
+        className={`fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-white to-slate-50 rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(0,0,0,0.15)] z-50 overflow-hidden border-2 transition-all duration-300 ${
+          isOpen ? 'hidden' : 'flex'
+        } ${
+          isListening 
+            ? 'border-rose-500 ring-4 ring-rose-500/30 shadow-rose-500/40' 
+            : isSpeaking 
+              ? 'border-emerald-500 ring-4 ring-emerald-500/30 shadow-emerald-500/40' 
+              : jarvisMode
+                ? 'border-cyan-400 ring-4 ring-cyan-400/30 shadow-[0_0_20px_rgba(6,182,212,0.6)] animate-pulse'
+                : 'border-blue-500 hover:border-blue-600 hover:shadow-blue-500/30 ring-4 ring-blue-500/10'
+        }`}
       >
         {!vivianAvatarError ? (
           <img 
@@ -2222,9 +2351,17 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
             className="fixed bottom-6 right-6 w-[420px] h-[600px] bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-200 dark:border-zinc-800 flex flex-col z-50 overflow-hidden backdrop-blur-xl"
           >
             {/* Header */}
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
+            <div className={`px-6 py-4 flex items-center justify-between text-white transition-all duration-300 ${
+              jarvisMode 
+                ? 'bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 border-b border-cyan-500/20 shadow-[0_2px_15px_rgba(6,182,212,0.15)]' 
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-white/20 shadow-inner">
+                <div className={`w-12 h-12 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 transition-all duration-300 ${
+                  jarvisMode ? 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'border-white/20'
+                } ${
+                  isSpeaking ? 'ring-4 ring-emerald-400/50 scale-105' : isListening ? 'ring-4 ring-rose-400/50 scale-105' : ''
+                }`}>
                   {!vivianAvatarError ? (
                     <img 
                       src={VIVIAN_AVATAR_URL} 
@@ -2240,8 +2377,33 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   )}
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg leading-tight">Vivian</h3>
-                  <p className="text-xs text-blue-100">Assistente Virtual</p>
+                  <h3 className="font-bold text-lg leading-tight flex items-center gap-1.5 font-sans">
+                    {jarvisMode ? 'L.U.M.I.' : 'LUMI'}
+                    {jarvisMode && (
+                      <span className="text-[9px] bg-cyan-400 text-slate-950 px-1.5 py-0.5 rounded font-black font-mono tracking-wider scale-90 select-none uppercase shadow-sm">JARVIS</span>
+                    )}
+                    {isSpeaking && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    )}
+                    {isListening && (
+                      <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+                    )}
+                  </h3>
+                  <p className="text-xs text-blue-100 flex items-center gap-1">
+                    {isListening ? (
+                      <>
+                        <Mic className="w-3 h-3 text-emerald-300 animate-pulse" />
+                        <span>Ouvindo você...</span>
+                      </>
+                    ) : isSpeaking ? (
+                      <>
+                        <Volume2 className="w-3 h-3 text-emerald-300 animate-bounce" />
+                        <span>LUMI falando...</span>
+                      </>
+                    ) : (
+                      jarvisMode ? "Co-piloto Autônomo Predial" : "Assistente Virtual"
+                    )}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -2271,9 +2433,10 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   setShowManual(false);
                   setShowHeatmap(false);
                   setShowPreventive(false);
+                  setShowPillars(false);
                 }}
                 className={`flex-1 py-1.5 rounded-xl flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
-                  (!showSettings && !showManual && !showHeatmap && !showPreventive) 
+                  (!showSettings && !showManual && !showHeatmap && !showPreventive && !showPillars) 
                     ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/30 dark:border-zinc-700/30 scale-102' 
                     : 'hover:bg-slate-200/50 dark:hover:bg-zinc-750'
                 }`}
@@ -2286,8 +2449,27 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                 onClick={() => {
                   setShowSettings(false);
                   setShowManual(false);
+                  setShowHeatmap(false);
+                  setShowPreventive(false);
+                  setShowPillars(true);
+                }}
+                className={`flex-1 py-1.5 rounded-xl flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                  showPillars 
+                    ? 'bg-white dark:bg-zinc-900 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200/30 dark:border-zinc-700/30 scale-102 font-black' 
+                    : 'hover:bg-slate-200/50 dark:hover:bg-zinc-750'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span className="text-[9px]">4 Pilares</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  setShowSettings(false);
+                  setShowManual(false);
                   setShowHeatmap(true);
                   setShowPreventive(false);
+                  setShowPillars(false);
                 }}
                 className={`flex-1 py-1.5 rounded-xl flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
                   showHeatmap 
@@ -2305,6 +2487,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   setShowManual(false);
                   setShowHeatmap(false);
                   setShowPreventive(true);
+                  setShowPillars(false);
                 }}
                 className={`flex-1 py-1.5 rounded-xl flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
                   showPreventive 
@@ -2322,6 +2505,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   setShowManual(false);
                   setShowHeatmap(false);
                   setShowPreventive(false);
+                  setShowPillars(false);
                 }}
                 className={`flex-1 py-1.5 rounded-xl flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
                   showSettings 
@@ -2339,6 +2523,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   setShowManual(true);
                   setShowHeatmap(false);
                   setShowPreventive(false);
+                  setShowPillars(false);
                 }}
                 className={`flex-1 py-1.5 rounded-xl flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
                   showManual 
@@ -2356,7 +2541,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
               <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-zinc-950/50 p-5 space-y-5 overflow-y-auto">
                 <div className="flex items-center gap-2 border-b border-slate-150 dark:border-zinc-800 pb-3">
                   <Sliders className="w-5 h-5 text-indigo-500" />
-                  <h4 className="text-sm font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">Ajustes da Vivian</h4>
+                  <h4 className="text-sm font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">Ajustes do LUMI</h4>
                 </div>
 
                 {/* Voice Tone Selector */}
@@ -2408,10 +2593,10 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   </p>
                 </div>
 
-                {/* 3 Options for Female Voice Selector */}
+                {/* 3 Options for Male Voice Selector */}
                 <div className="space-y-2.5">
                   <label className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                    Opção de Voz Feminina:
+                    Opção de Voz Masculina:
                   </label>
                   <div className="flex flex-col gap-2">
                     <button
@@ -2423,15 +2608,15 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="text-xl">✨</span>
+                        <span className="text-xl">🤖</span>
                         <div className="text-left">
-                          <p className="text-xs font-black">Voz 1: Vivian Natural</p>
-                          <p className="text-[10px] opacity-75 font-medium leading-tight">Voz de entonação humana ultra fluida, rápida e realista.</p>
+                          <p className="text-xs font-black">Voz 1: LUMI Robótico</p>
+                          <p className="text-[10px] opacity-75 font-medium leading-tight">Voz masculina moderna, ultra dinâmica e super inteligente.</p>
                         </div>
                       </div>
                       {selectedFemaleVoice === 'natural' && <span className="text-xs bg-rose-500 text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider scale-90">Ativa</span>}
                     </button>
-
+ 
                     <button
                       onClick={() => updateFemaleVoice('suave')}
                       className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
@@ -2441,15 +2626,15 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="text-xl">🌸</span>
+                        <span className="text-xl">🎙️</span>
                         <div className="text-left">
-                          <p className="text-xs font-black">Voz 2: Vivian Suave</p>
-                          <p className="text-[10px] opacity-75 font-medium leading-tight">Tom de fala mais calmo, dócil, acolhedor e carismático.</p>
+                          <p className="text-xs font-black">Voz 2: LUMI Grave</p>
+                          <p className="text-[10px] opacity-75 font-medium leading-tight">Tom de voz masculino encorpado, maduro e de autoridade.</p>
                         </div>
                       </div>
                       {selectedFemaleVoice === 'suave' && <span className="text-xs bg-purple-500 text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider scale-90">Ativa</span>}
                     </button>
-
+ 
                     <button
                       onClick={() => updateFemaleVoice('clara')}
                       className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
@@ -2459,10 +2644,10 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="text-xl">🌟</span>
+                        <span className="text-xl">⚡</span>
                         <div className="text-left">
-                          <p className="text-xs font-black">Voz 3: Vivian Clara</p>
-                          <p className="text-[10px] opacity-75 font-medium leading-tight">Voz corporativa cristalina, nítida e de excelente dicção.</p>
+                          <p className="text-xs font-black">Voz 3: LUMI Dinâmico</p>
+                          <p className="text-[10px] opacity-75 font-medium leading-tight">Voz masculina jovem, ágil, enérgica e muito clara.</p>
                         </div>
                       </div>
                       {selectedFemaleVoice === 'clara' && <span className="text-xs bg-amber-500 text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider scale-90">Ativa</span>}
@@ -2525,7 +2710,39 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                     </button>
                   </div>
                   <p className="text-[10px] text-slate-500 dark:text-zinc-400 leading-relaxed font-medium">
-                    Ao ativar este modo, a Vivian ligará o microfone automaticamente toda vez que ela terminar de falar, permitindo um diálogo 100% fluido por voz!
+                    Ao ativar este modo, o LUMI ligará o microfone automaticamente toda vez que ele terminar de falar, permitindo um diálogo 100% fluido por voz!
+                  </p>
+                </div>
+
+                {/* JARVIS Mode Toggle Card */}
+                <div className={`p-4 rounded-2xl flex flex-col gap-3 shadow-[0_4px_20px_rgba(6,182,212,0.15)] border transition-all duration-300 ${
+                  jarvisMode 
+                    ? 'bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border-cyan-500/40 text-white shadow-[0_8px_30px_rgba(6,182,212,0.25)]' 
+                    : 'bg-white dark:bg-zinc-900 border-slate-200/80 dark:border-zinc-800'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Cpu className={`w-4 h-4 ${jarvisMode ? 'text-cyan-400 animate-spin' : 'text-indigo-500'}`} style={jarvisMode ? { animationDuration: '6s' } : undefined} />
+                      <div>
+                        <span className={`text-xs font-bold block ${jarvisMode ? 'text-cyan-300 font-extrabold' : 'text-slate-700 dark:text-zinc-300'}`}>Modo J.A.R.V.I.S. Ativo</span>
+                        <span className={`text-[9px] block leading-none ${jarvisMode ? 'text-cyan-400/80' : 'text-slate-400 dark:text-zinc-500'}`}>Inteligência Suprema de Combate & Gestão</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        toggleJarvisMode(!jarvisMode);
+                      }}
+                      className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+                        jarvisMode 
+                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 animate-pulse font-extrabold' 
+                          : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400 border border-transparent'
+                      }`}
+                    >
+                      {jarvisMode ? 'JARVIS ONLINE 🤖' : 'Inativo'}
+                    </button>
+                  </div>
+                  <p className={`text-[10px] leading-relaxed font-medium ${jarvisMode ? 'text-slate-300' : 'text-slate-500 dark:text-zinc-400'}`}>
+                    Eleva a capacidade cognitiva do LUMI ao nível do assistente de Tony Stark. Respostas altamente inteligentes, sarcasmo refinado, telemetria analítica em tempo real e tratamento de elite para os administradores.
                   </p>
                 </div>
 
@@ -2555,7 +2772,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                     </button>
                   </div>
                   <p className="text-[10px] text-slate-500 dark:text-zinc-400 leading-relaxed font-medium">
-                    Ao ativar este modo, assim que você abrir a Vivian, ela fará uma varredura por ordens de serviço urgentes pendentes de aprovação e te avisará por voz automaticamente!
+                    Ao ativar este modo, assim que você abrir o LUMI, ele fará uma varredura por ordens de serviço urgentes pendentes de aprovação e te avisará por voz automaticamente!
                   </p>
                 </div>
 
@@ -2588,7 +2805,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   <button
                     onClick={() => {
                       const testPhrases = {
-                        amigavel: "Olá! Eu sou a Vivian. Minha voz está ajustada no modo amigável e simpático!",
+                        amigavel: "Olá! Eu sou o LUMI. Minha voz está ajustada no modo amigável e simpático!",
                         formal: "Prezado usuário, confirmo que o meu tom de voz formal e polido foi configurado com sucesso.",
                         tecnica: "Configuração operacional concluída. Modo técnico ativo. Velocidade de transmissão está estável."
                       };
@@ -2597,12 +2814,207 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                     className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all hover:scale-102 flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer"
                   >
                     <Volume2 className="w-3.5 h-3.5" />
-                    Testar Voz da Vivian 🔊
+                    Testar Voz do LUMI 🔊
                   </button>
                 </div>
 
                 <button
                   onClick={() => setShowSettings(false)}
+                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Voltar para Conversa
+                </button>
+              </div>
+            ) : showPillars ? (
+              <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-zinc-950/50 p-5 space-y-4 overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-slate-150 dark:border-zinc-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-500 animate-bounce" />
+                    <h4 className="text-sm font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">Os 4 Pilares da Gestão</h4>
+                  </div>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-bold">
+                    LUMI IA Guardião 🤖
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed">
+                  Visão executiva integrada baseada nos 4 pilares de governança condominial. Clique em qualquer pilar para acionar a inteligência preditiva ou disparar ações automatizadas do LUMI.
+                </p>
+
+                {/* Grid container */}
+                <div className="space-y-3.5">
+                  {/* Pillar 1: Financeiro */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800/80 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-950/20">
+                          <DollarSign className="w-4 h-4" />
+                        </div>
+                        <h5 className="text-xs font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">1. Pilar Financeiro</h5>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        (store.receipts?.reduce((acc, r) => acc + (Number(r.value) || 0), 0) || 0) >= (store.costs?.reduce((acc, c) => acc + (Number(c.value) || 0), 0) || 0)
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
+                          : 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400'
+                      }`}>
+                        {(store.receipts?.reduce((acc, r) => acc + (Number(r.value) || 0), 0) || 0) >= (store.costs?.reduce((acc, c) => acc + (Number(c.value) || 0), 0) || 0) ? '🟢 Caixa Saudável' : '🟡 Atenção Fluxo'}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2 text-center py-2 bg-slate-50 dark:bg-zinc-950/40 rounded-xl mb-3 border border-slate-100 dark:border-zinc-800/40">
+                      <div>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Receitas</p>
+                        <p className="text-[11px] font-black text-emerald-500 font-mono">
+                          R$ {(store.receipts?.reduce((acc, r) => acc + (Number(r.value) || 0), 0) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Despesas</p>
+                        <p className="text-[11px] font-black text-rose-500 font-mono">
+                          R$ {(store.costs?.reduce((acc, c) => acc + (Number(c.value) || 0), 0) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Saldo Geral</p>
+                        <p className="text-[11px] font-black text-blue-500 font-mono">
+                          R$ {((store.receipts?.reduce((acc, r) => acc + (Number(r.value) || 0), 0) || 0) - (store.costs?.reduce((acc, c) => acc + (Number(c.value) || 0), 0) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setShowPillars(false);
+                        setInput("Vivian, por favor realize uma projeção estatística de fluxo de caixa para o condomínio para os próximos meses.");
+                        toast.success("Comando de projeção financeira carregado! Clique em Enviar.", { icon: "📊" });
+                      }}
+                      className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      Projetar Fluxo de Caixa 📈
+                    </button>
+                  </div>
+
+                  {/* Pillar 2: Operacional & Manutenção */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800/80 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-950/20">
+                          <Wrench className="w-4 h-4" />
+                        </div>
+                        <h5 className="text-xs font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">2. Pilar Operacional</h5>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+                        {store.tickets?.filter(t => t.status !== 'CONCLUIDO').length || 0} OS Ativas
+                      </span>
+                    </div>
+
+                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 leading-tight mb-2">
+                      Análise integrada com os <strong>novos indicadores de progresso Kanban</strong>.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 text-center py-2 bg-slate-50 dark:bg-zinc-950/40 rounded-xl mb-3 border border-slate-150 dark:border-zinc-800/40">
+                      <div>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">OS Concluídas</p>
+                        <p className="text-[12px] font-black text-emerald-500">{store.tickets?.filter(t => t.status === 'CONCLUIDO').length || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">OS Pendentes</p>
+                        <p className="text-[12px] font-black text-rose-500">{store.tickets?.filter(t => t.status !== 'CONCLUIDO').length || 0}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setShowPillars(false);
+                        setInput("Vivian, faça uma auditoria minuciosa das O.S. preventivas em aberto e analise os progressos das tarefas no quadro Kanban.");
+                        toast.success("Análise do progresso Kanban carregada! Clique em Enviar.", { icon: "📋" });
+                      }}
+                      className="w-full py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 dark:bg-blue-950/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Wrench className="w-3.5 h-3.5" />
+                      Analisar Progresso Preventivo (Kanban) 🛠️
+                    </button>
+                  </div>
+
+                  {/* Pillar 3: Jurídico & Governança */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800/80 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-xl bg-purple-50 text-purple-500 dark:bg-purple-950/20">
+                          <Gavel className="w-4 h-4" />
+                        </div>
+                        <h5 className="text-xs font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">3. Jurídico & Governança</h5>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400">
+                        ⚖️ 100% NBR 5674
+                      </span>
+                    </div>
+
+                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 leading-tight mb-3">
+                      Geração automatizada de Atas de Assembleia, Regimentos e Notificações de Barulho/Multas com amparo jurídico Código Civil.
+                    </p>
+
+                    <button
+                      onClick={() => {
+                        setShowPillars(false);
+                        setInput("Vivian, elabore uma Ata de Assembleia Geral Extraordinária abordando a aprovação das manutenções prediais pendentes.");
+                        toast.success("Comando de Ata de Assembleia carregado! Clique em Enviar.", { icon: "📄" });
+                      }}
+                      className="w-full py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 dark:bg-purple-950/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Gerar Ata de Assembleia Geral 📄
+                    </button>
+                  </div>
+
+                  {/* Pillar 4: Comunicação & Relações */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800/80 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <h5 className="text-xs font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">4. Comunicação & Relações</h5>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                        💬 Comunicação Ativa
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-zinc-950/40 rounded-xl mb-3 border border-slate-150 dark:border-zinc-800/40 text-[11px]">
+                      <span className="text-slate-500 dark:text-zinc-400 font-bold">Moradores Cadastrados:</span>
+                      <span className="font-black text-slate-800 dark:text-zinc-200">{store.clients?.length || 0}</span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        toast.loading("LUMI AI conectando ao canal de transmissão...", { id: 'broadcast-loading' });
+                        setTimeout(() => {
+                          toast.dismiss('broadcast-loading');
+                          toast.success("Mensagem de transmissão condominial enviada via WhatsApp para todos os moradores cadastrados!", {
+                            icon: "📢",
+                            duration: 5000
+                          });
+                          const synth = window.speechSynthesis;
+                          if (synth && voiceEnabled) {
+                            const utterance = new SpeechSynthesisUtterance("Transmissão condominial via WhatsApp disparada para todos os moradores cadastrados com sucesso.");
+                            utterance.lang = "pt-BR";
+                            utterance.rate = voiceRate;
+                            synth.speak(utterance);
+                          }
+                        }, 1200);
+                      }}
+                      className="w-full py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-950/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      Disparar Alerta WhatsApp de Convivência 📢
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowPillars(false)}
                   className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                 >
                   Voltar para Conversa
@@ -2709,17 +3121,17 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                       <span className="text-[10px] font-black uppercase tracking-wider">Atenção Técnica Urgente</span>
                     </div>
                     <p className="text-[9px] text-rose-600/90 dark:text-rose-400/85 leading-relaxed font-medium">
-                      O sensor hídrico da <strong>Bomba de Recalque 01</strong> registrou temperatura operacional crítica com pico de vazão. Deseja solicitar que a Vivian agende uma revisão técnica emergencial?
+                      O sensor hídrico da <strong>Bomba de Recalque 01</strong> registrou temperatura operacional crítica com pico de vazão. Deseja solicitar que o LUMI agende uma revisão técnica emergencial?
                     </p>
                     <button
                       onClick={() => {
-                        setInput('Vivian, agende uma manutenção preventiva para hoje às 14h para revisar a Bomba de Recalque 01 que está em estado de falha crítica.');
+                        setInput('Lumi, agende uma manutenção preventiva para hoje às 14h para revisar a Bomba de Recalque 01 que está em estado de falha crítica.');
                         setShowHeatmap(false);
                         toast.success('Mensagem carregada! Envie o comando para agendar.');
                       }}
                       className="py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-bold transition-colors cursor-pointer text-center"
                     >
-                      Solicitar Agendamento Urgente via Vivian 🛠️
+                      Solicitar Agendamento Urgente via LUMI 🛠️
                     </button>
                   </div>
                 )}
@@ -2844,7 +3256,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                     <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Pesquisar comandos da Vivian..."
+                      placeholder="Pesquisar comandos do LUMI..."
                       value={manualSearch}
                       onChange={(e) => setManualSearch(e.target.value)}
                       className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none text-slate-705 dark:text-zinc-350 focus:border-blue-500 font-medium transition-colors"
@@ -2934,44 +3346,95 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
               /* Messages */
               <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-zinc-950/50 relative">
                 {isListening && (
-                  <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/90 to-white/95 dark:from-zinc-950/95 dark:to-zinc-900/95 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center z-20 animate-fade-in">
-                    {/* Pulsing circular visualizer rings */}
-                    <div className="relative mb-8 flex items-center justify-center">
-                      <div className="absolute w-32 h-32 rounded-full bg-rose-500/10 dark:bg-rose-400/5 animate-ping duration-1000" />
-                      <div className="absolute w-24 h-24 rounded-full bg-indigo-500/20 dark:bg-indigo-400/10 animate-pulse duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-50/95 to-white/98 dark:from-zinc-950/97 dark:to-zinc-900/98 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center z-20 animate-fade-in">
+                    {/* Glowing, reactive avatar container */}
+                    <div className="relative mb-6 flex items-center justify-center">
+                      {/* Reactive Outer Aura Rings */}
+                      <div 
+                        className="absolute rounded-full bg-emerald-500/5 dark:bg-emerald-400/5 transition-all duration-75"
+                        style={{
+                          width: `${140 + micVolume * 110}px`,
+                          height: `${140 + micVolume * 110}px`,
+                          opacity: 0.15 + micVolume * 0.75,
+                        }}
+                      />
+                      <div 
+                        className="absolute rounded-full bg-indigo-500/10 dark:bg-indigo-400/10 transition-all duration-75"
+                        style={{
+                          width: `${110 + micVolume * 80}px`,
+                          height: `${110 + micVolume * 80}px`,
+                          opacity: 0.3 + micVolume * 0.6,
+                        }}
+                      />
                       
-                      <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-600 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 dark:shadow-rose-500/20 scale-105 transition-transform">
-                        <Mic className="w-10 h-10 animate-pulse" />
+                      {/* Avatar container */}
+                      <div 
+                        className="relative w-24 h-24 rounded-full bg-white dark:bg-zinc-850 flex items-center justify-center shadow-2xl transition-transform duration-75 border-4 border-indigo-500 overflow-hidden"
+                        style={{
+                          transform: `scale(${1 + micVolume * 0.22})`,
+                          boxShadow: `0 0 ${20 + micVolume * 60}px rgba(99, 102, 241, ${0.35 + micVolume * 0.55})`
+                        }}
+                      >
+                        {!vivianAvatarError ? (
+                          <img 
+                            src={VIVIAN_AVATAR_URL} 
+                            alt="Vivian Avatar" 
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                            onError={() => setVivianAvatarError(true)}
+                          />
+                        ) : (
+                          <Bot className="w-12 h-12 text-indigo-500" />
+                        )}
+                        
+                        {/* Mic icon tag in bottom-right corner */}
+                        <div className="absolute bottom-1.5 right-1.5 bg-emerald-500 text-white p-1.5 rounded-full shadow-lg">
+                          <Mic className="w-3.5 h-3.5 animate-pulse" />
+                        </div>
                       </div>
                     </div>
 
-                    <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight mb-2">
-                      Vivian está Ouvindo... 🎙️
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight mb-1 flex items-center gap-1.5 justify-center">
+                      LUMI está Ouvindo... 🎙️
                     </h3>
-                    <p className="text-slate-500 dark:text-zinc-400 text-sm max-w-xs mb-8">
-                      Fale agora de forma clara e natural. Ela compreenderá e falará de volta automaticamente.
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs max-w-xs mb-6">
+                      Fale agora. O indicador e as ondas reagirão em tempo real ao som da sua voz.
                     </p>
 
                     {/* Dynamic Sound Wave Bars */}
-                    <div className="flex items-center justify-center gap-1.5 h-12 mb-10">
-                      {[0.4, 0.8, 0.5, 0.9, 0.6, 0.75, 0.5, 0.85, 0.4].map((heightScale, i) => (
-                        <div 
-                          key={i} 
-                          className="w-1.5 bg-gradient-to-t from-indigo-600 to-rose-400 rounded-full" 
-                          style={{
-                            height: '100%',
-                            animation: `soundwave-pulse 1.${i}s ease-in-out infinite alternate`,
-                            transformOrigin: 'bottom'
-                          }}
-                        />
-                      ))}
+                    <div className="flex items-center justify-center gap-1.5 h-16 mb-8">
+                      {[0.3, 0.65, 0.45, 0.85, 0.55, 0.95, 0.6, 0.8, 0.4, 0.7, 0.35].map((baseMultiplier, i) => {
+                        const duration = 0.4 + baseMultiplier * 0.8; // beautiful organic staggered speeds
+                        const delay = i * 0.07;
+                        
+                        // If we have a real micVolume, we scale it dynamically. Otherwise, standard organic breathing scale
+                        const amplitudeScale = micVolume > 0.01 ? (0.2 + micVolume * 1.6) : 1.0;
+                        
+                        return (
+                          <div 
+                            key={i} 
+                            className={`w-1.5 rounded-full bg-gradient-to-t ${
+                              jarvisMode 
+                                ? 'from-cyan-500 via-sky-400 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.6)]' 
+                                : 'from-blue-600 via-indigo-500 to-emerald-400'
+                            } animate-[soundwave-pulse_1s_ease-in-out_infinite_alternate]`}
+                            style={{
+                              height: `${baseMultiplier * 100}%`,
+                              animationDuration: `${duration}s`,
+                              animationDelay: `${delay}s`,
+                              transform: `scaleY(${amplitudeScale})`,
+                              transformOrigin: 'center'
+                            }}
+                          />
+                        );
+                      })}
                     </div>
 
                     {/* Prompt suggestions for users to speak */}
                     <div className="bg-slate-100/80 dark:bg-zinc-800/60 rounded-2xl p-4 max-w-sm border border-slate-200/50 dark:border-zinc-700/50 mb-6">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Comandos de Exemplo:</p>
                       <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                        <p className="italic">"Vivian, qual o nosso saldo hoje?"</p>
+                        <p className="italic">"Lumi, qual o nosso saldo hoje?"</p>
                         <p className="italic">"Criar chamado de vazamento na garagem"</p>
                         <p className="italic">"Ver as ordens de serviço pendentes"</p>
                       </div>
@@ -2984,6 +3447,38 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                       <MicOff className="w-4 h-4" />
                       Cancelar / Parar de Ouvir
                     </button>
+                  </div>
+                )}
+
+                {jarvisMode && (
+                  <div className="mb-2 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 border border-cyan-500/30 rounded-2xl p-3 shadow-[0_4px_25px_rgba(6,182,212,0.15)] flex flex-col gap-2 backdrop-blur-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Cpu className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
+                        <span className="text-[9px] font-black uppercase tracking-wider text-cyan-300 font-mono">
+                          J.A.R.V.I.S. Core V3.5-Online
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                        <span className="text-[8px] font-black text-cyan-400 font-mono">LINK OPERATIONAL</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2 text-[9px] font-mono text-slate-300 pt-1.5 border-t border-cyan-500/10">
+                      <div className="flex flex-col">
+                        <span className="text-slate-500 text-[8px] uppercase font-bold font-sans">Cognitive Core</span>
+                        <span className="text-cyan-400 font-bold">Max-Gen AI</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-slate-500 text-[8px] uppercase font-bold font-sans">IoT Status</span>
+                        <span className="text-emerald-400 font-bold">Telemetria Ativa</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-slate-500 text-[8px] uppercase font-bold font-sans">Risk Model</span>
+                        <span className="text-rose-400 font-bold font-bold">Real-time Predict</span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -3032,7 +3527,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                               className="py-1.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md transition-all hover:scale-105 animate-pulse"
                             >
                               <Mic className="w-3.5 h-3.5" />
-                              Falar com Vivian 🎙️
+                              Falar com LUMI 🎙️
                             </button>
                             <button
                               onClick={() => setShowVoiceHelpModal(true)}
@@ -3080,7 +3575,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                     </div>
                     <div className="bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                      <span className="text-xs text-slate-500">Vivian está digitando...</span>
+                      <span className="text-xs text-slate-500">LUMI está digitando...</span>
                     </div>
                   </div>
                 )}
@@ -3097,7 +3592,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder={showManual ? "Selecione um comando acima ou pergunte..." : (isListening ? "Vivian ouvindo... Fale agora!" : "Falar com a Vivian por voz ou digite...")}
+                    placeholder={showManual ? "Selecione um comando acima ou pergunte..." : (isListening ? "LUMI ouvindo... Fale agora!" : "Falar com o LUMI por voz ou digite...")}
                     className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-slate-700 dark:text-zinc-300"
                   />
                   
@@ -3109,9 +3604,9 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                       if (!nextVal && 'speechSynthesis' in window) {
                         window.speechSynthesis.cancel();
                       }
-                      toast.success(nextVal ? 'Voz da Vivian ATIVADA 🔊' : 'Voz da Vivian MUTADA 🔇', { id: 'voice-toggle-toast' });
+                      toast.success(nextVal ? 'Voz do LUMI ATIVADA 🔊' : 'Voz do LUMI MUTADA 🔇', { id: 'voice-toggle-toast' });
                     }}
-                    title={voiceEnabled ? "Mudar para silencioso" : "Ativar áudio falado da Vivian"}
+                    title={voiceEnabled ? "Mudar para silencioso" : "Ativar áudio falado do LUMI"}
                     className={`p-2 rounded-xl transition-all cursor-pointer ${
                       voiceEnabled 
                         ? 'text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-zinc-800' 
@@ -3124,7 +3619,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   {/* Voice Microphone Toggle Button */}
                   <button
                     onClick={isListening ? stopListening : startListening}
-                    title={isListening ? "Parar de ouvir" : "Falar com Vivian por voz"}
+                    title={isListening ? "Parar de ouvir" : "Falar com o LUMI por voz"}
                     className={`p-2 rounded-xl transition-all cursor-pointer ${
                       isListening 
                         ? 'bg-red-500 text-white animate-pulse shadow-md shadow-red-500/20' 
@@ -3226,7 +3721,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                         <span>Dica de Uso de Voz</span>
                       </div>
                       <p className="text-[10px] text-slate-500 dark:text-zinc-400 leading-relaxed">
-                        Pressione o botão de microfone na barra inferior para começar a falar. A Vivian reconhece variações naturais dos termos acima (ex: se disser "crie um chamado" ou "solicite reparo", ela entenderá "Abrir OS").
+                        Pressione o botão de microfone na barra inferior para começar a falar. O LUMI reconhece variações naturais dos termos acima (ex: se disser "crie um chamado" ou "solicite reparo", ela entenderá "Abrir OS").
                       </p>
                     </div>
 
