@@ -696,6 +696,7 @@ export interface AppState {
   addConsumptionReading: (reading: Omit<ConsumptionReading, 'id'>) => void;
   addDigitalFolderItem: (item: Omit<DigitalFolderItem, 'id' | 'signatures' | 'status'>) => void;
   validateDigitalFolderItem: (id: string, userName: string, role: string) => void;
+  rejectDigitalFolderItem: (id: string) => void;
   addAssembly: (assembly: Omit<Assembly, 'id' | 'votes' | 'legalValidityHash'>) => void;
   castVote: (assemblyId: string, optionId: string, userName: string) => void;
   closeAssembly: (id: string) => void;

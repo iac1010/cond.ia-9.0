@@ -295,14 +295,18 @@ export const VivianBrain: React.FC = () => {
         7. ADD_FINANCIAL: Lançamento financeiro. Campos: description, amount, type (INCOME/EXPENSE), category, date.
         8. ADD_ANNOUNCEMENT: Criar comunicado/aviso. Campos: title, content, category (AVISO/EVENTO/MANUTENCAO), priority (LOW/MEDIUM/HIGH).
         9. GET_SUMMARY: Obter resumo ou saldo. Campos: topic ('financeiro', 'chamados', 'moradores', 'agenda', 'encomendas').
-        10. REPLY_ONLY: Apenas responder a uma dúvida ou conversa sem ação no sistema.
+        10. REPLY_ONLY: Apenas responder a uma dúvida ou conversa sem ação no sistema. Esta ação deve ser usada para quaisquer perguntas gerais ou consultas que exijam pesquisa na internet em tempo real.
         11. UNKNOWN: Se não entender o comando.
+
+        PESQUISA NA INTERNET (GOOGLE SEARCH GROUNDING):
+        Você tem acesso à pesquisa do Google em tempo real. Se o usuário fizer perguntas que exijam dados externos atualizados (como notícias, placares, classificação, horários de jogos, clima, cotação de moedas ou fatos recentes), utilize o Google Search, formule uma resposta precisa e concisa no campo "reply" e defina a ação como "REPLY_ONLY".
 
         Exemplos de entrada e saída:
         - "aviso para todos: amanhã falta água das 14h às 16h" -> { "action": "ADD_ANNOUNCEMENT", "data": { "title": "Falta de Água", "content": "Amanhã faltará água das 14h às 16h para manutenção.", "category": "MANUTENCAO", "priority": "HIGH" }, "reply": "Comunicado criado! Todos os moradores serão avisados sobre a falta de água." }
         - "Lumi, como você está?" -> { "action": "REPLY_ONLY", "data": {}, "reply": "Estou ótimo e pronto para te ajudar a gerenciar o condomínio! O que vamos fazer hoje?" }
         - "chegou uma encomenda da Amazon para o apto 101 torre A" -> { "action": "ADD_PACKAGE", "data": { "carrier": "Amazon", "apartment": "101", "tower": "A" }, "reply": "Recebido! Registrei a encomenda da Amazon para o apto 101A." }
         - "Lumi, qual o nosso saldo?" -> { "action": "GET_SUMMARY", "data": { "topic": "financeiro" }, "reply": "Vou verificar o saldo para você agora mesmo." }
+        - "Lumi, quando é o próximo jogo do Flamengo?" -> { "action": "REPLY_ONLY", "data": {}, "reply": "O próximo jogo do Flamengo será contra..." }
         
         Responda APENAS em formato JSON seguindo o schema fornecido.
       `;
@@ -318,7 +322,8 @@ export const VivianBrain: React.FC = () => {
             contents: prompt,
             config: {
               responseMimeType: "application/json",
-              responseSchema: responseSchema
+              responseSchema: responseSchema,
+              tools: [{ googleSearch: {} }]
             }
           });
           break; // Success!
@@ -347,6 +352,29 @@ export const VivianBrain: React.FC = () => {
       const result = JSON.parse(responseText);
       if (!result.action) throw new Error('Invalid AI response');
       
+      // Extract internet grounding resources and format as Markdown
+      try {
+        const metadata = response.candidates?.[0]?.groundingMetadata;
+        if (metadata && metadata.groundingChunks && metadata.groundingChunks.length > 0) {
+          const sources = metadata.groundingChunks
+            .map((chunk: any) => chunk.web)
+            .filter((web: any) => web && web.uri && web.title);
+          
+          if (sources.length > 0) {
+            const uniqueSources = Array.from(
+              new Map(sources.map((s: any) => [s.uri, s])).values()
+            ) as any[];
+            
+            if (result.reply) {
+              result.reply += `\n\n**🔍 Fontes consultadas:**\n` + 
+                uniqueSources.map((s: any) => `- [${s.title}](${s.uri})`).join('\n');
+            }
+          }
+        }
+      } catch (groundingErr) {
+        console.warn('Error processing grounding metadata:', groundingErr);
+      }
+
       console.log('Vivian interpreted:', result);
 
       // Execute the action

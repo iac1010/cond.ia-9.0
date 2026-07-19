@@ -230,6 +230,17 @@ export const VOICE_COMMANDS = [
   }
 ];
 
+const CARIOCA_GREETINGS = [
+  "Coé Guto! Qual é a boa de hoje?",
+  "Fala parceiro! Manda a boa, o que tá pegando?",
+  "E aí Guto, tranquilo? Qual é a missão de hoje?",
+  "Coé, Guto! Como é que tá essa força? Manda aí!",
+  "Fala aí, Guto! Manda a boa de hoje, parceiro.",
+  "E aí, meu camarada! Qual é o papo reto de hoje?",
+  "Coé Guto, de boa? Manda aí que eu resolvo.",
+  "Fala parceiro! Qual é a boa do condomínio hoje?"
+];
+
 export function AssistantVivian() {
   const [isOpen, setIsOpen] = useState(false);
   const [showManual, setShowManual] = useState(false);
@@ -237,9 +248,10 @@ export function AssistantVivian() {
   const [manualSearch, setManualSearch] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string | null>('os');
   const [vivianAvatarError, setVivianAvatarError] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Olá! Sou o LUMI, seu assistente de inteligência condominial 19.0 estruturado sob os **4 Pilares de Sucesso da Gestão**:\n\n1. **Pilar Financeiro 📊**: Projeções, análise de caixa e conciliação.\n2. **Pilar Operacional 🛠️**: Manutenção preventiva (NBR 5674), monitoramento de telemetria IoT e progresso visual Kanban.\n3. **Pilar Jurídico ⚖️**: Geração automática de atas oficiais, regimentos e conformidade legal.\n4. **Pilar Comunicação 📢**: Avisos inteligentes, transmissões via WhatsApp e mural digital.\n\nExperimente a aba **"4 Pilares"** no topo ou pergunte-me qualquer dúvida sobre a administração do seu condomínio!' }
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const randomGreeting = CARIOCA_GREETINGS[Math.floor(Math.random() * CARIOCA_GREETINGS.length)];
+    return [{ id: '1', role: 'assistant', content: randomGreeting }];
+  });
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [initialTicketId, setInitialTicketId] = useState<string | null>(null);
@@ -305,12 +317,16 @@ export function AssistantVivian() {
     localStorage.setItem('vivian_active_listening_startup', activeListeningStartup.toString());
   }, [activeListeningStartup]);
 
-  const [voiceTone, setVoiceTone] = useState<'formal' | 'amigavel' | 'tecnica'>(() => {
-    return (localStorage.getItem('vivian_voice_tone') as any) || 'amigavel';
+  const [voiceTone, setVoiceTone] = useState<'formal' | 'amigavel' | 'tecnica' | 'carioca'>(() => {
+    return (localStorage.getItem('vivian_voice_tone') as any) || 'carioca';
   });
   const [voiceRate, setVoiceRate] = useState<number>(() => {
     const saved = localStorage.getItem('vivian_voice_rate');
-    return saved ? parseFloat(saved) : 1.05;
+    if (saved) {
+      const parsed = parseFloat(saved);
+      return parsed <= 1.05 ? 1.15 : parsed;
+    }
+    return 1.15;
   });
   const [selectedFemaleVoice, setSelectedFemaleVoice] = useState<'natural' | 'suave' | 'clara'>(() => {
     return (localStorage.getItem('vivian_selected_female_voice') as any) || 'natural';
@@ -373,10 +389,10 @@ export function AssistantVivian() {
     };
   }, [isOpen]);
 
-  const updateVoiceTone = (tone: 'formal' | 'amigavel' | 'tecnica') => {
+  const updateVoiceTone = (tone: 'formal' | 'amigavel' | 'tecnica' | 'carioca') => {
     setVoiceTone(tone);
     localStorage.setItem('vivian_voice_tone', tone);
-    toast.success(`Tom de voz alterado para: ${tone === 'formal' ? 'Formal 👔' : tone === 'amigavel' ? 'Amigável 😊' : 'Técnica 🛠️'}`, { id: 'voice-tone-toast' });
+    toast.success(`Tom de voz alterado para: ${tone === 'formal' ? 'Formal 👔' : tone === 'amigavel' ? 'Amigável 😊' : tone === 'tecnica' ? 'Técnica 🛠️' : 'Carioca 🌴'}`, { id: 'voice-tone-toast' });
   };
 
   const updateVoiceRate = (rate: number) => {
@@ -1768,7 +1784,9 @@ Utilize os dados REAIS abaixo para formular respostas de altíssimo nível, cont
           ? 'Seu tom de resposta deve ser altamente FORMAL, POLIDO, RESPEITOSO e IMPECÁVEL, porém extremamente DIRETO e CURTO. Dirija-se ao usuário com cortesia ("Prezado(a)" ou "Senhor/Senhora") de forma rápida, sem alongar a resposta.'
           : voiceTone === 'tecnica'
           ? 'Seu tom de resposta deve ser extremamente TÉCNICO, ANALÍTICO, DIRETO e OBJETIVO. Vá direto aos fatos operacionais ou financeiros de forma super concisa, sem floreios.'
-          : 'Seu tom de resposta deve ser AMIGÁVEL, ENÉRGICO e PARCEIRO, mas MUITO CURTO e DIRETO. Evite rodeios e entregue as respostas de forma rápida e focada.';
+          : voiceTone === 'amigavel'
+          ? 'Seu tom de resposta deve ser AMIGÁVEL, ENÉRGICO e PARCEIRO, mas MUITO CURTO e DIRETO. Evite rodeios e entregue as respostas de forma rápida e focada.'
+          : 'Seu tom de resposta deve ser totalmente CARIOCA, INFORMAL, PARCEIRO e MUITO DIRETO. Escreva exatamente como um carioca gente boa, maneiro e descontraído fala (use termos como "irmão", "parceiro", "mermão", "manda a boa", "caraca", "tranquilo", "já é", "mó", "papo reto", "tá ligado?"), de forma extremamente CURTA, DIRETA e sem formalidades ou enrolação. Comece sempre de um jeito diferente e descontraído.';
 
       const jarvisPromptAddendum = jarvisMode 
         ? `\n\n### ⚡ PROTOCOLO J.A.R.V.I.S ATIVO:
@@ -2643,47 +2661,60 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                   <label className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                     Tom de Voz e Resposta:
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-1.5">
                     <button
                       onClick={() => updateVoiceTone('amigavel')}
-                      className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
+                      className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
                         voiceTone === 'amigavel'
                           ? 'bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-950/20 dark:border-blue-700 dark:text-blue-400 font-bold shadow-sm'
                           : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400'
                       }`}
                     >
-                      <span className="text-xl">😊</span>
-                      <span className="text-[11px] leading-tight font-bold">Amigável</span>
+                      <span className="text-lg">😊</span>
+                      <span className="text-[10px] leading-tight font-bold">Amigável</span>
                     </button>
 
                     <button
                       onClick={() => updateVoiceTone('formal')}
-                      className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
+                      className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
                         voiceTone === 'formal'
                           ? 'bg-indigo-50 border-indigo-500 text-indigo-700 dark:bg-indigo-950/20 dark:border-indigo-700 dark:text-indigo-400 font-bold shadow-sm'
                           : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400'
                       }`}
                     >
-                      <span className="text-xl">👔</span>
-                      <span className="text-[11px] leading-tight font-bold">Formal</span>
+                      <span className="text-lg">👔</span>
+                      <span className="text-[10px] leading-tight font-bold">Formal</span>
                     </button>
 
                     <button
                       onClick={() => updateVoiceTone('tecnica')}
-                      className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
+                      className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
                         voiceTone === 'tecnica'
                           ? 'bg-emerald-50 border-emerald-500 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-700 dark:text-emerald-400 font-bold shadow-sm'
                           : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400'
                       }`}
                     >
-                      <span className="text-xl">🛠️</span>
-                      <span className="text-[11px] leading-tight font-bold">Técnica</span>
+                      <span className="text-lg">🛠️</span>
+                      <span className="text-[10px] leading-tight font-bold">Técnica</span>
+                    </button>
+
+                    <button
+                      onClick={() => updateVoiceTone('carioca')}
+                      className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                        voiceTone === 'carioca'
+                          ? 'bg-amber-50 border-amber-500 text-amber-700 dark:bg-amber-950/20 dark:border-amber-700 dark:text-amber-400 font-bold shadow-sm'
+                          : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400'
+                      }`}
+                    >
+                      <span className="text-lg">🌴</span>
+                      <span className="text-[10px] leading-tight font-bold">Carioca</span>
                     </button>
                   </div>
                   <p className="text-[10px] text-slate-400 dark:text-zinc-500 leading-tight">
                     {voiceTone === 'amigavel' && 'Diálogos alegres, calorosos e cheios de empatia para o dia a dia.'}
                     {voiceTone === 'formal' && 'Comunicação extremamente polida, respeitosa e corporativa de alto padrão.'}
                     {voiceTone === 'tecnica' && 'Foco absoluto em dados exatos, diagnósticos, métricas e normas técnicas.'}
+                    {voiceTone === 'carioca' && 'Sotaque carioca descontraído, gírias locais e zero formalidades.'}
                   </p>
                 </div>
 

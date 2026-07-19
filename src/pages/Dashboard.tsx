@@ -34,6 +34,7 @@ import { CommercialMirror } from '../components/CommercialMirror';
 import { WaterManagementMirror } from '../components/WaterManagementMirror';
 import { MonitoringMirror } from '../components/MonitoringMirror';
 import { DashboardKeepNotesTile } from '../components/DashboardKeepNotesTile';
+import { DashboardNotionTile } from '../components/DashboardNotionTile';
 import { DailyTasksWidget } from '../components/DailyTasksWidget';
 import WorkspaceWidget from '../components/WorkspaceWidget';
 import GmailWidget from '../components/GmailWidget';
@@ -756,7 +757,7 @@ export default function Dashboard() {
   } | null>(null);
 
   // News Widget State (Toggler between Tech & Globo)
-  const [newsChannel, setNewsChannel] = useState<'TECH' | 'GLOBO'>('TECH');
+  const [newsChannel, setNewsChannel] = useState<'TECH' | 'GLOBO'>('GLOBO');
   const [newsItems, setNewsItems] = useState<{ title: string; link: string; description: string; pubDate: string; type?: string }[]>([]);
   const [newsLoading, setNewsLoading] = useState<boolean>(true);
   const [newsError, setNewsError] = useState<string | null>(null);
@@ -1202,41 +1203,12 @@ export default function Dashboard() {
       id: 'notion-workspace',
       type: 'wide',
       component: (
-        <Link 
-          to={isEditMode ? '#' : "/notion"} 
-          onClick={(e) => isEditMode && e.preventDefault()}
-          className="w-full h-full bg-gradient-to-br from-zinc-900 to-zinc-950 hover:brightness-110 transition-all p-4 flex flex-col justify-between group relative overflow-hidden border border-white/10 shadow-2xl active:scale-95 text-white rounded-[2rem]"
-        >
-          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 via-transparent to-white/5 pointer-events-none" />
-          <div className="absolute -top-10 -right-10 w-24 h-24 bg-indigo-500/10 blur-2xl rounded-full mix-blend-screen pointer-events-none" />
-          
-          <div className="flex items-start justify-between relative z-10 w-full mb-2">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/25 group-hover:scale-110 transition-transform duration-500 shrink-0 text-indigo-400">
-                <Layers className="w-10 h-10" />
-              </div>
-              <div className="text-left">
-                <p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Espaço de Trabalho</p>
-                <h3 className="font-black text-xl text-white leading-tight">Wiki & Notas Notion</h3>
-                <p className="text-[10px] text-white/50 font-medium">Documentos, atas e rotinas interativas</p>
-              </div>
-            </div>
-            
-            <div className="flex flex-col items-end">
-              <span className="text-[8px] font-black uppercase tracking-wider text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 px-2 py-0.5 rounded-full">
-                Notion Live
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between relative z-10 pt-2 border-t border-white/5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Criar Documento Inteligente</span>
-            <div className="flex items-center gap-1 text-xs text-indigo-400 font-bold group-hover:translate-x-1 transition-transform">
-              <span>Acessar Workspace</span>
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          </div>
-        </Link>
+        <DashboardNotionTile 
+          onNavigate={() => {
+            if (!isEditMode) navigate('/notion');
+          }} 
+          isEditMode={isEditMode} 
+        />
       )
     },
     {
@@ -4050,30 +4022,18 @@ export default function Dashboard() {
                 </div>
 
                 {/* Tech & Globo News Feed Widget (Smart Home, AI, G1 & Flamengo) */}
-                <div className={`bg-zinc-950/40 border rounded-3xl p-5 space-y-4 relative overflow-hidden shadow-2xl transition-all duration-500 ${
-                  newsChannel === 'TECH' ? 'border-cyan-500/10' : 'border-red-500/10'
-                }`}>
-                  {/* Subtle decorative tech-cyan / violet / red ambient light glow */}
-                  <div className={`absolute top-0 right-0 w-32 h-32 bg-radial pointer-events-none rounded-full blur-2xl transition-all duration-500 ${
-                    newsChannel === 'TECH' 
-                      ? 'from-cyan-500/5 to-transparent' 
-                      : 'from-red-500/5 to-transparent'
-                  }`} />
+                <div className="bg-zinc-950/40 border border-red-500/10 rounded-3xl p-5 space-y-4 relative overflow-hidden shadow-2xl">
+                  {/* Subtle decorative red ambient light glow */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-red-500/5 to-transparent pointer-events-none rounded-full blur-2xl" />
 
                   <div className="flex flex-col gap-3 border-b border-white/5 pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full animate-pulse shrink-0 transition-colors duration-500 ${
-                          newsChannel === 'TECH' ? 'bg-cyan-400' : 'bg-red-500'
-                        }`} />
+                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
                         <div className="flex items-center gap-1.5">
-                          {newsChannel === 'TECH' ? (
-                            <Cpu className="w-4 h-4 text-cyan-400 transition-colors duration-500" />
-                          ) : (
-                            <Newspaper className="w-4 h-4 text-red-500 transition-colors duration-500" />
-                          )}
+                          <Newspaper className="w-4 h-4 text-red-500" />
                           <span className="text-xs font-black uppercase tracking-wider text-white">
-                            {newsChannel === 'TECH' ? 'Casa Inteligente & IA' : 'Globo.com & Flamengo'}
+                            Globo.com & Flamengo
                           </span>
                         </div>
                       </div>
@@ -4084,44 +4044,14 @@ export default function Dashboard() {
                           </span>
                         )}
                         <button
-                          onClick={() => fetchNews(newsChannel)}
+                          onClick={() => fetchNews('GLOBO')}
                           disabled={newsLoading}
-                          className={`p-1.5 hover:bg-white/5 text-white/50 rounded-lg transition-all active:scale-90 cursor-pointer ${
-                            newsChannel === 'TECH' ? 'hover:text-cyan-400' : 'hover:text-red-500'
-                          }`}
+                          className="p-1.5 hover:bg-white/5 text-white/50 hover:text-red-500 rounded-lg transition-all active:scale-90 cursor-pointer"
                           title="Atualizar Notícias"
                         >
-                          <RefreshCw className={`w-3.5 h-3.5 ${newsLoading ? 'animate-spin' : ''} ${
-                            newsChannel === 'TECH' ? (newsLoading ? 'text-cyan-400' : '') : (newsLoading ? 'text-red-500' : '')
-                          }`} />
+                          <RefreshCw className={`w-3.5 h-3.5 ${newsLoading ? 'animate-spin text-red-500' : ''}`} />
                         </button>
                       </div>
-                    </div>
-
-                    {/* Channel Selector Buttons */}
-                    <div className="grid grid-cols-2 gap-1 bg-white/[0.03] p-1 rounded-xl border border-white/5">
-                      <button
-                        onClick={() => setNewsChannel('TECH')}
-                        className={`flex items-center justify-center gap-1.5 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-200 cursor-pointer ${
-                          newsChannel === 'TECH'
-                            ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-                            : 'text-white/50 hover:text-white hover:bg-white/[0.02] border border-transparent'
-                        }`}
-                      >
-                        <Cpu className="w-3 h-3" />
-                        <span>Casa Inteligente & IA</span>
-                      </button>
-                      <button
-                        onClick={() => setNewsChannel('GLOBO')}
-                        className={`flex items-center justify-center gap-1.5 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-200 cursor-pointer ${
-                          newsChannel === 'GLOBO'
-                            ? 'bg-red-500/10 text-red-500 border border-red-500/20'
-                            : 'text-white/50 hover:text-white hover:bg-white/[0.02] border border-transparent'
-                        }`}
-                      >
-                        <Newspaper className="w-3 h-3" />
-                        <span>Globo & Flamengo</span>
-                      </button>
                     </div>
                   </div>
 
@@ -4280,55 +4210,27 @@ export default function Dashboard() {
                           );
                         })}
                         <div className="flex items-center justify-center gap-4 pt-1">
-                          {newsChannel === 'TECH' ? (
-                            <>
-                              <a 
-                                href="https://olhardigital.com.br/casa-inteligente/" 
-                                target="_blank" 
-                                referrerPolicy="no-referrer"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-cyan-400 uppercase tracking-widest transition-colors cursor-pointer"
-                              >
-                                <span>IoT (Olhar Digital)</span>
-                                <ExternalLink className="w-2 h-2" />
-                              </a>
-                              <span className="text-white/10">|</span>
-                              <a 
-                                href="https://canaltech.com.br/inteligencia-artificial/" 
-                                target="_blank" 
-                                referrerPolicy="no-referrer"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-violet-400 uppercase tracking-widest transition-colors cursor-pointer"
-                              >
-                                <span>IA (Canaltech)</span>
-                                <ExternalLink className="w-2 h-2" />
-                              </a>
-                            </>
-                          ) : (
-                            <>
-                              <a 
-                                href="https://g1.globo.com/" 
-                                target="_blank" 
-                                referrerPolicy="no-referrer"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-emerald-400 uppercase tracking-widest transition-colors cursor-pointer"
-                              >
-                                <span>Globo.com</span>
-                                <ExternalLink className="w-2 h-2" />
-                              </a>
-                              <span className="text-white/10">|</span>
-                              <a 
-                                href="https://ge.globo.com/futebol/times/flamengo/" 
-                                target="_blank" 
-                                referrerPolicy="no-referrer"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-red-400 uppercase tracking-widest transition-colors cursor-pointer"
-                              >
-                                <span>GE Flamengo</span>
-                                <ExternalLink className="w-2 h-2" />
-                              </a>
-                            </>
-                          )}
+                          <a 
+                            href="https://g1.globo.com/" 
+                            target="_blank" 
+                            referrerPolicy="no-referrer"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-emerald-400 uppercase tracking-widest transition-colors cursor-pointer"
+                          >
+                            <span>Globo.com</span>
+                            <ExternalLink className="w-2 h-2" />
+                          </a>
+                          <span className="text-white/10">|</span>
+                          <a 
+                            href="https://ge.globo.com/futebol/times/flamengo/" 
+                            target="_blank" 
+                            referrerPolicy="no-referrer"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[8px] font-black text-white/30 hover:text-red-400 uppercase tracking-widest transition-colors cursor-pointer"
+                          >
+                            <span>GE Flamengo</span>
+                            <ExternalLink className="w-2 h-2" />
+                          </a>
                         </div>
                       </>
                     )}

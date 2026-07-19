@@ -8,7 +8,7 @@ import {
   Loader2, Sparkle, AlertCircle, HelpCircle, Flame, Wrench,
   BookOpen, Compass, Terminal, FileCode, CheckCircle2, ChevronDown, 
   Info, CornerRightDown, RefreshCw, Layers3, Settings, ClipboardList,
-  Paperclip, File, UploadCloud, Download, Eye
+  Paperclip, File, UploadCloud, Download, Eye, Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -18,7 +18,7 @@ import { Modal } from '../components/Modal';
 // Define Notion Block Type
 export interface NotionBlock {
   id: string;
-  type: 'h1' | 'h2' | 'h3' | 'paragraph' | 'todo' | 'bullet' | 'code' | 'callout' | 'table' | 'quote' | 'file';
+  type: 'h1' | 'h2' | 'h3' | 'paragraph' | 'todo' | 'bullet' | 'code' | 'callout' | 'table' | 'quote' | 'file' | 'textbox';
   content: string;
   properties?: {
     checked?: boolean;
@@ -31,6 +31,8 @@ export interface NotionBlock {
     fileSize?: string;
     fileType?: string;
     fileUrl?: string;
+    width?: number;
+    height?: number;
   };
 }
 
@@ -315,6 +317,10 @@ export default function NotionWorkspace() {
               ];
             } else if (type === 'quote') {
               properties.colorTheme = 'rose';
+            } else if (type === 'textbox') {
+              properties.colorTheme = 'indigo';
+              properties.width = 450;
+              properties.height = 180;
             }
 
             return {
@@ -342,7 +348,7 @@ export default function NotionWorkspace() {
       id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 5),
       type,
       content: '',
-      properties: type === 'todo' ? { checked: false, colorTheme: 'default' } : type === 'code' ? { language: 'sql' } : { colorTheme: 'default' }
+      properties: type === 'todo' ? { checked: false, colorTheme: 'default' } : type === 'code' ? { language: 'sql' } : type === 'textbox' ? { colorTheme: 'indigo', width: 450, height: 180 } : { colorTheme: 'default' }
     };
 
     setPages(prev => prev.map(p => {
@@ -552,6 +558,9 @@ export default function NotionWorkspace() {
         case 'quote':
           markdown += `> ${b.content}\n\n`;
           break;
+        case 'textbox':
+          markdown += `### 📝 Caixa de Texto Ajustável\n${b.content}\n\n`;
+          break;
         case 'table':
           if (b.properties?.headers) {
             markdown += `| ${b.properties.headers.join(' | ')} |\n`;
@@ -592,6 +601,7 @@ export default function NotionWorkspace() {
     { type: 'quote', label: 'Citação / Norma Técnica', icon: Quote, desc: 'Citação de normas ou diretrizes' },
     { type: 'table', label: 'Tabela Organizacional', icon: Table, desc: 'Tabela interativa de colunas' },
     { type: 'file', label: 'Anexo de Arquivo / Documento', icon: Paperclip, desc: 'Arraste ou selecione fotos, PDFs, etc.' },
+    { type: 'textbox', label: 'Caixa de Texto Ajustável', icon: Maximize2, desc: 'Caixa de texto com dimensões redimensionáveis' },
   ];
 
   const filteredSlashCommands = slashCommands.filter(cmd =>
@@ -1029,6 +1039,46 @@ export default function NotionWorkspace() {
                                 </div>
                               )}
 
+                              {/* Resizable Text Box Block */}
+                              {block.type === 'textbox' && (
+                                <div 
+                                  className="border border-indigo-500/20 bg-black/50 rounded-2xl flex flex-col overflow-hidden relative mt-1"
+                                  style={{
+                                    width: block.properties?.width ? `${block.properties.width}px` : '100%',
+                                    height: block.properties?.height ? `${block.properties.height}px` : '180px',
+                                    resize: 'both',
+                                    overflow: 'auto',
+                                    minWidth: '200px',
+                                    minHeight: '100px'
+                                  }}
+                                  onMouseUp={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    handleBlockChange(block.id, block.content, { 
+                                      width: Math.round(rect.width), 
+                                      height: Math.round(rect.height) 
+                                    });
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-indigo-500/5 select-none shrink-0">
+                                    <span className="text-white/50 uppercase text-[9px] font-black tracking-widest flex items-center gap-1.5">
+                                      <Maximize2 className="w-3.5 h-3.5 text-indigo-400" />
+                                      Caixa de Texto Ajustável
+                                    </span>
+                                    <span className="text-[8px] text-white/20 font-mono">
+                                      {block.properties?.width && block.properties?.height 
+                                        ? `${block.properties.width}x${block.properties.height}px` 
+                                        : 'Ajustável'}
+                                    </span>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) => handleBlockChange(block.id, e.target.value)}
+                                    className="flex-1 w-full bg-transparent border-none outline-none p-3.5 text-sm leading-relaxed text-white placeholder-white/20 focus:ring-0 resize-none overflow-y-auto"
+                                    placeholder="Escreva anotações livres, memorandos ou relatórios técnicos aqui... Redimensione puxando o canto inferior direito."
+                                  />
+                                </div>
+                              )}
+
                               {/* File / Attachment Block */}
                               {block.type === 'file' && (
                                 <div className="mt-1">
@@ -1353,6 +1403,13 @@ export default function NotionWorkspace() {
                     <Paperclip className="w-4 h-4" />
                     Anexar Arquivo
                   </button>
+                  <button
+                    onClick={() => handleAddNewBlock(activePage.blocks[activePage.blocks.length - 1]?.id, 'textbox')}
+                    className="flex items-center gap-2 px-5 py-3 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/25 rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                    Caixa de Texto Ajustável
+                  </button>
                 </div>
 
               </div>
@@ -1429,17 +1486,49 @@ export default function NotionWorkspace() {
         onClose={() => setShowCoverModal(false)}
         title="Selecione um Tema de Capa"
       >
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5 p-1">
-          {PRESET_COVERS.map((cov, idx) => (
-            <div
-              key={idx}
-              onClick={() => handleUpdatePageCover(cov)}
-              className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 hover:border-indigo-500 cursor-pointer transition-all hover:scale-105 group"
-            >
-              <img src={cov} alt="Cover option" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors" />
+        <div className="space-y-4 p-1">
+          {/* File Upload Box */}
+          <div className="border border-dashed border-white/20 hover:border-indigo-500/50 rounded-2xl p-5 bg-white/[0.02] hover:bg-white/[0.04] transition-all text-center relative cursor-pointer group">
+            <input 
+              type="file" 
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    if (typeof reader.result === 'string') {
+                      handleUpdatePageCover(reader.result);
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div className="flex flex-col items-center justify-center gap-2 pointer-events-none">
+              <UploadCloud className="w-7 h-7 text-indigo-400 group-hover:scale-110 transition-transform duration-300" />
+              <span className="text-xs font-black uppercase tracking-wider text-white/90">Fazer Upload de Imagem de Fundo</span>
+              <span className="text-[10px] text-white/40">Selecione uma imagem do seu dispositivo para colocar como capa</span>
             </div>
-          ))}
+          </div>
+
+          <div className="text-[10px] font-black uppercase tracking-wider text-white/40 pt-2 border-t border-white/5">
+            Ou escolha um tema padrão:
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
+            {PRESET_COVERS.map((cov, idx) => (
+              <div
+                key={idx}
+                onClick={() => handleUpdatePageCover(cov)}
+                className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 hover:border-indigo-500 cursor-pointer transition-all hover:scale-105 group"
+              >
+                <img src={cov} alt="Cover option" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors" />
+              </div>
+            ))}
+          </div>
         </div>
       </Modal>
 

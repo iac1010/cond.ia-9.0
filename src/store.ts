@@ -194,18 +194,18 @@ export const useStore = create<AppState>()(
           // Helper to wrap supabase calls with individual error handling
           const safeFetch = async (promise: any, tableName: string) => {
             try {
-              const res = await promise;
-              if (res.error) {
-                if (res.error.code === 'PGRST205') {
-                  console.warn(`Tabela "${tableName}" não encontrada no Supabase.`);
-                } else if (res.error.code !== 'PGRST116') {
-                  console.error(`Erro na tabela "${tableName}":`, res.error);
-                }
-              }
-              return res;
+               const res = await promise;
+               if (res.error) {
+                 if (res.error.code === 'PGRST205') {
+                   console.warn(`Tabela "${tableName}" não encontrada no Supabase.`);
+                 } else if (res.error.code !== 'PGRST116') {
+                   console.warn(`Erro na tabela "${tableName}":`, res.error);
+                 }
+               }
+               return res;
             } catch (e) {
-              console.error(`Falha crítica ao buscar "${tableName}":`, e);
-              return { data: null, error: e };
+               console.warn(`Falha crítica ao buscar "${tableName}":`, e);
+               return { data: null, error: e };
             }
           };
 
@@ -294,7 +294,7 @@ export const useStore = create<AppState>()(
               if (res.error.code === 'PGRST205') {
                 console.warn(`Tabela (index ${index}) ainda não criada no Supabase. Use o SQL Editor para criá-la.`);
               } else {
-                console.error(`Erro ao carregar tabela (index ${index}):`, res.error);
+                console.warn(`Erro ao carregar tabela (index ${index}):`, res.error);
               }
             }
           });
@@ -3292,6 +3292,31 @@ export const useStore = create<AppState>()(
         } catch (e: any) { 
           console.error(e);
           toast.error('Erro de conexão ao validar documento.');
+        }
+      },
+
+      rejectDigitalFolderItem: async (id) => {
+        set((state) => ({
+          digitalFolder: state.digitalFolder.map(i => 
+            i.id === id ? { ...i, status: 'REJECTED' } : i
+          )
+        }));
+
+        if (!isSupabaseConfigured) return;
+
+        try {
+          const { error } = await supabase.from('digital_folder').update({ 
+            status: 'REJECTED' 
+          }).eq('id', id);
+          if (error) {
+            console.error('Erro Supabase rejectDigitalFolderItem:', error);
+            toast.error(`Erro ao rejeitar documento: ${error.message}`);
+          } else {
+            toast.success('Documento rejeitado!');
+          }
+        } catch (e: any) { 
+          console.error(e);
+          toast.error('Erro de conexão ao rejeitar documento.');
         }
       },
 
