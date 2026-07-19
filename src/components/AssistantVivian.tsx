@@ -1778,23 +1778,69 @@ Você agora opera no MODO J.A.R.V.I.S, mas suas respostas devem ser extremamente
 3. Mantenha os comentários espirituosos em pouquíssimas palavras.`
         : '';
 
+      // Detect if user wants to search internet / get real-time info
+      const userLower = userContent.toLowerCase();
+      const searchKeywords = [
+        'jogo', 'time', 'futebol', 'brasileirão', 'campeonato', 'placar', 'tabela', 'partida',
+        'noticia', 'notícia', 'noticias', 'notícias', 'últimas', 'ultimas', 'clima', 'tempo',
+        'previsão', 'previsao', 'temperatura', 'chover', 'chuva', 'dólar', 'dolar', 'euro',
+        'moeda', 'cotação', 'cotacao', 'bolsa', 'ações', 'acoes', 'noticiário', 'noticiario',
+        'hoje', 'ontem', 'amanhã', 'amanha', 'google', 'internet', 'buscar', 'pesquisar',
+        'pesquisa', 'web', 'search', 'grounding', 'real-time', 'tempo real', 'noticías', 'quem ganhou',
+        'quem é', 'quem e', 'quem foi', 'onde fica', 'como está', 'como esta', 'presidente', 'notícias do',
+        'noticias do', 'notícias de', 'noticias de'
+      ];
+      const systemKeywords = [
+        'criar chamado', 'abrir chamado', 'lançar despesa', 'cadastrar morador', 'criar morador',
+        'adicionar morador', 'abrir os', 'criar os', 'nova os', 'gerar pdf', 'gerar documento',
+        'cadastrar visitante', 'liberar visitante', 'agendar reserva', 'reservar salão', 'reservar chapa',
+        'gerar qr', 'criar qr', 'mudar status', 'atualizar status'
+      ];
+      const isSearchQuery = searchKeywords.some(keyword => userLower.includes(keyword)) &&
+                            !systemKeywords.some(keyword => userLower.includes(keyword));
+
       let response;
       let retries = 5;
       let delay = 3000;
 
       while (retries > 0) {
         try {
-          response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash',
-            contents: `Histórico da conversa recente:
+          if (isSearchQuery) {
+            response = await ai.models.generateContent({
+              model: 'gemini-3.5-flash',
+              contents: `Histórico da conversa recente:
 ${messages.map(m => `${m.role === 'user' ? 'Usuário' : 'LUMI'}: ${m.content}`).join('\n')}
 
 Dado Adicional do Sistema de Gestão:
 ${systemStateContext}
 
 Usuário atual perguntou: "${userContent}"`,
-            config: {
-              systemInstruction: `Você é o LUMI, o inteligentíssimo co-piloto de Gestão Condominial e Engenharia Predial Avançada do CONDFY.IA.
+              config: {
+                systemInstruction: `Você é o LUMI, o inteligentíssimo co-piloto de Gestão Condominial e Engenharia Predial Avançada do CONDFY.IA.
+Sua principal função nesta consulta é realizar uma pesquisa na internet em tempo real para responder de forma precisa, objetiva e concisa à pergunta do usuário (notícias, esportes, clima, dados externos atuais).
+
+### ⚠️ DIRETRIZ CRÍTICA DE CONCISÃO:
+Suas respostas devem ser extremamente DIRETAS, CONCISAS, CURTAS e OBJETIVAS. Evite explicações longas ou rodeios.
+
+${jarvisPromptAddendum}
+
+### 🎭 DIRETRIZ DE PERSONA E TOM DE VOZ ATUAL:
+${toneInstruction}`,
+                tools: [{ googleSearch: {} }]
+              }
+            });
+          } else {
+            response = await ai.models.generateContent({
+              model: 'gemini-3.5-flash',
+              contents: `Histórico da conversa recente:
+${messages.map(m => `${m.role === 'user' ? 'Usuário' : 'LUMI'}: ${m.content}`).join('\n')}
+
+Dado Adicional do Sistema de Gestão:
+${systemStateContext}
+
+Usuário atual perguntou: "${userContent}"`,
+              config: {
+                systemInstruction: `Você é o LUMI, o inteligentíssimo co-piloto de Gestão Condominial e Engenharia Predial Avançada do CONDFY.IA.
 
 ### ⚠️ DIRETRIZ CRÍTICA DE CONCISÃO:
 Suas respostas devem ser extremamente DIRETAS, CONCISAS, CURTAS e OBJETIVAS. Evite explicações longas, introduções ou rodeios. Entregue os dados de forma rápida e ultra sintetizada.
@@ -1847,22 +1893,23 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
 ### 🛠️ REQUISITOS DE FERRAMENTAS ESPECÍFICAS
 - **Analisar Chamado**: Use 'getTicketDetails' obrigatoriamente antes de emitir a análise.
 - **Ajuda/Manual**: Diga de forma natural e convidativa que o usuário possui o **Manual de Comandos Interativo oficial de 1-Clique** à disposição pressionando o elegante botão com o ícone de livro (📖) no canto superior direito deste chat, ao lado do botão de fechar!`,
-              tools: [{ 
-                functionDeclarations: [
-                  generateDocumentTool, getSummaryTool, navigateTool, createTicketTool, 
-                  createKanbanTaskTool,
-                  addClientTool, addFinancialRecordTool, addAppointmentTool, createBudgetTool, 
-                  createQRCodeTool, addSupplyItemTool, createQuoteTool, addChecklistItemTool,
-                  addNoticeTool, addVisitorTool, addReservationTool, addStaffTool,
-                  addKeyTool, addTicketHistoryTool, listTemplatesTool,
-                  updateTicketStatusTool, updateQuoteStatusTool, addWaterReadingTool, addEnergyReadingTool,
-                  downloadQuotePDFTool, downloadTicketPDFTool, getFinancialProjectionTool,
-                  adjustSupplyStockTool, getCondoHydraulicInfoTool, setCondoHydraulicInfoTool,
-                  getDetailedFinancialInfoTool, controlEquipmentTool, getTicketDetailsTool
-                ] 
-              }],
-            },
-          });
+                tools: [{ 
+                  functionDeclarations: [
+                    generateDocumentTool, getSummaryTool, navigateTool, createTicketTool, 
+                    createKanbanTaskTool,
+                    addClientTool, addFinancialRecordTool, addAppointmentTool, createBudgetTool, 
+                    createQRCodeTool, addSupplyItemTool, createQuoteTool, addChecklistItemTool,
+                    addNoticeTool, addVisitorTool, addReservationTool, addStaffTool,
+                    addKeyTool, addTicketHistoryTool, listTemplatesTool,
+                    updateTicketStatusTool, updateQuoteStatusTool, addWaterReadingTool, addEnergyReadingTool,
+                    downloadQuotePDFTool, downloadTicketPDFTool, getFinancialProjectionTool,
+                    adjustSupplyStockTool, getCondoHydraulicInfoTool, setCondoHydraulicInfoTool,
+                    getDetailedFinancialInfoTool, controlEquipmentTool, getTicketDetailsTool
+                  ] 
+                }]
+              }
+            });
+          }
           break; // Success!
         } catch (err: any) {
           const isRateLimit = err.message?.includes('429') || 
@@ -1886,6 +1933,27 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
       }
 
       let assistantReply = response.text || '';
+
+      // Extract internet grounding resources and format as Markdown
+      try {
+        const metadata = response.candidates?.[0]?.groundingMetadata;
+        if (metadata && metadata.groundingChunks && metadata.groundingChunks.length > 0) {
+          const sources = metadata.groundingChunks
+            .map((chunk: any) => chunk.web)
+            .filter((web: any) => web && web.uri && web.title);
+          
+          if (sources.length > 0) {
+            const uniqueSources = Array.from(
+              new Map(sources.map((s: any) => [s.uri, s])).values()
+            ) as any[];
+            
+            assistantReply += `\n\n**🔍 Fontes consultadas na internet:**\n` + 
+              uniqueSources.map((s: any) => `- [${s.title}](${s.uri})`).join('\n');
+          }
+        }
+      } catch (groundingErr) {
+        console.warn('Error processing grounding metadata:', groundingErr);
+      }
 
       if (response.functionCalls && response.functionCalls.length > 0) {
         for (const call of response.functionCalls) {
