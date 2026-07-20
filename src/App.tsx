@@ -43,6 +43,7 @@ import DocumentFactory from './pages/DocumentFactory';
 import DocumentManagement from './pages/DocumentManagement';
 import SystemPresentation from './pages/SystemPresentation';
 import ExecutionCenter from './pages/ExecutionCenter';
+import ContentCreator from './pages/ContentCreator';
 import { AssistantVivian } from './components/AssistantVivian';
 import { VivianBrain } from './components/VivianBrain';
 
@@ -144,6 +145,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     '/energy',
     '/document-factory',
     '/document-management',
+    '/brand-content-creator',
     '/presentation',
     '/budget-forecast',
     '/financial-brain',
@@ -348,6 +350,7 @@ export default function App() {
           <Route path="/weather" element={<Weather />} />
           <Route path="/document-factory" element={<DocumentFactory />} />
           <Route path="/document-management" element={<DocumentManagement />} />
+          <Route path="/brand-content-creator" element={<ContentCreator />} />
           <Route path="/execution" element={<ExecutionCenter />} />
           <Route path="/technical-report" element={<TechnicalReport />} />
           <Route path="/presentation" element={<SystemPresentation />} />

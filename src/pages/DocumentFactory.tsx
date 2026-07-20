@@ -1299,11 +1299,11 @@ Cidade do Rio de Janeiro, ${new Date(item.date).toLocaleDateString('pt-BR', { da
           <div className="lg:col-span-7 flex flex-col space-y-4">
             <div className="flex justify-between items-center px-2">
               <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 flex items-center gap-2">
-                <Eye className="w-4 h-4 text-blue-600" />
+                <Eye className="w-4 h-4 text-red-600" />
                 Preview Interativo & Autocompletação
               </h4>
               <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
                 Destaque inteligente ativo
               </span>
             </div>
@@ -1322,7 +1322,7 @@ Cidade do Rio de Janeiro, ${new Date(item.date).toLocaleDateString('pt-BR', { da
                           <img src={companyLogo} alt="Logo" className="h-10 w-auto object-contain" />
                         </div>
                       ) : (
-                        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                        <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center">
                           <FileSignature className="w-5 h-5 text-white" />
                         </div>
                       )}
@@ -1334,7 +1334,7 @@ Cidade do Rio de Janeiro, ${new Date(item.date).toLocaleDateString('pt-BR', { da
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-md">
+                      <p className="text-[10px] font-black text-red-600 uppercase tracking-widest bg-red-50 px-2.5 py-1 rounded-md">
                         {format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                       </p>
                     </div>
@@ -1364,7 +1364,7 @@ Cidade do Rio de Janeiro, ${new Date(item.date).toLocaleDateString('pt-BR', { da
                                   return (
                                     <span 
                                       key={pIdx} 
-                                      className="inline bg-blue-50 text-blue-800 font-bold px-1.5 py-0.5 rounded border border-blue-200/50 mx-0.5 shadow-sm"
+                                      className="inline bg-red-50 text-red-800 font-bold px-1.5 py-0.5 rounded border border-red-200/50 mx-0.5 shadow-sm"
                                     >
                                       {value}
                                     </span>

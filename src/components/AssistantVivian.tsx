@@ -440,6 +440,16 @@ export function AssistantVivian() {
 
   const continuousVoiceRef = useRef(continuousVoice);
   const voiceEnabledRef = useRef(voiceEnabled);
+  const isSpeakingRef = useRef(isSpeaking);
+  const isTypingRef = useRef(isTyping);
+
+  useEffect(() => {
+    isSpeakingRef.current = isSpeaking;
+  }, [isSpeaking]);
+
+  useEffect(() => {
+    isTypingRef.current = isTyping;
+  }, [isTyping]);
 
   useEffect(() => {
     continuousVoiceRef.current = continuousVoice;
@@ -602,6 +612,13 @@ export function AssistantVivian() {
     return () => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {
+          console.warn(e);
+        }
       }
       cleanupAudioAnalyser();
     };
@@ -819,7 +836,7 @@ export function AssistantVivian() {
 
       rec.onstart = () => {
         setIsListening(true);
-        toast.success('Vivian ouvindo... Fale agora 🎙️', { id: 'voice-toast' });
+        toast.success('LUMI ouvindo... Fale agora 🎙️', { id: 'voice-toast' });
       };
 
       rec.onresult = (event: any) => {
@@ -849,14 +866,29 @@ export function AssistantVivian() {
         console.warn('Speech recognition error:', event.error);
         setIsListening(false);
         cleanupAudioAnalyser();
-        if (event.error !== 'no-speech') {
-          toast.error(`Erro ao ouvir: ${event.error}. Certifique-se de que o microfone está ativo.`, { id: 'voice-toast' });
+        
+        if (event.error === 'not-allowed') {
+          setContinuousVoice(false);
+          continuousVoiceRef.current = false;
+          toast.error('Permissão de microfone negada ou indisponível. Ative o acesso ao microfone no seu navegador.', { id: 'voice-toast' });
+        } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          toast.error(`Erro de voz: ${event.error}`, { id: 'voice-toast' });
         }
       };
 
       rec.onend = () => {
         setIsListening(false);
         cleanupAudioAnalyser();
+
+        // Self-healing continuous voice: if continuous mode is active, the assistant is not typing,
+        // and the assistant is not speaking, restart the microphone session.
+        if (continuousVoiceRef.current && voiceEnabledRef.current && !isSpeakingRef.current && !isTypingRef.current) {
+          setTimeout(() => {
+            if (continuousVoiceRef.current && !isListeningRef.current && !isSpeakingRef.current && !isTypingRef.current) {
+              startListening();
+            }
+          }, 600);
+        }
       };
 
       recognitionRef.current = rec;
@@ -1218,9 +1250,169 @@ export function AssistantVivian() {
 
       // Generate PDF
       const doc = new jsPDF();
-      doc.setFontSize(12);
-      const splitText = doc.splitTextToSize(filledContent, 180);
-      doc.text(splitText, 15, 20);
+      
+      // Page styling helper
+      const drawPageDecorations = (pageDoc: jsPDF) => {
+        // Red accent top bar
+        pageDoc.setFillColor(220, 38, 38); // #dc2626
+        pageDoc.rect(0, 0, 210, 8, 'F');
+        
+        // Red vertical left-side indicator
+        pageDoc.setFillColor(220, 38, 38);
+        pageDoc.rect(15, 18, 3, 16, 'F');
+        
+        // Company Logo
+        if (store.companyLogo) {
+          try {
+            pageDoc.addImage(store.companyLogo, 'PNG', 24, 16, 12, 12);
+          } catch (e) {
+            console.error('Error adding logo to PDF:', e);
+          }
+        }
+        
+        // Header Text
+        pageDoc.setFont('helvetica', 'bold');
+        pageDoc.setFontSize(10);
+        pageDoc.setTextColor(82, 82, 91); // Neutral-600
+        const logoOffset = store.companyLogo ? 40 : 24;
+        pageDoc.text(store.companyData?.name?.toUpperCase() || 'CONDFY SÍNDICO DIGITAL', logoOffset, 22);
+        
+        pageDoc.setFont('helvetica', 'normal');
+        pageDoc.setFontSize(8);
+        pageDoc.setTextColor(161, 161, 170); // Neutral-400
+        pageDoc.text('INSTRUMENTO OFICIAL • DOCUMENTO DE GESTÃO', logoOffset, 27);
+        
+        // Date on top right
+        pageDoc.setFont('helvetica', 'bold');
+        pageDoc.setFontSize(9);
+        pageDoc.setTextColor(220, 38, 38);
+        const dateStr = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+        pageDoc.text(dateStr, 195, 23, { align: 'right' });
+        
+        // Elegant header divider line
+        pageDoc.setDrawColor(228, 228, 231); // Neutral-200
+        pageDoc.setLineWidth(0.5);
+        pageDoc.line(15, 36, 195, 36);
+        
+        // Footer line
+        pageDoc.setDrawColor(244, 244, 245); // Neutral-100
+        pageDoc.line(15, 280, 195, 280);
+        
+        // Footer text
+        pageDoc.setFont('helvetica', 'bold');
+        pageDoc.setFontSize(7);
+        pageDoc.setTextColor(212, 212, 216); // Neutral-300
+        pageDoc.text(`CONDFY.IA • SISTEMA INTELIGENTE DE GESTÃO PREDIAL`, 15, 286);
+        pageDoc.text(`PÁGINA ${pageDoc.getNumberOfPages()}`, 195, 286, { align: 'right' });
+      };
+
+      drawPageDecorations(doc);
+      
+      // Document Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(24, 24, 27); // Zinc 900
+      doc.text(template.title.toUpperCase(), 105, 50, { align: 'center' });
+      
+      // Draw content
+      doc.setFont('times', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(39, 39, 42); // Zinc 800
+      
+      const contentLines = filledContent.split('\n');
+      let y = 62;
+      const marginX = 15;
+      const widthMax = 180;
+      const pageHeightLimit = 265;
+      
+      for (const line of contentLines) {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          y += 5;
+          continue;
+        }
+        
+        const isTitle = trimmed.startsWith('CLÁUSULA') || trimmed.startsWith('CAPÍTULO') || trimmed === 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS';
+        
+        if (isTitle) {
+          y += 4;
+          // Check page break
+          if (y > pageHeightLimit) {
+            doc.addPage();
+            drawPageDecorations(doc);
+            y = 48;
+          }
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.setTextColor(24, 24, 27);
+          const splitTitle = doc.splitTextToSize(trimmed, widthMax);
+          doc.text(splitTitle, 105, y, { align: 'center' });
+          y += splitTitle.length * 6;
+          doc.setFont('times', 'normal');
+          doc.setFontSize(11);
+          doc.setTextColor(39, 39, 42);
+        } else {
+          const splitParagraph = doc.splitTextToSize(trimmed, widthMax);
+          for (const splitLine of splitParagraph) {
+            if (y > pageHeightLimit) {
+              doc.addPage();
+              drawPageDecorations(doc);
+              y = 48;
+            }
+            doc.text(splitLine, marginX, y);
+            y += 6.5; // Line height
+          }
+          y += 3; // Space between paragraphs
+        }
+      }
+      
+      // Signatures Block
+      y += 10;
+      if (y > 230) {
+        doc.addPage();
+        drawPageDecorations(doc);
+        y = 60;
+      }
+      
+      // Signature lines
+      doc.setDrawColor(212, 212, 216);
+      doc.setLineWidth(0.5);
+      
+      // Left signature line
+      doc.line(20, y + 20, 95, y + 20);
+      // Right signature line
+      doc.line(115, y + 20, 190, y + 20);
+      
+      // Left signature image if exists
+      if (store.companySignature) {
+        try {
+          doc.addImage(store.companySignature, 'PNG', 37, y, 40, 15);
+        } catch (e) {
+          console.error('Error adding signature image to PDF:', e);
+        }
+      }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(24, 24, 27);
+      
+      // Left text
+      doc.text(store.companyData?.name || 'CONDFY SÍNDICO DIGITAL', 57.5, y + 25, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(113, 113, 122);
+      doc.text('Pelo Condomínio', 57.5, y + 30, { align: 'center' });
+      
+      // Right text
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(24, 24, 27);
+      doc.text('Responsável / Outorgado', 152.5, y + 25, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(113, 113, 122);
+      doc.text('Pela Contratada', 152.5, y + 30, { align: 'center' });
+
       doc.save(`${template.title.replace(/\s+/g, '_')}_gerado.pdf`);
 
       return `Documento "${template.title}" preenchido e o download foi iniciado automaticamente.`;
@@ -1688,6 +1880,22 @@ ${userContent || "Por favor, analise o arquivo anexado e me dê um resumo profis
         },
       };
 
+      const createDocumentTemplateTool: FunctionDeclaration = {
+        name: 'createDocumentTemplate',
+        description: 'Cria um novo modelo de documento (Template) no sistema com a identidade visual da empresa (cores vermelhas e estilo corporativo da proposta). Use isso quando o usuário solicitar para cadastrar, criar ou salvar um novo modelo, template ou estrutura de documento.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING, description: 'Título do modelo de documento (ex: "Contrato de Locação de Salão de Festas").' },
+            category: { type: Type.STRING, description: 'Categoria do documento (ex: "Contratos", "Assembleia", "Convivência", "Financeiro").' },
+            description: { type: Type.STRING, description: 'Uma breve descrição do que se trata o documento.' },
+            legalBasis: { type: Type.STRING, description: 'Base legal do documento (ex: "Código Civil Art. 1.348" ou "Regimento Interno").' },
+            content: { type: Type.STRING, description: 'O texto modelo completo do documento, usando variáveis entre colchetes como [NOME], [DIA], [APARTAMENTO], [VALOR], etc., que serão preenchidas futuramente.' },
+          },
+          required: ['title', 'category', 'description', 'legalBasis', 'content'],
+        },
+      };
+
       const listTemplatesTool: FunctionDeclaration = {
         name: 'listTemplates',
         description: 'Lista todos os modelos de documentos disponíveis no sistema.',
@@ -2060,7 +2268,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
 - **Ajuda/Manual**: Diga de forma natural e convidativa que o usuário possui o **Manual de Comandos Interativo oficial de 1-Clique** à disposição pressionando o elegante botão com o ícone de livro (📖) no canto superior direito deste chat, ao lado do botão de fechar!`,
                 tools: [{ 
                   functionDeclarations: [
-                    generateDocumentTool, getSummaryTool, navigateTool, createTicketTool, 
+                    generateDocumentTool, createDocumentTemplateTool, getSummaryTool, navigateTool, createTicketTool, 
                     createKanbanTaskTool,
                     addClientTool, addFinancialRecordTool, addAppointmentTool, createBudgetTool, 
                     createQRCodeTool, addSupplyItemTool, createQuoteTool, addChecklistItemTool,
@@ -2161,6 +2369,21 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
             const args = call.args as any;
             const result = await generateDocument(args.templateName, args.context);
             assistantReply = result;
+          } else if (call.name === 'createDocumentTemplate') {
+            const args = call.args as any;
+            try {
+              await store.addDocumentTemplate({
+                title: args.title,
+                category: args.category,
+                description: args.description,
+                legalBasis: args.legalBasis,
+                content: args.content,
+              });
+              assistantReply = `Sucesso! O novo modelo de documento "${args.title}" foi criado e salvo com nossa identidade visual corporativa (estilo e cores da proposta). Ele já está disponível no painel de Fábrica de Documentos!`;
+            } catch (err: any) {
+              console.error('Error creating template via LUMI:', err);
+              assistantReply = `Ocorreu um erro ao tentar criar o modelo de documento: ${err.message || err}`;
+            }
           } else if (call.name === 'downloadQuotePDF') {
             const args = call.args as any;
             assistantReply = generateQuotePDF(args.quoteId);

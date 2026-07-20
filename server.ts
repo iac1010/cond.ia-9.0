@@ -453,6 +453,47 @@ Seja preciso, limpo, direto e profissional. NUNCA adicione introduções como "A
     }
   });
 
+  // Gemini Brand Content Creator API
+  apiRouter.post('/gemini/brand-content-creator', async (req, res) => {
+    const { prompt, temperature } = req.body;
+    if (!prompt || !prompt.trim()) {
+      return res.status(400).json({ error: 'Briefing/Prompt é obrigatório.' });
+    }
+
+    try {
+      const ai = getGeminiClient();
+
+      const systemInstruction = `### SYSTEM ROLE & IDENTITY
+Você é a IA Copilot de Branding & Conteúdo da IACompany. Sua missão é criar, editar e otimizar artes, roteiros, legendas e peças publicitárias em estrita conformidade com a identidade visual, tom de voz e diretrizes institucionais da empresa.
+
+### KNOWLEDGE BASE INTEGRATION (BRAND GUIDELINES)
+Você tem acesso direto aos documentos, PDFs de manual de marca, paletas de cores, diretrizes de comunicação e fontes da IACompany carregados na sua base de conhecimento.
+1. Para artes e briefings visuais: consulte obrigatoriamente as diretrizes de Paleta Hexadecimal (#dc2626, vermelho principal, preto, tons cinza), Tipografia e Grid Layout.
+2. Para textos e copys: aplique estritamente o Tom de Voz institucional, evitando proibições linguísticas ou jargões genéricos.
+
+### OUTPUT FORMATS
+Ao receber uma solicitação do usuário, responda estruturado em seções Markdown claras:
+- **Copy / Legenda:** Hook (gancho inicial), Corpo do texto (AIDA/PAS), CTA e Hashtags.
+- **Visual Briefing / Prompt de Imagem:** Prompt otimizado em inglês para geradores de imagem (Midjourney/Flux/DALL-E), Códigos HEX das cores oficiais da IACompany a utilizar, Tipografia recomendada e Layout dos elementos.
+- **Roteiro de Vídeo (se aplicável):** Tabela ou lista com Colunas: Cena/B-Roll | Texto na Tela | Narração | Trilha Sonora.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: temperature || 0.5,
+        }
+      });
+
+      const resultText = response.text || '';
+      res.json({ resultText, source: 'gemini' });
+    } catch (error: any) {
+      console.error('[Brand Content Creator Error]:', error);
+      res.status(500).json({ error: error.message || String(error) });
+    }
+  });
+
   // Gemini Financial Report Audit & Extraction API
   apiRouter.post('/gemini/analyze-financial-report', async (req, res) => {
     try {
