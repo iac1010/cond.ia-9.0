@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings as SettingsIcon, Moon, Sun, User, LogOut, Database, Bell } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Moon, Sun, User, LogOut, Database, Bell, ShieldAlert } from 'lucide-react';
 import { useStore } from './store';
 import { supabase, isSupabaseConfigured, isLocalSupabase } from './lib/supabase';
 
@@ -47,14 +47,43 @@ import { AssistantVivian } from './components/AssistantVivian';
 import { VivianBrain } from './components/VivianBrain';
 
 
+function RestrictedAccess() {
+  return (
+    <div className="flex flex-col items-center justify-center p-12 text-center bg-zinc-900/40 backdrop-blur-md border border-white/10 rounded-2xl max-w-md mx-auto my-12 shadow-2xl">
+      <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-6">
+        <ShieldAlert className="w-8 h-8" />
+      </div>
+      <h2 className="text-2xl font-black uppercase tracking-wider text-white mb-2">Acesso Restrito</h2>
+      <p className="text-sm text-white/60 mb-6">Seu perfil de usuário não possui permissão para visualizar esta página. Entre em contato com um administrador.</p>
+      <Link to="/" className="px-5 py-2.5 bg-white text-black text-xs font-black uppercase tracking-widest rounded-xl hover:bg-white/90 transition-all active:scale-95">
+        Voltar para Home
+      </Link>
+    </div>
+  );
+}
+
 function Layout({ children }: { children: React.ReactNode }) {
-  const { theme, toggleTheme, isAuthenticated, logout, notifications, markNotificationAsRead, clearNotifications, companyLogo, backgroundImage, fetchInitialData, vivianEnabled } = useStore();
+  const { theme, toggleTheme, isAuthenticated, logout, notifications, markNotificationAsRead, clearNotifications, companyLogo, backgroundImage, fetchInitialData, vivianEnabled, currentUser } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
   const [showNotifications, setShowNotifications] = useState(false);
   
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const isPageAllowed = (path: string) => {
+    if (!currentUser) return true; // fallback
+    if (currentUser.allowedPages.includes('*')) return true;
+    if (path === '/') return true; // always allow home
+    
+    // Check if the current path starts with any of the allowed routes (excluding '/')
+    return currentUser.allowedPages.some(allowedPath => {
+      if (allowedPath === '/') return false;
+      return path.startsWith(allowedPath);
+    });
+  };
+
+  const isAllowed = isPageAllowed(location.pathname);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -164,6 +193,17 @@ function Layout({ children }: { children: React.ReactNode }) {
           </div>
           
           <div className="flex items-center gap-4">
+            {currentUser && (
+              <div className="hidden sm:flex items-center gap-2 bg-gray-100 dark:bg-zinc-800/80 px-3 py-1.5 rounded-full border border-gray-200 dark:border-zinc-700/50">
+                <div className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-black uppercase shrink-0">
+                  {currentUser.name.charAt(0)}
+                </div>
+                <div className="text-[10px] font-bold uppercase tracking-wider">
+                  <span className="text-gray-950 dark:text-gray-200">{currentUser.name}</span>
+                  <span className="text-gray-400 dark:text-zinc-500 ml-1.5 px-1.5 py-0.5 bg-gray-200 dark:bg-zinc-800 rounded text-[8px] font-black">{currentUser.role}</span>
+                </div>
+              </div>
+            )}
             <div className="text-right hidden md:block mr-4">
               <div className="text-sm font-medium">{time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">{time.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
@@ -226,9 +266,11 @@ function Layout({ children }: { children: React.ReactNode }) {
               <button onClick={logout} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors" title="Sair">
                 <LogOut className="w-5 h-5" />
               </button>
-              <Link to="/settings" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors" title="Configurações">
-                <SettingsIcon className="w-5 h-5" />
-              </Link>
+              {isPageAllowed('/settings') && (
+                <Link to="/settings" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors" title="Configurações">
+                  <SettingsIcon className="w-5 h-5" />
+                </Link>
+              )}
             </div>
           </div>
         </header>
@@ -236,7 +278,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area */}
       <main className={`flex-1 relative z-10 ${isDashboard ? '' : 'p-6 md:p-8'}`}>
-        {children}
+        {isAllowed ? children : <RestrictedAccess />}
       </main>
       {vivianEnabled && <AssistantVivian />}
     </div>

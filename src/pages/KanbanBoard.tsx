@@ -109,7 +109,7 @@ export default function KanbanBoard() {
       } catch (e) {}
     }
     return [
-      { id: 'APROVADO', title: 'Aprovado', iconName: 'CheckCircle', color: 'text-blue-400', glowColor: 'shadow-blue-500/20' },
+      { id: 'APROVADO', title: 'Pendente', iconName: 'CheckCircle', color: 'text-blue-400', glowColor: 'shadow-blue-500/20' },
       { id: 'AGUARDANDO_MATERIAL', title: 'Aguardando Material', iconName: 'AlertCircle', color: 'text-amber-400', glowColor: 'shadow-amber-500/20' },
       { id: 'REALIZANDO', title: 'Realizando', iconName: 'Wrench', color: 'text-purple-400', glowColor: 'shadow-purple-500/20' },
       { id: 'CONCLUIDO', title: 'Concluído', iconName: 'CheckCircle', color: 'text-white', glowColor: 'shadow-white/20' },
@@ -177,7 +177,7 @@ export default function KanbanBoard() {
   const handleResetColumnNames = () => {
     const resetNames: { [key: string]: string } = {};
     const defaultCols = [
-      { id: 'APROVADO', title: 'Aprovado' },
+      { id: 'APROVADO', title: 'Pendente' },
       { id: 'AGUARDANDO_MATERIAL', title: 'Aguardando Material' },
       { id: 'REALIZANDO', title: 'Realizando' },
       { id: 'CONCLUIDO', title: 'Concluído' }
@@ -458,7 +458,13 @@ export default function KanbanBoard() {
 
       <div className="flex-1 flex gap-8 overflow-x-auto pb-8 snap-x relative z-10 custom-scrollbar">
         {columns.map((column, colIndex) => {
-          const columnTickets = filteredTickets.filter(t => (t.status || 'APROVADO') === column.id);
+          const columnTickets = filteredTickets.filter(t => {
+            const status = t.status || 'APROVADO';
+            if (column.id === 'APROVADO') {
+              return status === 'APROVADO' || status === 'PENDENTE_APROVACAO';
+            }
+            return status === column.id;
+          });
           const Icon = ICON_MAP[column.iconName] || CheckCircle;
 
           // Dynamic configurations based on ZOOM state

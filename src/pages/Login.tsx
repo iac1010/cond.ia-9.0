@@ -4,6 +4,7 @@ import { ArrowRight, Power, Accessibility, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Login() {
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ export default function Login() {
 
     // Windows 8 style login usually has a small delay
     setTimeout(() => {
-      const success = login('iac', password);
+      const success = login(username, password);
       if (!success) {
         setError(true);
         setLoading(false);
@@ -75,42 +76,92 @@ export default function Login() {
         </div>
 
         {/* User Name */}
-        <h1 className="text-4xl font-light mb-8 tracking-tight">Administrador</h1>
+        <h1 className="text-3xl font-light mb-6 tracking-tight text-center">Acesso ao Sistema</h1>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="w-full max-w-[320px] relative">
-          <div className="relative flex items-center">
+        <form onSubmit={handleSubmit} className="w-full max-w-[320px] space-y-4">
+          <div className="space-y-1">
+            <label className="block text-[10px] font-black uppercase tracking-widest text-white/50">Usuário</label>
             <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Senha"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Digite seu usuário"
               autoFocus
-              className={`w-full bg-white/10 border-2 ${error ? 'border-red-500' : 'border-white/30'} focus:border-white/60 outline-none px-4 py-2.5 pr-12 text-lg transition-all placeholder:text-white/40`}
+              className={`w-full bg-white/10 border-2 ${error ? 'border-red-500' : 'border-white/20'} focus:border-white/60 outline-none px-4 py-2 text-md transition-all placeholder:text-white/30`}
               required
             />
-            <button 
-              type="submit"
-              disabled={loading}
-              className="absolute right-1 w-10 h-10 bg-white/20 hover:bg-white/30 active:bg-white/40 flex items-center justify-center transition-colors disabled:opacity-50"
-            >
-              <ArrowRight className="w-6 h-6" />
-            </button>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-[10px] font-black uppercase tracking-widest text-white/50">Senha</label>
+            <div className="relative flex items-center">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Digite sua senha"
+                className={`w-full bg-white/10 border-2 ${error ? 'border-red-500' : 'border-white/20'} focus:border-white/60 outline-none px-4 py-2 pr-12 text-md transition-all placeholder:text-white/30`}
+                required
+              />
+              <button 
+                type="submit"
+                disabled={loading}
+                className="absolute right-1 w-8 h-8 bg-white/20 hover:bg-white/30 active:bg-white/40 flex items-center justify-center transition-colors disabled:opacity-50"
+              >
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           {error && (
             <motion.p 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-400 text-sm mt-3 text-center font-medium"
+              className="text-red-400 text-xs text-center font-semibold"
             >
-              A senha está incorreta. Tente novamente.
+              Usuário ou senha incorretos.
             </motion.p>
           )}
+
+          {/* Quick Access */}
+          <div className="pt-3 border-t border-white/10">
+            <p className="text-[9px] text-white/40 mb-2 font-black uppercase tracking-widest text-center">Acesso Rápido de Teste</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => { setUsername('admin'); setPassword('admin'); }}
+                className="text-[9px] py-1 bg-white/5 hover:bg-white/15 transition-all font-black uppercase tracking-wider rounded border border-white/5 hover:border-white/10 text-white"
+              >
+                Admin (Completo)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUsername('tecnico'); setPassword('123'); }}
+                className="text-[9px] py-1 bg-white/5 hover:bg-white/15 transition-all font-black uppercase tracking-wider rounded border border-white/5 hover:border-white/10 text-white"
+              >
+                Técnico (Obras)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUsername('cliente'); setPassword('123'); }}
+                className="text-[9px] py-1 bg-white/5 hover:bg-white/15 transition-all font-black uppercase tracking-wider rounded border border-white/5 hover:border-white/10 text-white"
+              >
+                Cliente (Morador)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUsername('iac'); setPassword('iac2010'); }}
+                className="text-[9px] py-1 bg-white/5 hover:bg-white/15 transition-all font-black uppercase tracking-wider rounded border border-white/5 hover:border-white/10 text-teal-300"
+              >
+                Super Geral
+              </button>
+            </div>
+          </div>
         </form>
 
         {/* Hint */}
-        <p className="mt-8 text-white/40 text-sm font-medium">Dica: iac / iac2010</p>
+        <p className="mt-4 text-white/30 text-[10px] text-center font-medium">Você também pode criar novos usuários e gerenciar permissões em Configurações.</p>
       </motion.div>
 
       {/* Bottom Icons */}

@@ -168,7 +168,7 @@ export default function Calendar() {
 
     addTicket({
       type: 'TAREFA',
-      title: `Manutenção Preventiva (${maintFreq}): ${maintTask}`,
+      title: maintTask,
       clientId: maintClient,
       date: maintDate,
       technician: 'A Definir',

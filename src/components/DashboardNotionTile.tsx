@@ -345,8 +345,12 @@ export function DashboardNotionTile({
                   className="space-y-1.5 text-left p-2 rounded-xl bg-indigo-500/[0.03] border border-indigo-500/10"
                 >
                   <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-1">
-                    <span className="text-[9px] font-bold text-white/80 flex items-center gap-1">
-                      <span>{activePreviewPage.emoji}</span>
+                    <span className="text-[9px] font-bold text-white/80 flex items-center gap-1.5 min-w-0">
+                      {activePreviewPage.emoji && (activePreviewPage.emoji.startsWith('http') || activePreviewPage.emoji.startsWith('data:')) ? (
+                        <img src={activePreviewPage.emoji} className="w-3.5 h-3.5 object-cover rounded shrink-0" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span>{activePreviewPage.emoji}</span>
+                      )}
                       <span className="truncate max-w-[120px]">{activePreviewPage.title}</span>
                     </span>
                     <button
@@ -399,7 +403,11 @@ export function DashboardNotionTile({
                             }
                           }}
                         >
-                          <span className="text-xs shrink-0 select-none">{page.emoji}</span>
+                          {page.emoji && (page.emoji.startsWith('http') || page.emoji.startsWith('data:')) ? (
+                            <img src={page.emoji} className="w-4 h-4 object-cover rounded shrink-0 select-none" referrerPolicy="no-referrer" />
+                          ) : (
+                            <span className="text-xs shrink-0 select-none">{page.emoji}</span>
+                          )}
                           <div className="text-left min-w-0">
                             <h4 className="text-[9px] font-black uppercase text-white/90 group-hover/item:text-indigo-300 transition-colors truncate">
                               {page.title}

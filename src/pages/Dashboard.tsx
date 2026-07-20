@@ -361,7 +361,8 @@ export default function Dashboard() {
     updateStaff,
     addStaff,
     deleteStaff,
-    updateTicketStatus
+    updateTicketStatus,
+    currentUser
   } = useStore();
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -2520,6 +2521,15 @@ export default function Dashboard() {
   const [tileSizes, setTileSizes] = useState<Record<string, 'small' | 'medium' | 'large'>>({});
   const [tiles, setTiles] = useState<TileData[]>(initialTiles);
 
+  const visibleTiles = useMemo(() => {
+    return tiles.filter(t => {
+      if (hiddenTiles.includes(t.id)) return false;
+      if (!currentUser) return true;
+      if (currentUser.allowedTiles.includes('*')) return true;
+      return currentUser.allowedTiles.includes(t.id);
+    });
+  }, [tiles, hiddenTiles, currentUser]);
+
   // Initialize tiles and sizes from store
   useEffect(() => {
     if (storeTileSizes && Object.keys(storeTileSizes).length > 0) {
@@ -3007,7 +3017,7 @@ export default function Dashboard() {
                                     // 1. Create the Ticket/O.S.
                                     addTicket({
                                       type: 'TAREFA',
-                                      title: `Manutenção Preventiva NBR 5674: ${alert.item}`,
+                                      title: alert.item,
                                       clientId: alert.clientId,
                                       date: alert.nextDate,
                                       technician: chosenTechName,
@@ -3026,8 +3036,8 @@ export default function Dashboard() {
                                     toast.success(`O.S. de Preventiva aberta e atribuída a ${chosenTechName}!`);
                                     setAssignTechAlertId(null);
 
-                                    // 3. Navigate to the maintenance operational screen
-                                    navigate('/operational?tab=MAINTENANCE');
+                                    // 3. Navigate to the Kanban board
+                                    navigate('/kanban');
                                   } catch (err: any) {
                                     toast.error(`Falha ao abrir O.S.: ${err.message || String(err)}`);
                                   }
@@ -4333,11 +4343,11 @@ export default function Dashboard() {
         onDragEnd={handleDragEnd}
       >
         <SortableContext 
-          items={tiles.map(t => t.id)}
+          items={visibleTiles.map(t => t.id)}
           strategy={rectSortingStrategy}
         >
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3 relative z-10 max-w-[1400px] perspective-1000 grid-flow-dense">
-            {tiles.filter(t => !hiddenTiles.includes(t.id)).map((tile) => {
+            {visibleTiles.map((tile) => {
               const currentSize = tileSizes[tile.id] || (tile.id === 'daily-tasks' ? 'large' : tile.type === 'wide' ? 'medium' : 'small');
               const sizeClasses = currentSize === 'small' ? 'col-span-1 row-span-1 aspect-square' :
                                   currentSize === 'medium' ? 'col-span-2 row-span-1 aspect-[2/1] sm:aspect-video md:aspect-[2/1]' :

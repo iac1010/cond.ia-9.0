@@ -11,11 +11,41 @@ import {
   SupplyItem, SupplyQuotation, Payment, LegalAgreement, ScheduledMaintenance, 
   AppNotification, ConsumptionReading, Assembly, Notice, Package, Visitor, 
   CriticalEvent, EnergyRecord, AppState, DigitalFolderItem, Vote, DocumentTemplate, IotState,
-  Contract, Renovation, Move, BillingRule, BudgetForecast, Sale
+  Contract, Renovation, Move, BillingRule, BudgetForecast, Sale, AppUser
 } from './types';
 
 import { sendWhatsAppMessage } from './services/whatsappService';
 import { safeFormatDate } from './utils/dateUtils';
+
+const DEFAULT_USERS: AppUser[] = [
+  {
+    id: 'default-admin',
+    username: 'admin',
+    name: 'Administrador Principal',
+    password: 'iac2010',
+    role: 'ADMIN',
+    allowedPages: ['*'],
+    allowedTiles: ['*']
+  },
+  {
+    id: 'default-tech',
+    username: 'tecnico',
+    name: 'Técnico de Campo',
+    password: '123',
+    role: 'TECNICO',
+    allowedPages: ['/', '/kanban', '/tickets', '/service-orders', '/checklist', '/intelligent-checklist', '/execution'],
+    allowedTiles: ['daily-tasks', 'execution-center', 'tickets', 'kanban', 'intelligent-checklist', 'weather']
+  },
+  {
+    id: 'default-client',
+    username: 'cliente',
+    name: 'Morador / Cliente',
+    password: '123',
+    role: 'CLIENTE',
+    allowedPages: ['/', '/report', '/chat', '/feedback', '/notices', '/visitors', '/locker', '/reservations'],
+    allowedTiles: ['notices', 'locker', 'visitors', 'reservations', 'whatsapp-status', 'weather']
+  }
+];
 
 async function executeResilientDbOp(
   opFn: (payload: any) => Promise<{ error: any }>,
@@ -143,6 +173,8 @@ export const useStore = create<AppState>()(
       },
       theme: 'light',
       isAuthenticated: localStorage.getItem('isAuthenticated') === 'true',
+      users: DEFAULT_USERS,
+      currentUser: null,
       menuOrder: ['dashboard', 'accountability', 'consumption', 'clients', 'products', 'supplies', 'tickets', 'kanban', 'quotes', 'receipts', 'financial', 'calendar', 'settings'],
       showBalance: true,
       hiddenTiles: [],
@@ -1382,16 +1414,66 @@ export const useStore = create<AppState>()(
       login: (user, pass) => {
         if (user === 'iac' && pass === 'iac2010') {
           localStorage.setItem('isAuthenticated', 'true');
-          set({ isAuthenticated: true });
+          set({ 
+            isAuthenticated: true,
+            currentUser: {
+              id: 'super-admin',
+              username: 'iac',
+              name: 'Administrador Geral',
+              role: 'ADMIN',
+              allowedPages: ['*'],
+              allowedTiles: ['*']
+            }
+          });
           // Ao fazer login, busca os dados do Supabase
           get().fetchInitialData();
           return true;
         }
+
+        const foundUser = get().users.find(
+          (u) => u.username.toLowerCase() === user.toLowerCase() && u.password === pass
+        );
+
+        if (foundUser) {
+          localStorage.setItem('isAuthenticated', 'true');
+          set({ 
+            isAuthenticated: true, 
+            currentUser: foundUser 
+          });
+          get().fetchInitialData();
+          return true;
+        }
+
         return false;
       },
       logout: () => {
         localStorage.removeItem('isAuthenticated');
-        set({ isAuthenticated: false });
+        set({ isAuthenticated: false, currentUser: null });
+      },
+      addUser: async (user) => {
+        const id = uuidv4();
+        const newUser: AppUser = { ...user, id };
+        set((state) => ({ users: [...state.users, newUser] }));
+        toast.success(`Usuário ${user.name} criado com sucesso!`);
+      },
+      updateUser: async (id, userUpdates) => {
+        set((state) => ({
+          users: state.users.map(u => u.id === id ? { ...u, ...userUpdates } : u),
+          currentUser: state.currentUser?.id === id ? { ...state.currentUser, ...userUpdates } as AppUser : state.currentUser
+        }));
+        toast.success(`Perfil do usuário atualizado!`);
+      },
+      deleteUser: async (id) => {
+        const isSelf = get().currentUser?.id === id;
+        set((state) => ({
+          users: state.users.filter(u => u.id !== id),
+          currentUser: isSelf ? null : state.currentUser,
+          isAuthenticated: isSelf ? false : state.isAuthenticated
+        }));
+        if (isSelf) {
+          localStorage.removeItem('isAuthenticated');
+        }
+        toast.success(`Usuário excluído com sucesso!`);
       },
       
       addClient: async (client) => {
@@ -5070,7 +5152,9 @@ export const useStore = create<AppState>()(
         tileOrder: state.tileOrder,
         hiddenTiles: state.hiddenTiles,
         isAuthenticated: state.isAuthenticated,
-        kanbanColumnNames: state.kanbanColumnNames
+        kanbanColumnNames: state.kanbanColumnNames,
+        users: state.users,
+        currentUser: state.currentUser
       }),
     }
   )

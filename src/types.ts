@@ -254,7 +254,7 @@ export type ScheduledMaintenance = {
   clientId: string;
   standardId: string;
   item: string;
-  frequency: 'Mensal' | 'Trimestral' | 'Semestral' | 'Anual';
+  frequency: 'Mensal' | 'Trimestral' | 'Semestral' | 'Anual' | 'Atividade Única';
   lastDone?: string;
   nextDate: string;
   status: 'PENDING' | 'DONE' | 'OVERDUE';
@@ -532,7 +532,19 @@ export type TechnicalReport = {
   osNumber?: string;
 };
 
+export interface AppUser {
+  id: string;
+  username: string;
+  name: string;
+  password?: string;
+  role: 'ADMIN' | 'TECNICO' | 'CLIENTE' | 'OUTRO';
+  allowedPages: string[];
+  allowedTiles: string[];
+}
+
 export interface AppState {
+  users: AppUser[];
+  currentUser: AppUser | null;
   clients: Client[];
   checklistItems: ChecklistItem[];
   tickets: Ticket[];
@@ -610,6 +622,9 @@ export interface AppState {
   toggleVivian: () => void;
   login: (user: string, pass: string) => boolean;
   logout: () => void;
+  addUser: (user: Omit<AppUser, 'id'>) => Promise<void>;
+  updateUser: (id: string, user: Partial<AppUser>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
   
   addClient: (client: Omit<Client, 'id'>) => Promise<void>;
   updateClient: (id: string, client: Omit<Client, 'id'>) => Promise<void>;

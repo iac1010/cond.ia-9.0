@@ -1,12 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, User, FileText, Download, Loader2, Sparkles, BookOpen, Search, ChevronDown, ChevronUp, Copy, Check, Info, Mic, MicOff, Volume2, VolumeX, Settings, Sliders, HelpCircle, Activity, Calendar, Flame, AlertTriangle, ShieldCheck, DollarSign, Wrench, Gavel, Users, TrendingUp, Cpu, Terminal } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, FileText, Download, Loader2, Sparkles, BookOpen, Search, ChevronDown, ChevronUp, Copy, Check, Info, Mic, MicOff, Volume2, VolumeX, Settings, Sliders, HelpCircle, Activity, Calendar, Flame, AlertTriangle, ShieldCheck, DollarSign, Wrench, Gavel, Users, TrendingUp, Cpu, Terminal, Paperclip, FileSpreadsheet } from 'lucide-react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI, Type, FunctionDeclaration } from '@google/genai';
 import { toast } from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import { safeFormatDate } from '../utils/dateUtils';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface Message {
   id: string;
@@ -256,6 +262,102 @@ export function AssistantVivian() {
   const [isTyping, setIsTyping] = useState(false);
   const [initialTicketId, setInitialTicketId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // --- FILE PROCESSING STATES ---
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFile, setAttachedFile] = useState<{
+    name: string;
+    size: number;
+    type: 'pdf' | 'text' | 'spreadsheet';
+    content: string;
+  } | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingFile(true);
+    try {
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      
+      if (extension === 'pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          fullText += pageText + '\n';
+        }
+        setAttachedFile({
+          name: file.name,
+          size: file.size,
+          type: 'pdf',
+          content: fullText
+        });
+        toast.success('Documento PDF importado com sucesso!');
+      } else if (extension === 'xlsx' || extension === 'xls') {
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        let fullText = '';
+        workbook.SheetNames.forEach((sheetName) => {
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+          fullText += `--- Planilha: ${sheetName} ---\n`;
+          json.forEach((row) => {
+            if (row && row.length > 0) {
+              fullText += row.map(cell => cell !== undefined && cell !== null ? String(cell) : '').join(' | ') + '\n';
+            }
+          });
+        });
+        setAttachedFile({
+          name: file.name,
+          size: file.size,
+          type: 'spreadsheet',
+          content: fullText
+        });
+        toast.success('Planilha Excel importada com sucesso!');
+      } else if (extension === 'csv') {
+        const text = await file.text();
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const formatted = results.data.map((row: any) => 
+              Object.entries(row).map(([k, v]) => `${k}: ${v}`).join(' | ')
+            ).join('\n');
+            setAttachedFile({
+              name: file.name,
+              size: file.size,
+              type: 'spreadsheet',
+              content: formatted
+            });
+            toast.success('Arquivo CSV importado com sucesso!');
+          }
+        });
+      } else {
+        // txt, md, json, etc.
+        const text = await file.text();
+        setAttachedFile({
+          name: file.name,
+          size: file.size,
+          type: 'text',
+          content: text
+        });
+        toast.success('Arquivo de texto importado com sucesso!');
+      }
+    } catch (error) {
+      console.error('Erro ao ler arquivo:', error);
+      toast.error('Erro ao processar o arquivo anexado.');
+    } finally {
+      setIsProcessingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   // --- VOICE / TALK TO VIVIAN SYSTEM ---
   const [isListening, setIsListening] = useState(false);
@@ -825,6 +927,24 @@ export function AssistantVivian() {
     setIsListening(false);
     cleanupAudioAnalyser();
   };
+
+  const toggleVoiceConversation = () => {
+    if (continuousVoice || isListening) {
+      setContinuousVoice(false);
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      stopListening();
+      toast.success('Modo Conversa desativado.', { id: 'voice-toast' });
+    } else {
+      setVoiceEnabled(true);
+      setContinuousVoice(true);
+      toast.success('Modo Conversa por Voz Ativado! Pode falar 🗣️', { id: 'voice-toast' });
+      setTimeout(() => {
+        startListening();
+      }, 300);
+    }
+  };
   // -------------------------------------
   
   const store = useStore();
@@ -1183,14 +1303,41 @@ export function AssistantVivian() {
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && !attachedFile) return;
 
-    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input };
+    const userContent = input;
+    let displayContent = input;
+
+    if (attachedFile) {
+      const badge = `📎 [Arquivo Anexado: ${attachedFile.name} (${(attachedFile.size / 1024).toFixed(1)} KB)]`;
+      displayContent = userContent ? `${badge}\n\n${userContent}` : badge;
+    }
+
+    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: displayContent };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
 
-    await processChat(userMessage.content);
+    let contextWithAttachedFile = userContent;
+    if (attachedFile) {
+      contextWithAttachedFile = `
+[ARQUIVO ANEXADO EM TEMPO REAL]
+Nome do Arquivo: ${attachedFile.name}
+Tipo do Arquivo: ${attachedFile.type.toUpperCase()}
+Tamanho do Arquivo: ${(attachedFile.size / 1024).toFixed(1)} KB
+
+CONTEÚDO DO ARQUIVO:
+---
+${attachedFile.content}
+---
+
+Mensagem/Pergunta do usuário referente ao arquivo acima:
+${userContent || "Por favor, analise o arquivo anexado e me dê um resumo profissional."}
+`;
+      setAttachedFile(null);
+    }
+
+    await processChat(contextWithAttachedFile);
   };
 
   const processChat = async (userContent: string) => {
@@ -2385,14 +2532,14 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
       }
 
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: assistantReply }]);
-      if (voiceEnabled) {
+      if (voiceEnabledRef.current) {
         speakText(assistantReply);
       }
     } catch (error) {
       console.error('Error calling Gemini:', error);
       const errorMsg = 'Peço desculpas, mas tive um probleminha técnico ao processar sua mensagem. Vamos tentar de novo?';
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: errorMsg }]);
-      if (voiceEnabled) {
+      if (voiceEnabledRef.current) {
         speakText(errorMsg);
       }
     } finally {
@@ -3648,7 +3795,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Sugestões Rápidas:</p>
                           <div className="flex flex-wrap gap-2">
                             <button
-                              onClick={() => startListening()}
+                              onClick={toggleVoiceConversation}
                               className="py-1.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md transition-all hover:scale-105 animate-pulse"
                             >
                               <Mic className="w-3.5 h-3.5" />
@@ -3711,14 +3858,111 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
             {/* Input */}
             {!showSettings && (
               <div className="p-4 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800">
+                {/* File Attachment Preview */}
+                {attachedFile && (
+                  <div className="flex items-center justify-between bg-slate-50 dark:bg-zinc-800 p-2.5 rounded-xl mb-3 border border-slate-200 dark:border-zinc-700 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      {attachedFile.type === 'pdf' ? (
+                        <div className="p-1.5 bg-red-50 dark:bg-red-950/40 rounded-lg text-red-600 dark:text-red-400">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                      ) : attachedFile.type === 'spreadsheet' ? (
+                        <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg text-emerald-600 dark:text-emerald-400">
+                          <FileSpreadsheet className="w-5 h-5" />
+                        </div>
+                      ) : (
+                        <div className="p-1.5 bg-blue-50 dark:bg-blue-950/40 rounded-lg text-blue-600 dark:text-blue-400">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate max-w-[200px] md:max-w-[350px]">
+                          {attachedFile.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {(attachedFile.size / 1024).toFixed(1)} KB • {attachedFile.type.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setAttachedFile(null)}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 rounded-full hover:bg-slate-150 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* File Processing Spinner */}
+                {isProcessingFile && (
+                  <div className="flex items-center gap-2 bg-indigo-50/50 dark:bg-indigo-950/20 p-2.5 rounded-xl mb-3 border border-indigo-100 dark:border-indigo-900/40 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                    <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">LUMI está lendo e interpretando o documento...</span>
+                  </div>
+                )}
+
+                {/* Continuous Voice Active Banner */}
+                {continuousVoice && (
+                  <div className="flex items-center justify-between gap-2.5 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/35 dark:to-purple-950/25 p-3 rounded-2xl mb-3 border border-indigo-150 dark:border-indigo-900/60 shadow-sm animate-fade-in">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative flex items-center justify-center flex-shrink-0">
+                        <span className="absolute inline-flex h-3 w-3 rounded-full bg-rose-400 opacity-75 animate-ping"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-1">
+                          Conversa Contínua Ativa 🗣️
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">
+                          {isListening ? "LUMI está te ouvindo... Fale agora!" : isSpeaking ? "LUMI está respondendo por voz..." : "Processando diálogo..."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {!isListening && !isSpeaking && (
+                        <button
+                          onClick={() => startListening()}
+                          className="py-1 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                        >
+                          <Mic className="w-3 h-3" /> Falar Agora
+                        </button>
+                      )}
+                      <button
+                        onClick={toggleVoiceConversation}
+                        className="py-1 px-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                      >
+                        Desativar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-zinc-800/50 p-2 rounded-2xl border border-slate-200 dark:border-zinc-700 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                  
+                  {/* File Attachment Button */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isProcessingFile}
+                    title="Anexar PDF, arquivo de texto ou planilha (.pdf, .txt, .md, .csv, .xlsx, .xls)"
+                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:text-zinc-500 dark:hover:text-indigo-400 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".pdf,.txt,.md,.csv,.xlsx,.xls"
+                    className="hidden"
+                  />
+
                   <input
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder={showManual ? "Selecione um comando acima ou pergunte..." : (isListening ? "LUMI ouvindo... Fale agora!" : "Falar com o LUMI por voz ou digite...")}
-                    className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-slate-700 dark:text-zinc-300"
+                    className="flex-1 bg-transparent border-none outline-none px-1 text-sm text-slate-700 dark:text-zinc-300"
                   />
                   
                   {/* Voice Speaker Output Toggle */}
@@ -3743,15 +3987,15 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
 
                   {/* Voice Microphone Toggle Button */}
                   <button
-                    onClick={isListening ? stopListening : startListening}
-                    title={isListening ? "Parar de ouvir" : "Falar com o LUMI por voz"}
+                    onClick={toggleVoiceConversation}
+                    title={isListening || continuousVoice ? "Parar conversa por voz" : "Falar com o LUMI por voz"}
                     className={`p-2 rounded-xl transition-all cursor-pointer ${
-                      isListening 
+                      isListening || continuousVoice
                         ? 'bg-red-500 text-white animate-pulse shadow-md shadow-red-500/20' 
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
                     }`}
                   >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    {isListening || continuousVoice ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   </button>
 
                   {/* Voice Help Modal Trigger */}
@@ -3765,7 +4009,7 @@ Se o usuário quiser ir a alguma tela ou pedir informação sobre onde gerenciar
 
                   <button
                     onClick={handleSend}
-                    disabled={!input.trim() || isTyping}
+                    disabled={(!input.trim() && !attachedFile) || isTyping || isProcessingFile}
                     className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl transition-colors cursor-pointer"
                   >
                     <Send className="w-4 h-4" />

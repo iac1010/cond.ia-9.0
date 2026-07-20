@@ -13,6 +13,7 @@ import { BackButton } from '../components/BackButton';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
+import { UserManagementPanel } from '../components/UserManagementPanel';
 
 const BG_SOLID_COLORS = [
   { id: 'ocean_trello', name: 'Azul Trello', value: 'bg-[#0079bf]' },
@@ -71,6 +72,7 @@ export default function Settings() {
   const backupInputRef = useRef<HTMLInputElement>(null);
 
   const [isBgPanelOpen, setIsBgPanelOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'users'>('general');
   const [isTestingLatency, setIsTestingLatency] = useState(false);
   const [latencyTime, setLatencyTime] = useState<number | null>(null);
   const [diagnosticLogs, setDiagnosticLogs] = useState<string[]>([]);
@@ -374,13 +376,35 @@ export default function Settings() {
         </div>
       </header>
 
+      {/* Tab Navigation */}
+      <div className="flex gap-4 border-b border-white/20 mb-8 relative z-10 max-w-5xl mx-auto w-full">
+        <button
+          onClick={() => setActiveTab('general')}
+          className={`pb-3 px-4 font-black uppercase text-xs tracking-widest transition-all border-b-2 ${
+            activeTab === 'general' ? 'border-white text-white' : 'border-transparent text-white/50 hover:text-white/80'
+          }`}
+        >
+          Configurações Gerais
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`pb-3 px-4 font-black uppercase text-xs tracking-widest transition-all border-b-2 ${
+            activeTab === 'users' ? 'border-white text-white' : 'border-transparent text-white/50 hover:text-white/80'
+          }`}
+        >
+          Usuários & Perfis
+        </button>
+      </div>
+
       <motion.div 
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         className="max-w-5xl mx-auto w-full space-y-8 relative z-10 pb-20"
       >
-        {/* Logo Section */}
+        {activeTab === 'general' ? (
+          <>
+            {/* Logo Section */}
         <motion.div variants={itemVariants} className="bg-zinc-50 rounded-3xl border border-zinc-200 p-8 shadow-xl">
           <h2 className="text-2xl font-bold mb-8 flex items-center gap-3 text-zinc-900">
             <ImageIcon className="w-6 h-6 text-blue-600" />
@@ -956,6 +980,10 @@ export default function Settings() {
             </p>
           </div>
         </motion.div>
+          </>
+        ) : (
+          <UserManagementPanel />
+        )}
 
         {/* Logout Section */}
         <motion.div variants={itemVariants} className="pt-10 flex justify-center">

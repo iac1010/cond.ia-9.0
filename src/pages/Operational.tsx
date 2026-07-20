@@ -816,10 +816,10 @@ export default function Operational() {
                   onChange={e => setStaffForm({...staffForm, shift: e.target.value as any})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 >
-                  <option value="MORNING">Manhã</option>
-                  <option value="AFTERNOON">Tarde</option>
-                  <option value="NIGHT">Noite</option>
-                  <option value="FLEXIBLE">Flexível</option>
+                  <option value="MORNING" className="bg-[#18181b] text-white">Manhã</option>
+                  <option value="AFTERNOON" className="bg-[#18181b] text-white">Tarde</option>
+                  <option value="NIGHT" className="bg-[#18181b] text-white">Noite</option>
+                  <option value="FLEXIBLE" className="bg-[#18181b] text-white">Flexível</option>
                 </select>
               </div>
               <div>
@@ -829,9 +829,9 @@ export default function Operational() {
                   onChange={e => setStaffForm({...staffForm, status: e.target.value as any})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 >
-                  <option value="ACTIVE">Ativo</option>
-                  <option value="ON_LEAVE">Licença</option>
-                  <option value="INACTIVE">Inativo</option>
+                  <option value="ACTIVE" className="bg-[#18181b] text-white">Ativo</option>
+                  <option value="ON_LEAVE" className="bg-[#18181b] text-white">Licença</option>
+                  <option value="INACTIVE" className="bg-[#18181b] text-white">Inativo</option>
                 </select>
               </div>
             </div>
@@ -872,9 +872,9 @@ export default function Operational() {
                   onChange={e => setKeyForm({...keyForm, status: e.target.value as any})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 >
-                  <option value="AVAILABLE">Disponível</option>
-                  <option value="BORROWED">Emprestada</option>
-                  <option value="LOST">Perdida</option>
+                  <option value="AVAILABLE" className="bg-[#18181b] text-white">Disponível</option>
+                  <option value="BORROWED" className="bg-[#18181b] text-white">Emprestada</option>
+                  <option value="LOST" className="bg-[#18181b] text-white">Perdida</option>
                 </select>
               </div>
               {keyForm.status === 'BORROWED' && (
@@ -917,9 +917,9 @@ export default function Operational() {
                   onChange={e => setMaintenanceForm({...maintenanceForm, clientId: e.target.value})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 >
-                  <option value="">Geral / Não Especificado</option>
+                  <option value="" className="bg-[#18181b] text-white">Geral / Não Especificado</option>
                   {clients.map(client => (
-                    <option key={client.id} value={client.id}>{client.name}</option>
+                    <option key={client.id} value={client.id} className="bg-[#18181b] text-white">{client.name}</option>
                   ))}
                 </select>
               </div>
@@ -952,10 +952,11 @@ export default function Operational() {
                   onChange={e => setMaintenanceForm({...maintenanceForm, frequency: e.target.value as any})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 >
-                  <option value="Mensal">Mensal</option>
-                  <option value="Trimestral">Trimestral</option>
-                  <option value="Semestral">Semestral</option>
-                  <option value="Anual">Anual</option>
+                  <option value="Mensal" className="bg-[#18181b] text-white">Mensal</option>
+                  <option value="Trimestral" className="bg-[#18181b] text-white">Trimestral</option>
+                  <option value="Semestral" className="bg-[#18181b] text-white">Semestral</option>
+                  <option value="Anual" className="bg-[#18181b] text-white">Anual</option>
+                  <option value="Atividade Única" className="bg-[#18181b] text-white">Atividade Única</option>
                 </select>
               </div>
               <div>
@@ -975,9 +976,9 @@ export default function Operational() {
                   onChange={e => setMaintenanceForm({...maintenanceForm, status: e.target.value as any})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 >
-                  <option value="PENDING">Pendente</option>
-                  <option value="DONE">Concluído</option>
-                  <option value="OVERDUE">Atrasado</option>
+                  <option value="PENDING" className="bg-[#18181b] text-white">Pendente</option>
+                  <option value="DONE" className="bg-[#18181b] text-white">Concluído</option>
+                  <option value="OVERDUE" className="bg-[#18181b] text-white">Atrasado</option>
                 </select>
               </div>
             </div>

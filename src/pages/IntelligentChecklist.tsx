@@ -1486,10 +1486,11 @@ export default function IntelligentChecklist() {
                   onChange={(e) => setNewTask({...newTask, frequency: e.target.value as any})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 >
-                  <option value="Mensal" className="bg-[#1e293b]">Mensal</option>
-                  <option value="Trimestral" className="bg-[#1e293b]">Trimestral</option>
-                  <option value="Semestral" className="bg-[#1e293b]">Semestral</option>
-                  <option value="Anual" className="bg-[#1e293b]">Anual</option>
+                  <option value="Mensal" className="bg-[#18181b] text-white">Mensal</option>
+                  <option value="Trimestral" className="bg-[#18181b] text-white">Trimestral</option>
+                  <option value="Semestral" className="bg-[#18181b] text-white">Semestral</option>
+                  <option value="Anual" className="bg-[#18181b] text-white">Anual</option>
+                  <option value="Atividade Única" className="bg-[#18181b] text-white">Atividade Única</option>
                 </select>
               </div>
 
@@ -1747,10 +1748,11 @@ export default function IntelligentChecklist() {
                   onChange={(e) => setEditingTask({...editingTask, frequency: e.target.value as any})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 >
-                  <option value="Mensal" className="bg-[#1e293b]">Mensal</option>
-                  <option value="Trimestral" className="bg-[#1e293b]">Trimestral</option>
-                  <option value="Semestral" className="bg-[#1e293b]">Semestral</option>
-                  <option value="Anual" className="bg-[#1e293b]">Anual</option>
+                  <option value="Mensal" className="bg-[#18181b] text-white">Mensal</option>
+                  <option value="Trimestral" className="bg-[#18181b] text-white">Trimestral</option>
+                  <option value="Semestral" className="bg-[#18181b] text-white">Semestral</option>
+                  <option value="Anual" className="bg-[#18181b] text-white">Anual</option>
+                  <option value="Atividade Única" className="bg-[#18181b] text-white">Atividade Única</option>
                 </select>
               </div>
 

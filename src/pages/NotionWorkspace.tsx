@@ -687,7 +687,11 @@ export default function NotionWorkspace() {
                     }`}
                   >
                     <div className="flex items-center gap-3 truncate">
-                      <span className="text-lg shrink-0 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{p.emoji}</span>
+                      {p.emoji && (p.emoji.startsWith('http') || p.emoji.startsWith('data:')) ? (
+                        <img src={p.emoji} className="w-5 h-5 object-cover rounded-lg shrink-0" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-lg shrink-0 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{p.emoji}</span>
+                      )}
                       <div className="flex flex-col truncate">
                         <span className="text-xs font-bold truncate leading-snug">{p.title || 'Sem Título'}</span>
                         <span className="text-[8px] font-black text-white/30 tracking-widest uppercase">
@@ -771,10 +775,14 @@ export default function NotionWorkspace() {
                 <div className="relative inline-block mb-6 print:hidden">
                   <button
                     onClick={() => setShowEmojiMenu(!showEmojiMenu)}
-                    className="w-24 h-24 bg-zinc-900 border border-white/15 rounded-[2rem] flex items-center justify-center text-5xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] hover:scale-105 hover:border-indigo-500/50 hover:shadow-indigo-500/5 transition-all"
+                    className="w-24 h-24 bg-zinc-900 border border-white/15 rounded-[2rem] flex items-center justify-center text-5xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] hover:scale-105 hover:border-indigo-500/50 hover:shadow-indigo-500/5 overflow-hidden transition-all"
                     title="Mudar Ícone do Documento"
                   >
-                    {activePage.emoji}
+                    {activePage.emoji && (activePage.emoji.startsWith('http') || activePage.emoji.startsWith('data:')) ? (
+                      <img src={activePage.emoji} className="w-full h-full object-cover rounded-[2rem]" referrerPolicy="no-referrer" />
+                    ) : (
+                      activePage.emoji
+                    )}
                   </button>
                   
                   {/* Emoji dropdown popup */}
@@ -798,6 +806,31 @@ export default function NotionWorkspace() {
                             {em}
                           </button>
                         ))}
+
+                        <div className="w-full pt-2 border-t border-white/5 mt-1">
+                          <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer">
+                            <UploadCloud className="w-3.5 h-3.5" />
+                            Fazer Upload de Ícone
+                            <input 
+                              type="file" 
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = () => {
+                                    if (typeof reader.result === 'string') {
+                                      handleUpdatePageEmoji(reader.result);
+                                      setShowEmojiMenu(false);
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -805,7 +838,11 @@ export default function NotionWorkspace() {
 
                 {/* Print Title indicator */}
                 <div className="hidden print:flex items-center gap-4 border-b pb-4 mb-6">
-                  <span className="text-4xl">{activePage.emoji}</span>
+                  {activePage.emoji && (activePage.emoji.startsWith('http') || activePage.emoji.startsWith('data:')) ? (
+                    <img src={activePage.emoji} className="w-10 h-10 object-cover rounded-xl" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="text-4xl">{activePage.emoji}</span>
+                  )}
                   <h1 className="text-3xl font-black">{activePage.title}</h1>
                 </div>
 
