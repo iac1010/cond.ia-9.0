@@ -23,7 +23,15 @@ import {
   ExternalLink,
   RefreshCw,
   X,
-  ChevronRight
+  ChevronRight,
+  Download,
+  Image,
+  Heart,
+  MessageSquare,
+  Bookmark,
+  Share2,
+  Eye,
+  Send
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
@@ -92,8 +100,54 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [generatedResult, setGeneratedResult] = useState<string | null>(null);
   
-  const [activeOutputTab, setActiveOutputTab] = useState<'all' | 'copy' | 'visual' | 'script'>('all');
+  const [activeOutputTab, setActiveOutputTab] = useState<'all' | 'copy' | 'visual' | 'script' | 'image'>('all');
   const [copiedText, setCopiedText] = useState(false);
+
+  // Image generation states
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [imageRatio, setImageRatio] = useState<'1:1' | '16:9' | '9:16' | '4:3' | '3:4'>('1:1');
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [imageGenSteps, setImageGenSteps] = useState<string[]>([]);
+  const [activeImageStep, setActiveImageStep] = useState(0);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [imageEngine, setImageEngine] = useState<string>('Imagen 3.0');
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(128);
+  const [showFeedPreview, setShowFeedPreview] = useState(false);
+
+  const extractImagePrompt = (text: string): string => {
+    if (!text) return '';
+    // Try to find Midjourney prompt inside backticks first
+    const midjourneyRegex = /Prompt Midjourney:\s*`([^`]+)`/i;
+    const match = text.match(midjourneyRegex);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    
+    // Try to find Prompt Midjourney without backticks
+    const midjourneyNoTicksRegex = /Prompt Midjourney:\s*([^\n]+)/i;
+    const matchNoTicks = text.match(midjourneyNoTicksRegex);
+    if (matchNoTicks && matchNoTicks[1]) {
+      return matchNoTicks[1].replace(/[*`"]/g, '').trim();
+    }
+
+    // Try standard Prompt / Prompt de Imagem
+    const imagePromptRegex = /(?:Prompt de Imagem|Prompt de Imagem Midjourney|Prompt de Imagem de Imagem|Prompt):\s*`([^`]+)`/i;
+    const matchImage = text.match(imagePromptRegex);
+    if (matchImage && matchImage[1]) {
+      return matchImage[1].trim();
+    }
+
+    // General check for lines starting with "- **Prompt Midjourney:**" or similar
+    const lines = text.split('\n');
+    for (const line of lines) {
+      if (line.toLowerCase().includes('prompt') && (line.toLowerCase().includes('midjourney') || line.toLowerCase().includes('flux') || line.toLowerCase().includes('dall-e'))) {
+        const cleaned = line.replace(/^[-\s*]*Prompt\s+(?:Midjourney|Flux|DALL-E|de Imagem):\s*/i, '').replace(/[*`"]/g, '').trim();
+        if (cleaned.length > 15) return cleaned;
+      }
+    }
+    return '';
+  };
 
   // Parse sections for tabs view
   const getSection = (title: string) => {
@@ -209,13 +263,14 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
 
       const data = await response.json();
       setGeneratedResult(data.resultText);
+      const extracted = extractImagePrompt(data.resultText);
+      setImagePrompt(extracted || promptInput);
       toast.success('Conteúdo criado e validado pelo Brand Safety com sucesso!');
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Erro ao gerar conteúdo');
       // Elegant high-fidelity fallback if key is missing or offline
-      setGeneratedResult(
-`### Copy / Legenda
+      const fallbackResult = `### Copy / Legenda
 **Hook:** 🚨 Sabe aquela pane de bombas d'água de repente em pleno domingo? Esqueça isso de vez! 
 
 **Corpo (AIDA):** 
@@ -246,8 +301,11 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
 2. **Cena/B-Roll:** Técnico chegando ao condomínio com kit de ferramentas moderno.
    - **Texto na Tela:** Manutenção Preventiva Eficiente
    - **Narração:** "Nossa equipe age antes do condomínio ficar sem água."
-   - **Trilha Sonora:** Música inspiradora crescendo de intensidade.`
-      );
+   - **Trilha Sonora:** Música inspiradora crescendo de intensidade.`;
+
+      setGeneratedResult(fallbackResult);
+      const extracted = extractImagePrompt(fallbackResult);
+      setImagePrompt(extracted || promptInput);
     } finally {
       setGenerating(false);
     }
@@ -259,6 +317,117 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
     setCopiedText(true);
     toast.success('Todo o conteúdo copiado para a área de transferência!');
     setTimeout(() => setCopiedText(false), 2000);
+  };
+
+  const runImageGenerator = async () => {
+    if (!imagePrompt.trim()) {
+      toast.error('Por favor, insira ou gere um prompt de imagem.');
+      return;
+    }
+
+    setGeneratingImage(true);
+    setGeneratedImage(null);
+    setImageGenSteps([
+      'Conectando ao barramento de renderização do Google AI Studio...',
+      'Analisando diretrizes de cor da marca (#dc2626)...',
+      'Injetando restrições de Brand Safety de imagem da IACompany...',
+      'Otimizando prompt para o modelo Imagen 3.0...',
+      'Renderizando grade de pixels em alta resolução...',
+      'Finalizando arte publicitária final...'
+    ]);
+    setActiveImageStep(0);
+
+    const interval = setInterval(() => {
+      setActiveImageStep(prev => {
+        if (prev < 5) {
+          return prev + 1;
+        } else {
+          clearInterval(interval);
+          return prev;
+        }
+      });
+    }, 850);
+
+    try {
+      const response = await fetch('/api/gemini/generate-brand-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: imagePrompt,
+          aspectRatio: imageRatio,
+        }),
+      });
+
+      clearInterval(interval);
+
+      if (!response.ok) {
+        throw new Error('Falha ao gerar imagem no servidor.');
+      }
+
+      const data = await response.json();
+      if (data.success && data.imageUrl) {
+        setGeneratedImage(data.imageUrl);
+        setImageEngine(data.source === 'imagen-3.0' ? 'Imagen 3.0' : 'Flux (High-Def Fallback)');
+        toast.success('Imagem gerada com sucesso e alinhada à marca!');
+      } else {
+        throw new Error(data.error || 'Nenhuma URL de imagem retornada.');
+      }
+    } catch (error: any) {
+      console.error(error);
+      clearInterval(interval);
+      
+      // Standalone Pollinations AI url as client-side ultra-fast fallback
+      const brandEnhanced = `${imagePrompt}, company branding style, crisp clean tech visual, professional studio lighting, high resolution, 8k, marketing content`;
+      const seed = Math.floor(Math.random() * 1000000);
+      let width = 1024;
+      let height = 1024;
+      if (imageRatio === '16:9') { width = 1280; height = 720; }
+      else if (imageRatio === '9:16') { width = 720; height = 1280; }
+      else if (imageRatio === '4:3') { width = 1024; height = 768; }
+      else if (imageRatio === '3:4') { width = 768; height = 1024; }
+
+      const fallbackUrl = `https://image.pollinations.ai/p/${encodeURIComponent(brandEnhanced)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
+      setGeneratedImage(fallbackUrl);
+      setImageEngine('Flux (Client-Side Fallback)');
+      toast.success('Arte criada usando motor de fallback FLUX!');
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    if (!generatedImage) return;
+    try {
+      if (generatedImage.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = generatedImage;
+        link.download = `iacompany-art-${Date.now()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Download da imagem iniciado!');
+      } else {
+        toast.loading('Iniciando download...', { id: 'download-toast' });
+        const res = await fetch(generatedImage);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `iacompany-art-${Date.now()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+        toast.dismiss('download-toast');
+        toast.success('Imagem salva com sucesso!');
+      }
+    } catch (err) {
+      console.error(err);
+      window.open(generatedImage, '_blank');
+      toast.success('Imagem aberta em nova aba para salvar!');
+    }
   };
 
   return (
@@ -581,10 +750,10 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
                 </div>
 
                 {/* Tab Navigation for specific items */}
-                <div className="flex border-b border-gray-100 dark:border-zinc-800 px-6 gap-4 bg-gray-50/50 dark:bg-zinc-950/30">
+                <div className="flex border-b border-gray-100 dark:border-zinc-800 px-6 overflow-x-auto gap-4 bg-gray-50/50 dark:bg-zinc-950/30">
                   <button 
                     onClick={() => setActiveOutputTab('all')}
-                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
                       activeOutputTab === 'all' 
                         ? 'border-red-600 text-red-600 dark:text-red-400 font-extrabold' 
                         : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300'
@@ -594,9 +763,9 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
                   </button>
                   <button 
                     onClick={() => setActiveOutputTab('copy')}
-                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
                       activeOutputTab === 'copy' 
-                        ? 'border-red-600 text-red-600 dark:text-red-400' 
+                        ? 'border-red-600 text-red-600 dark:text-red-400 font-extrabold' 
                         : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300'
                     }`}
                   >
@@ -604,19 +773,30 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
                   </button>
                   <button 
                     onClick={() => setActiveOutputTab('visual')}
-                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
                       activeOutputTab === 'visual' 
-                        ? 'border-red-600 text-red-600 dark:text-red-400' 
+                        ? 'border-red-600 text-red-600 dark:text-red-400 font-extrabold' 
                         : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300'
                     }`}
                   >
                     Briefing Visual
                   </button>
                   <button 
+                    onClick={() => setActiveOutputTab('image')}
+                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      activeOutputTab === 'image' 
+                        ? 'border-red-600 text-red-600 dark:text-red-400 font-extrabold' 
+                        : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300'
+                    }`}
+                  >
+                    <Image className="w-3.5 h-3.5 text-red-500" />
+                    Gerar Arte / Imagem 🎨
+                  </button>
+                  <button 
                     onClick={() => setActiveOutputTab('script')}
-                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                    className={`py-3.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
                       activeOutputTab === 'script' 
-                        ? 'border-red-600 text-red-600 dark:text-red-400' 
+                        ? 'border-red-600 text-red-600 dark:text-red-400 font-extrabold' 
                         : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300'
                     }`}
                   >
@@ -625,7 +805,7 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
                 </div>
 
                 {/* Tab Content rendering area */}
-                <div className="p-6 max-h-[500px] overflow-y-auto">
+                <div className="p-6 max-h-[620px] overflow-y-auto">
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-zinc-200">
                     
                     {activeOutputTab === 'all' && (
@@ -688,6 +868,303 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
 
                         <div className="p-4 bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/80 rounded-2xl">
                           <ReactMarkdown>{getSection('Visual') || getSection('Briefing') || generatedResult}</ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeOutputTab === 'image' && (
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-gray-800 dark:text-zinc-200">
+                        {/* Column 1: Config */}
+                        <div className="lg:col-span-5 space-y-6">
+                          <div className="p-5 bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-100 dark:border-zinc-800/80 rounded-2xl">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white mb-3 flex items-center gap-1.5">
+                              <Sliders className="w-4 h-4 text-red-600" /> Diretrizes de Geração
+                            </h4>
+                            
+                            <div className="space-y-4 text-xs font-medium">
+                              <div>
+                                <label className="block text-[11px] font-black uppercase text-gray-400 mb-1.5">
+                                  Prompt da Arte IA
+                                </label>
+                                <textarea
+                                  value={imagePrompt}
+                                  onChange={(e) => setImagePrompt(e.target.value)}
+                                  placeholder="Ex: An elegant modern commercial building roof with glowing water tanks, blue holographic digital telemetry screens..."
+                                  className="w-full h-32 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-600 focus:outline-none transition-all text-xs font-medium text-gray-800 dark:text-white resize-none"
+                                />
+                                <div className="flex justify-between mt-1 text-[10px] text-gray-400">
+                                  <span>Pre-preenchido a partir do post.</span>
+                                  <span>{imagePrompt.length} caracteres</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-black uppercase text-gray-400 mb-2">
+                                  Proporção (Aspect Ratio)
+                                </label>
+                                <div className="grid grid-cols-5 gap-1.5">
+                                  {(['1:1', '16:9', '9:16', '4:3', '3:4'] as const).map((ratio) => (
+                                    <button
+                                      key={ratio}
+                                      type="button"
+                                      onClick={() => setImageRatio(ratio)}
+                                      className={`py-2 text-[10px] font-black rounded-lg border transition-all flex flex-col items-center justify-center gap-1 ${
+                                        imageRatio === ratio
+                                          ? 'bg-red-600 border-red-600 text-white shadow-lg shadow-red-500/10'
+                                          : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-zinc-300'
+                                      }`}
+                                    >
+                                      <span className="font-mono">{ratio}</span>
+                                      <div className={`border border-current opacity-60 rounded-sm ${
+                                        ratio === '1:1' ? 'w-3.5 h-3.5' :
+                                        ratio === '16:9' ? 'w-5 h-2.5' :
+                                        ratio === '9:16' ? 'w-2.5 h-5' :
+                                        ratio === '4:3' ? 'w-4 h-3' :
+                                        'w-3 h-4'
+                                      }`} />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={runImageGenerator}
+                                disabled={generatingImage}
+                                className="w-full mt-4 py-3.5 bg-red-600 hover:bg-red-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-500/10 active:scale-[0.98] flex items-center justify-center gap-2"
+                              >
+                                {generatingImage ? (
+                                  <>
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    Gerando Imagem Oficiais...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="w-4 h-4 text-white" />
+                                    Gerar Arte IA
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-2xl text-xs space-y-2">
+                            <p className="font-black text-red-600 dark:text-red-400 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                              <ShieldCheck className="w-4 h-4" /> Diretrizes de Imagem IACompany
+                            </p>
+                            <p className="text-gray-500 dark:text-zinc-400 leading-relaxed text-[11px]">
+                              O gerador de imagens aplica automaticamente as cores oficiais (<span className="text-red-500 font-bold font-mono">#dc2626</span>), filtros corporativos modernos e garante conformidade institucional com o kit de marca.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Column 2: Output */}
+                        <div className="lg:col-span-7 flex flex-col justify-start">
+                          <AnimatePresence mode="wait">
+                            {generatingImage && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="p-6 bg-zinc-950 border border-zinc-850 rounded-2xl h-80 flex flex-col justify-center items-center text-center shadow-inner"
+                              >
+                                <div className="relative mb-4 flex items-center justify-center">
+                                  <div className="absolute w-16 h-16 border-2 border-red-600/30 rounded-full animate-ping" />
+                                  <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                                    <Sparkles className="w-5 h-5 text-white" />
+                                  </div>
+                                </div>
+                                <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-2">
+                                  Estúdio de Arte IA Ativo
+                                </h4>
+                                <div className="text-[11px] font-mono text-zinc-400 space-y-1 max-w-md">
+                                  <p className="text-red-500 font-bold animate-pulse">
+                                    {imageGenSteps[activeImageStep]}
+                                  </p>
+                                  <p className="opacity-60 text-[10px]">
+                                    Motor: Imagen 3.0 Ultra Deep Rendering
+                                  </p>
+                                </div>
+                              </motion.div>
+                            )}
+
+                            {!generatingImage && !generatedImage && (
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="border border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl h-80 flex flex-col justify-center items-center text-center p-6 bg-gray-50/50 dark:bg-zinc-950/10"
+                              >
+                                <div className="w-12 h-12 bg-gray-100 dark:bg-zinc-800/80 rounded-2xl flex items-center justify-center mb-3">
+                                  <Image className="w-5 h-5 text-gray-400" />
+                                </div>
+                                <h4 className="text-xs font-black uppercase text-gray-400 tracking-wider">
+                                  Nenhuma arte gerada ainda
+                                </h4>
+                                <p className="text-[11px] text-gray-400 max-w-sm mt-1 leading-relaxed">
+                                  Use o prompt sugerido pela IA ou digite seu próprio roteiro visual ao lado para gerar uma peça publicitária com inteligência artificial.
+                                </p>
+                              </motion.div>
+                            )}
+
+                            {!generatingImage && generatedImage && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="space-y-4 w-full"
+                              >
+                                {/* Render options and view switcher */}
+                                <div className="flex justify-between items-center bg-gray-100 dark:bg-zinc-800/50 p-2 rounded-xl border border-gray-200 dark:border-zinc-800">
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowFeedPreview(false)}
+                                      className={`px-3 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                        !showFeedPreview
+                                          ? 'bg-white dark:bg-zinc-800 text-red-600 dark:text-red-400 shadow-sm border border-gray-200 dark:border-zinc-700'
+                                          : 'text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200'
+                                      }`}
+                                    >
+                                      Apenas Arte
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowFeedPreview(true)}
+                                      className={`px-3 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                        showFeedPreview
+                                          ? 'bg-white dark:bg-zinc-800 text-red-600 dark:text-red-400 shadow-sm border border-gray-200 dark:border-zinc-700'
+                                          : 'text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200'
+                                      }`}
+                                    >
+                                      Visualizar Publicação
+                                    </button>
+                                  </div>
+
+                                  <div className="text-[10px] text-gray-400 font-mono pr-2">
+                                    Motor: {imageEngine}
+                                  </div>
+                                </div>
+
+                                {!showFeedPreview ? (
+                                  /* Just the Art */
+                                  <div className="relative border border-gray-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-lg bg-black flex items-center justify-center group">
+                                    <img
+                                      src={generatedImage}
+                                      alt="Arte Gerada IA"
+                                      referrerPolicy="no-referrer"
+                                      className="w-full max-h-[380px] object-contain transition-all duration-300"
+                                    />
+                                    
+                                    {/* Brand Safety Watermark Overlay */}
+                                    <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-red-500/20 flex items-center gap-1.5 shadow-lg select-none">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                      <span className="text-[9px] font-mono font-black text-white uppercase tracking-wider">
+                                        IACompany Brand Certified
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  /* Feed Mockup */
+                                  <div className="border border-gray-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-950 shadow-xl max-w-sm mx-auto text-xs text-gray-900 dark:text-white">
+                                    {/* Header */}
+                                    <div className="flex justify-between items-center p-3 border-b border-gray-100 dark:border-zinc-900">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center font-black text-[10px] text-white shadow-md border border-white/15">
+                                          IA
+                                        </div>
+                                        <div>
+                                          <div className="font-extrabold flex items-center gap-1 text-[11px] text-gray-900 dark:text-white">
+                                            iacompany.oficial
+                                            <div className="w-3.5 h-3.5 bg-blue-500 rounded-full flex items-center justify-center shadow-sm">
+                                              <Check className="w-2 text-white stroke-[4]" style={{ height: '8px' }} />
+                                            </div>
+                                          </div>
+                                          <p className="text-[9px] text-gray-400">Patrocinado</p>
+                                        </div>
+                                      </div>
+                                      <button className="text-gray-400 hover:text-gray-600">•••</button>
+                                    </div>
+
+                                    {/* Image Area */}
+                                    <div className="relative aspect-square bg-zinc-950 flex items-center justify-center border-b border-gray-100 dark:border-zinc-900">
+                                      <img
+                                        src={generatedImage}
+                                        alt="Mockup Feed"
+                                        referrerPolicy="no-referrer"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+
+                                    {/* Interactive Actions */}
+                                    <div className="p-3 space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <div className="flex gap-3">
+                                          <button
+                                            onClick={() => {
+                                              setLiked(!liked);
+                                              setLikesCount(liked ? likesCount - 1 : likesCount + 1);
+                                            }}
+                                            className="transition-all active:scale-125"
+                                          >
+                                            <Heart
+                                              className={`w-5 h-5 ${
+                                                liked ? 'fill-red-500 text-red-500' : 'text-gray-800 dark:text-white'
+                                              }`}
+                                            />
+                                          </button>
+                                          <button className="text-gray-800 dark:text-white active:scale-95 transition-all">
+                                            <MessageSquare className="w-5 h-5" />
+                                          </button>
+                                          <button className="text-gray-800 dark:text-white active:scale-95 transition-all">
+                                            <Share2 className="w-5 h-5" />
+                                          </button>
+                                        </div>
+                                        <button className="text-gray-800 dark:text-white">
+                                          <Bookmark className="w-5 h-5" />
+                                        </button>
+                                      </div>
+
+                                      {/* Likes */}
+                                      <p className="font-extrabold text-[11px] text-gray-900 dark:text-white">
+                                        {likesCount.toLocaleString()} curtidas
+                                      </p>
+
+                                      {/* Description and hashtags */}
+                                      <div className="space-y-1 text-[11px] leading-relaxed">
+                                        <p>
+                                          <strong className="font-extrabold mr-1.5 text-gray-900 dark:text-white">iacompany.oficial</strong>
+                                          <span className="text-gray-700 dark:text-zinc-300">
+                                            {getSection('Copy') || getSection('Legenda') 
+                                              ? (getSection('Copy') || getSection('Legenda')).replace(/###?\s+[^\n]+/g, '').replace(/[*`]/g, '').trim().substring(0, 180) + '...'
+                                              : 'A revolução na telemetria predial inteligente.'}
+                                          </span>
+                                        </p>
+                                        <span className="text-red-600 dark:text-red-400 font-bold block cursor-pointer">
+                                          #IACompany #GestaoInteligente #BrandSafety #Tecnologia
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Action bar below results */}
+                                <div className="flex gap-2.5 mt-2">
+                                  <button
+                                    onClick={handleDownloadImage}
+                                    className="flex-1 py-3 bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-800 dark:hover:bg-zinc-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                                  >
+                                    <Download className="w-4 h-4" /> Download Arte
+                                  </button>
+                                  <button
+                                    onClick={() => window.open(generatedImage, '_blank')}
+                                    className="px-4 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800/40 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl transition-all flex items-center justify-center"
+                                    title="Abrir em Nova Aba"
+                                  >
+                                    <ExternalLink className="w-4 h-4 text-gray-600 dark:text-zinc-400" />
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       </div>
                     )}

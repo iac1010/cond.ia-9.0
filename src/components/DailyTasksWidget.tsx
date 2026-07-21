@@ -7,7 +7,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store';
 
 interface DailyTask {
   id: string;
@@ -52,7 +51,6 @@ const CATEGORY_STYLES = {
 
 export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
   const navigate = useNavigate();
-  const { addTicket } = useStore();
   const [tasks, setTasks] = useState<DailyTask[]>(() => {
     const saved = localStorage.getItem('condfy_daily_tasks');
     if (saved) {
@@ -189,18 +187,6 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
     };
 
     setTasks(prev => [newTask, ...prev]);
-    
-    // Also add to Kanban board as a Ticket of type TAREFA
-    addTicket({
-      title: newTitle.trim(),
-      type: 'TAREFA',
-      status: 'APROVADO',
-      date: new Date().toISOString().split('T')[0],
-      technician: 'Administrador',
-      observations: `Tarefa criada via widget diário (${category})`,
-      maintenanceCategory: category,
-      color: category === 'Urgente' ? '#f43f5e' : category === 'Trabalho' ? '#3b82f6' : '#10b981'
-    });
 
     setNewTitle('');
     toast.success('Tarefa diária criada com sucesso! 🚀');

@@ -494,6 +494,75 @@ Ao receber uma solicitação do usuário, responda estruturado em seções Markd
     }
   });
 
+  // Gemini Brand Image Generator API
+  apiRouter.post('/gemini/generate-brand-image', async (req, res) => {
+    const { prompt, aspectRatio } = req.body;
+    if (!prompt || !prompt.trim()) {
+      return res.status(400).json({ error: 'Prompt de imagem é obrigatório.' });
+    }
+
+    const ratio = aspectRatio || '1:1';
+    
+    try {
+      console.log('[Image Generator] Attempting to generate image via Imagen 3.0...');
+      const ai = getGeminiClient();
+
+      const response = await ai.models.generateImages({
+        model: 'imagen-3.0-generate-002',
+        prompt: prompt,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: 'image/jpeg',
+          aspectRatio: ratio,
+        },
+      });
+
+      if (response && response.generatedImages && response.generatedImages[0]) {
+        const imageBytes = response.generatedImages[0].image.imageBytes;
+        if (imageBytes) {
+          const dataUrl = `data:image/jpeg;base64,${imageBytes}`;
+          return res.json({ 
+            success: true, 
+            imageUrl: dataUrl, 
+            source: 'imagen-3.0' 
+          });
+        }
+      }
+      throw new Error('Nenhuma imagem retornada pelo Imagen 3.0.');
+    } catch (error: any) {
+      console.warn('[Image Generator Warning] Imagen 3.0 failed, falling back to Pollinations.ai:', error.message || error);
+      
+      let width = 1024;
+      let height = 1024;
+      
+      if (ratio === '16:9') {
+        width = 1280;
+        height = 720;
+      } else if (ratio === '9:16') {
+        width = 720;
+        height = 1280;
+      } else if (ratio === '4:3') {
+        width = 1024;
+        height = 768;
+      } else if (ratio === '3:4') {
+        width = 768;
+        height = 1024;
+      }
+
+      // We add some stylings to make it look extremely aligned to IACompany's professional tech branding
+      const brandEnhancedPrompt = `${prompt}, company branding style, crisp clean tech visual, professional studio lighting, high resolution, 8k, marketing content`;
+      const seed = Math.floor(Math.random() * 1000000);
+      const pollinationsUrl = `https://image.pollinations.ai/p/${encodeURIComponent(brandEnhancedPrompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
+
+      res.json({
+        success: true,
+        imageUrl: pollinationsUrl,
+        source: 'pollinations-flux',
+        warning: 'Utilizado fallback ultra-rápido de alta definição FLUX.'
+      });
+    }
+  });
+
   // Gemini Financial Report Audit & Extraction API
   apiRouter.post('/gemini/analyze-financial-report', async (req, res) => {
     try {

@@ -83,7 +83,7 @@ const DIFFICULTY_STYLES = {
 
 export default function TasksProductivity() {
   const navigate = useNavigate();
-  const { addTicket, companyData, companyLogo } = useStore();
+  const { companyData, companyLogo } = useStore();
   const [activeTab, setActiveTab] = useState<'tasks' | 'metrics'>('tasks');
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   
@@ -275,27 +275,8 @@ export default function TasksProductivity() {
         osNumber: formOsNumber
       };
       saveTasks([newTask, ...tasks]);
-      
-      // Also add to Kanban board as a Ticket of type TAREFA
-      const formattedObservations = [
-        formNotes || 'Sem observações.',
-        formInstallationDetails ? `Instalação: ${formInstallationDetails}` : '',
-        formOsNumber ? `OS Nº: ${formOsNumber}` : '',
-        formAttachmentName ? `Anexo: ${formAttachmentName}` : ''
-      ].filter(Boolean).join('\n');
 
-      addTicket({
-        title: formTitle,
-        type: 'TAREFA',
-        status: 'APROVADO',
-        date: new Date().toISOString().split('T')[0],
-        technician: 'Administrador',
-        observations: formattedObservations,
-        maintenanceCategory: formCategory,
-        color: formPriority === 'Alta' ? '#f43f5e' : formPriority === 'Média' ? '#f59e0b' : '#0ea5e9'
-      });
-
-      toast.success('Tarefa operacional criada e adicionada ao Kanban! 📋');
+      toast.success('Tarefa operacional criada! 📋');
     }
 
     resetFormState();
