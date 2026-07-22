@@ -169,7 +169,8 @@ export const useStore = create<AppState>()(
         phone: '',
         email: '',
         address: '',
-        website: ''
+        website: '',
+        businessHours: 'Seg. a Sex. das 08h às 18h'
       },
       theme: 'light',
       isAuthenticated: localStorage.getItem('isAuthenticated') === 'true',
@@ -525,7 +526,7 @@ export const useStore = create<AppState>()(
           }
 
           if (scheduledMaintenancesRes.data) {
-            newState.scheduledMaintenances = scheduledMaintenancesRes.data.map(m => ({
+            const fetched = scheduledMaintenancesRes.data.map(m => ({
               id: m.id,
               clientId: m.client_id,
               standardId: m.standard_id,
@@ -533,9 +534,15 @@ export const useStore = create<AppState>()(
               frequency: m.frequency,
               lastDone: m.last_done,
               nextDate: m.next_date,
+              time: m.time || m.hour || '',
               status: m.status as any,
               category: m.category
             }));
+
+            // Merge with local state so locally created items not in Supabase are preserved
+            const fetchedIds = new Set(fetched.map(f => f.id));
+            const localOnly = (get().scheduledMaintenances || []).filter(l => !fetchedIds.has(l.id));
+            newState.scheduledMaintenances = [...fetched, ...localOnly];
           }
 
           if (consumptionReadingsRes.data) {
@@ -830,7 +837,8 @@ export const useStore = create<AppState>()(
               phone: companySettingsData.phone || state.companyData.phone,
               email: companySettingsData.email || state.companyData.email,
               address: companySettingsData.address || state.companyData.address,
-              website: companySettingsData.website || state.companyData.website
+              website: companySettingsData.website || state.companyData.website,
+              businessHours: companySettingsData.business_hours || state.companyData.businessHours
             };
             newState.companyLogo = companySettingsData.logo_url || state.companyLogo;
             newState.companySignature = companySettingsData.signature_url || state.companySignature;
@@ -1030,6 +1038,7 @@ export const useStore = create<AppState>()(
               frequency: m.frequency,
               last_done: m.lastDone,
               next_date: m.nextDate,
+              time: m.time || null,
               status: m.status,
               category: m.category
             })) },
@@ -1271,6 +1280,7 @@ export const useStore = create<AppState>()(
             email: state.companyData.email,
             address: state.companyData.address,
             website: state.companyData.website,
+            business_hours: state.companyData.businessHours,
             logo_url: state.companyLogo,
             signature_url: state.companySignature,
             background_image: state.backgroundImage,
@@ -3072,7 +3082,14 @@ export const useStore = create<AppState>()(
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
           let finalClientId = maintenance.clientId;
           if (!finalClientId || !uuidRegex.test(finalClientId)) {
-            finalClientId = clients[0]?.id || '';
+            const matchedClient = clients.find(c => c.id === finalClientId);
+            if (matchedClient && uuidRegex.test(matchedClient.id)) {
+              finalClientId = matchedClient.id;
+            } else if (clients[0]?.id && uuidRegex.test(clients[0].id)) {
+              finalClientId = clients[0].id;
+            } else {
+              finalClientId = '';
+            }
           }
 
           if (!finalClientId || !uuidRegex.test(finalClientId)) {
@@ -3088,14 +3105,15 @@ export const useStore = create<AppState>()(
             frequency: maintenance.frequency,
             last_done: maintenance.lastDone ? maintenance.lastDone : null,
             next_date: maintenance.nextDate || new Date().toISOString().split('T')[0],
+            time: maintenance.time || null,
             status: maintenance.status || 'PENDING',
             category: maintenance.category || 'Geral'
           }]);
           if (error) {
             console.error('Erro Supabase addScheduledMaintenance:', error);
-            toast.error(`Erro ao salvar manutenção: ${error.message}`);
+            toast.error(`Erro ao salvar manutenção no Supabase: ${error.message}`);
           } else {
-            toast.success('Manutenção agendada salva no Supabase!');
+            toast.success('Manutenção agendada salva!');
           }
         } catch (e: any) { 
           console.error(e);
@@ -3117,7 +3135,12 @@ export const useStore = create<AppState>()(
           if (updated.clientId !== undefined) {
             let finalClientId = updated.clientId;
             if (!finalClientId || !uuidRegex.test(finalClientId)) {
-              finalClientId = clients[0]?.id || '';
+              const matchedClient = clients.find(c => c.id === finalClientId);
+              if (matchedClient && uuidRegex.test(matchedClient.id)) {
+                finalClientId = matchedClient.id;
+              } else {
+                finalClientId = clients[0]?.id || '';
+              }
             }
             if (finalClientId && uuidRegex.test(finalClientId)) {
               updateData.client_id = finalClientId;
@@ -3129,6 +3152,7 @@ export const useStore = create<AppState>()(
           if (updated.frequency !== undefined) updateData.frequency = updated.frequency;
           if (updated.lastDone !== undefined) updateData.last_done = updated.lastDone ? updated.lastDone : null;
           if (updated.nextDate !== undefined) updateData.next_date = updated.nextDate ? updated.nextDate : undefined;
+          if (updated.time !== undefined) updateData.time = updated.time ? updated.time : null;
           if (updated.status !== undefined) updateData.status = updated.status;
           if (updated.category !== undefined) updateData.category = updated.category;
 
@@ -3184,12 +3208,19 @@ export const useStore = create<AppState>()(
           };
         });
 
-        set((state) => ({
-          scheduledMaintenances: [
-            ...state.scheduledMaintenances.filter(m => m.clientId !== clientId),
-            ...newSchedules
-          ]
-        }));
+        set((state) => {
+          const existingCustom = state.scheduledMaintenances.filter(
+            m => m.clientId === clientId && (!m.standardId || m.standardId.startsWith('custom'))
+          );
+          const otherClients = state.scheduledMaintenances.filter(m => m.clientId !== clientId);
+          return {
+            scheduledMaintenances: [
+              ...otherClients,
+              ...existingCustom,
+              ...newSchedules
+            ]
+          };
+        });
 
         if (!isSupabaseConfigured) return;
 
@@ -4815,6 +4846,7 @@ export const useStore = create<AppState>()(
               frequency: m.frequency,
               last_done: m.lastDone,
               next_date: m.nextDate,
+              time: m.time || null,
               status: m.status,
               category: m.category
             })));
@@ -5122,6 +5154,7 @@ export const useStore = create<AppState>()(
               email: data.companyData.email,
               address: data.companyData.address,
               website: data.companyData.website,
+              business_hours: data.companyData.businessHours,
               logo_url: data.companyLogo,
               signature_url: data.companySignature,
               background_image: data.backgroundImage,
@@ -5154,7 +5187,36 @@ export const useStore = create<AppState>()(
         isAuthenticated: state.isAuthenticated,
         kanbanColumnNames: state.kanbanColumnNames,
         users: state.users,
-        currentUser: state.currentUser
+        currentUser: state.currentUser,
+        scheduledMaintenances: state.scheduledMaintenances,
+        clients: state.clients,
+        tickets: state.tickets,
+        products: state.products,
+        quotes: state.quotes,
+        receipts: state.receipts,
+        costs: state.costs,
+        payments: state.payments,
+        legalAgreements: state.legalAgreements,
+        consumptionReadings: state.consumptionReadings,
+        notices: state.notices,
+        packages: state.packages,
+        visitors: state.visitors,
+        criticalEvents: state.criticalEvents,
+        savingsGoals: state.savingsGoals,
+        feedbacks: state.feedbacks,
+        assemblies: state.assemblies,
+        reservations: state.reservations,
+        staff: state.staff,
+        keys: state.keys,
+        sales: state.sales,
+        technicalReports: state.technicalReports,
+        budgetForecasts: state.budgetForecasts,
+        renovations: state.renovations,
+        moves: state.moves,
+        billingRules: state.billingRules,
+        suppliers: state.suppliers,
+        supplyItems: state.supplyItems,
+        supplyQuotations: state.supplyQuotations
       }),
     }
   )

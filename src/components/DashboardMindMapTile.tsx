@@ -18,6 +18,9 @@ export interface MindMapNode {
   details?: string;
   parentId?: string | null;
   connectionDisabled?: boolean;
+  ipAddress?: string;
+  battery?: number;
+  signal?: number;
   // Position offsets for flexible visualization
   x: number;
   y: number;
@@ -424,44 +427,58 @@ export function DashboardMindMapTile({
     setActiveView('view');
   };
 
+  const activeCount = nodes.filter(n => n.status !== 'inactive').length;
+
   return (
     <div 
-      className="w-full h-full bg-zinc-950/70 text-white rounded-3xl border border-white/10 flex flex-col justify-between overflow-hidden relative shadow-xl backdrop-blur-md"
+      className="w-full h-full bg-gradient-to-b from-zinc-950/90 via-zinc-900/90 to-zinc-950/95 text-white rounded-3xl border border-white/10 flex flex-col justify-between overflow-hidden relative shadow-2xl backdrop-blur-md"
       onMouseMove={handleGlobalMouseMove}
       onMouseUp={handleGlobalMouseUp}
       onMouseLeave={handleGlobalMouseUp}
     >
       {/* GLOW EFFECT */}
-      <div className="absolute top-0 left-0 w-36 h-36 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-0 w-44 h-44 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-44 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* HEADER */}
-      <div className="p-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-zinc-950/80 backdrop-blur-md z-10">
+      <div className="px-3.5 py-2.5 border-b border-white/10 flex items-center justify-between sticky top-0 bg-zinc-950/90 backdrop-blur-xl z-10 select-none">
         <div 
           onClick={() => !isEditMode && navigate('/installation-mindmap')}
-          className="flex items-center gap-2 cursor-pointer group"
+          className="flex items-center gap-2.5 cursor-pointer group min-w-0"
         >
-          <div className="p-1 px-[7px] bg-indigo-500/10 rounded-lg border border-indigo-500/30 group-hover:bg-indigo-500/20 transition-all">
-            <Network size={16} className="text-indigo-400" />
+          <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-xl border border-indigo-500/30 group-hover:border-indigo-400 group-hover:scale-105 transition-all text-indigo-400 shrink-0">
+            <Network size={16} />
           </div>
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-widest text-white group-hover:text-indigo-400 transition-colors">Mapa de Instalação</h3>
-            <p className="text-[9px] text-[#39FF14] font-semibold uppercase tracking-wider group-hover:text-[#39FF14]/80 transition-colors flex items-center gap-1">Relatórios &amp; Telas <Maximize2 size={8} /></p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h3 className="text-[11px] font-black uppercase tracking-wider text-white group-hover:text-indigo-300 transition-colors truncate">
+                Mapa de Instalação
+              </h3>
+              <span className="text-[8px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-ping" />
+                {activeCount}/{nodes.length} Online
+              </span>
+            </div>
+            <p className="text-[8.5px] text-zinc-400 font-medium tracking-wide flex items-center gap-1 truncate group-hover:text-indigo-400 transition-colors mt-0.5">
+              <span>Relatórios &amp; Telas</span>
+              <Maximize2 size={8} className="text-indigo-400" />
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
           <button
             onClick={() => navigate('/installation-mindmap')}
-            className="p-1 px-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/25 text-[8px] font-black uppercase tracking-wider text-indigo-400 transition-all hidden md:flex items-center gap-1"
-            title="Abrir Mapas Mensais e Relatórios"
+            className="p-1.5 px-2.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 hover:text-white text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 shadow-md hover:scale-105 active:scale-95"
+            title="Abrir Tela Completa com Relatórios"
           >
-            <Maximize2 size={10} /> Relatórios 📊
+            <Maximize2 size={10} /> Expandir
           </button>
 
           <button
             onClick={() => setActiveView('templates')}
-            className="p-1 px-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[9px] font-bold text-white transition-all uppercase"
-            title="Selecione um Preset"
+            className="p-1.5 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-[9px] font-bold uppercase transition-all shadow-md hover:scale-105 active:scale-95"
+            title="Gabaritos & Presets"
           >
             Templates
           </button>
@@ -469,8 +486,8 @@ export function DashboardMindMapTile({
           <button
             onClick={openAddNode}
             disabled={isEditMode}
-            className="p-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all disabled:opacity-50"
-            title="Adicionar Nó"
+            className="p-1.5 px-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 transition-all disabled:opacity-50 hover:scale-105 active:scale-95 shadow-md"
+            title="Adicionar Novo Ponto"
           >
             <Plus size={14} />
           </button>
@@ -479,6 +496,14 @@ export function DashboardMindMapTile({
 
       {/* BODY VIEWPORT OR SHEET FOR EDITING */}
       <div className="flex-1 overflow-hidden relative flex flex-col justify-between" ref={containerRef}>
+        {/* CANVAS SCHEMATIC BACKGROUND GRID PATTERN */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-25"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.15) 1px, transparent 0)`,
+            backgroundSize: '24px 24px'
+          }}
+        />
         <AnimatePresence mode="wait">
           {activeView === 'view' && (
             <motion.div 

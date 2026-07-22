@@ -438,14 +438,14 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
           e.stopPropagation();
           navigate('/tasks?new=true');
         }}
-        className="mb-3 shrink-0 relative z-10 w-full py-2.5 bg-gradient-to-r from-zinc-900 to-zinc-900/40 hover:from-[#39FF14]/10 hover:to-indigo-500/10 border border-white/10 hover:border-[#39FF14]/40 rounded-xl text-[9px] font-black uppercase tracking-wider text-zinc-300 hover:text-[#39FF14] transition-all duration-300 flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] group/btn"
+        className="mb-3 shrink-0 relative z-10 w-full py-2 bg-gradient-to-r from-zinc-900 to-zinc-900/40 hover:from-[#39FF14]/10 hover:to-indigo-500/10 border border-white/10 hover:border-[#39FF14]/40 rounded-xl text-[9px] font-black uppercase tracking-wider text-zinc-300 hover:text-[#39FF14] transition-all duration-300 flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] group/btn"
       >
         <Plus className="w-3.5 h-3.5 text-[#39FF14] group-hover/btn:scale-110 transition-transform" />
         <span>+ Adicionar Tarefa (Painel de Criação)</span>
       </button>
 
-      {/* Task List - Compact, Flex-grown height */}
-      <div className="flex-1 overflow-y-auto pr-0.5 space-y-1.5 relative z-10 scrollbar-thin max-h-[240px] mb-2.5 min-h-[120px]">
+      {/* Task List - Maximized Height */}
+      <div className="flex-1 overflow-y-auto pr-0.5 space-y-1.5 relative z-10 scrollbar-thin min-h-[160px]">
         <AnimatePresence mode="popLayout">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task) => {
@@ -548,64 +548,6 @@ export function DailyTasksWidget({ isEditMode }: { isEditMode?: boolean }) {
             </div>
           )}
         </AnimatePresence>
-      </div>
-
-      {/* PANORAMA DE EXECUÇÕES */}
-      <div className="shrink-0 bg-white/2 border border-white/10 rounded-xl p-2.5 transition-all relative z-10">
-        <div className="flex justify-between items-center mb-1.5">
-          <div className="flex items-center gap-1">
-            <TrendingUp className="w-3 h-3 text-[#39FF14]" />
-            <span className="text-[8px] font-black uppercase text-white/80 tracking-wider">Panorama Geral</span>
-          </div>
-          <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 px-1.5 py-0.5 rounded-md">
-            {stats.percentage}% OK
-          </span>
-        </div>
-
-        {/* Compact Glow Bar */}
-        <div className="w-full bg-white/10 rounded-full h-2 border border-white/5 overflow-hidden p-0.5 relative">
-          <motion.div 
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-[#39FF14]"
-            initial={{ width: 0 }}
-            animate={{ width: `${stats.percentage}%` }}
-            transition={{ type: 'spring', damping: 15, stiffness: 80 }}
-          />
-        </div>
-
-        {/* Compact Breakdown list */}
-        <div className="grid grid-cols-4 gap-1 mt-2 pt-2 border-t border-white/5">
-          {(['Trabalho', 'Pessoal', 'Fazer Diariamente', 'Urgente'] as const).map((cat) => {
-            const data = stats.categoryBreakdown[cat] || { total: 0, completed: 0 };
-            const style = CATEGORY_STYLES[cat];
-            return (
-              <div 
-                key={cat} 
-                className={`p-1 rounded-lg bg-black/40 border border-white/5 flex flex-col items-center hover:border-white/15 cursor-pointer ${
-                  activeFilter === cat ? 'border-[#39FF14]/40 bg-zinc-900' : ''
-                }`}
-                onClick={() => setActiveFilter(cat === activeFilter ? 'Todos' : cat)}
-              >
-                <div className="flex items-center gap-1">
-                  <span className={`w-1 h-1 rounded-full ${style.dot}`} />
-                  <span className="text-[7.5px] font-black uppercase text-white/40 tracking-wider truncate max-w-[45px]">
-                    {cat === 'Fazer Diariamente' ? 'Rotina' : cat}
-                  </span>
-                </div>
-                <p className="text-[9px] font-black text-white/90 mt-0.5">
-                  {data.completed}/{data.total}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Vivian virtual AI guidance - Compact banner */}
-        <div className="mt-2 bg-[#39FF14]/5 rounded-lg border border-[#39FF14]/15 p-1 px-1.5 flex gap-1.5 items-center">
-          <Sparkles className="w-3 h-3 text-[#39FF14] shrink-0" />
-          <p className="text-[8.5px] font-bold text-emerald-400 capitalize-first truncate leading-none">
-            <span className="font-extrabold text-[#39FF14]">Vivian:</span> {vivianInsight}
-          </p>
-        </div>
       </div>
     </div>
   );

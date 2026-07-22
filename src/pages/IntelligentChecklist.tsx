@@ -5,7 +5,7 @@ import {
   Calendar, CheckCircle2, AlertTriangle, Clock, Plus, RefreshCw, 
   Building2, Bell, Check, Download, FileText, Home, DollarSign, 
   MessageSquare, Settings, Users, Wrench, Activity, AlertCircle, Zap, Droplets, Menu, Share2, MapPin,
-  Search, Trash2, Edit2, Shield, Camera, Image as ImageIcon
+  Search, Trash2, Edit2, Shield, Camera, Image as ImageIcon, ChevronRight, X, ArrowRight
 } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { format, isAfter, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns';
@@ -129,7 +129,26 @@ export default function IntelligentChecklist() {
   } = useStore();
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [clientFilterTab, setClientFilterTab] = useState<'all' | 'pending' | 'has_tasks'>('all');
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [selectedClientIdForTask, setSelectedClientIdForTask] = useState<string>('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'add_maintenance' || params.get('action') === 'new') {
+      setShowAddTaskModal(true);
+    }
+  }, []);
+  
+  // Shortcut Modal: Criar Nova Página Inteligente
+  const [showCreateIntelligentPageModal, setShowCreateIntelligentPageModal] = useState(false);
+  const [createPageMode, setCreatePageMode] = useState<'custom' | 'nbr5674' | 'mindmap'>('custom');
+  const [targetClientForPage, setTargetClientForPage] = useState<string>('');
+  const [newPageName, setNewPageName] = useState('');
+  const [newPageInitialTask, setNewPageInitialTask] = useState('');
+  const [newPageFreq, setNewPageFreq] = useState<'Mensal' | 'Trimestral' | 'Semestral' | 'Anual' | 'Atividade Única'>('Mensal');
+
   const [time, setTime] = useState(new Date());
   const [newTask, setNewTask] = useState({
     item: '',
@@ -142,7 +161,8 @@ export default function IntelligentChecklist() {
     item: '',
     frequency: 'Mensal' as const,
     category: 'Manutenção Elétrica',
-    nextDate: new Date().toISOString().split('T')[0]
+    nextDate: new Date().toISOString().split('T')[0],
+    time: ''
   });
 
   const handleAddSidebarTask = (e: React.FormEvent) => {
@@ -157,6 +177,7 @@ export default function IntelligentChecklist() {
       item: sidebarTask.item,
       frequency: sidebarTask.frequency,
       nextDate: sidebarTask.nextDate,
+      time: sidebarTask.time,
       status: 'PENDING',
       category: sidebarTask.category
     });
@@ -165,7 +186,8 @@ export default function IntelligentChecklist() {
       item: '',
       frequency: 'Mensal',
       category: 'Manutenção Elétrica',
-      nextDate: new Date().toISOString().split('T')[0]
+      nextDate: new Date().toISOString().split('T')[0],
+      time: ''
     });
   };
 
@@ -328,7 +350,15 @@ export default function IntelligentChecklist() {
   };
 
   const handleAddTask = () => {
-    if (!selectedClientId || !newTask.item) return;
+    const targetClientId = selectedClientIdForTask || selectedClientId;
+    if (!targetClientId) {
+      toast.error('Por favor, selecione um cliente.');
+      return;
+    }
+    if (!newTask.item) {
+      toast.error('Informe o item da manutenção.');
+      return;
+    }
     
     const nextDate = new Date();
     if (newTask.frequency === 'Mensal') nextDate.setMonth(nextDate.getMonth() + 1);
@@ -337,24 +367,87 @@ export default function IntelligentChecklist() {
     else nextDate.setFullYear(nextDate.getFullYear() + 1);
 
     addScheduledMaintenance({
-      clientId: selectedClientId,
+      clientId: targetClientId,
       standardId: 'custom-' + Date.now(),
       item: newTask.item,
       frequency: newTask.frequency,
       nextDate: nextDate.toISOString().split('T')[0],
       status: 'PENDING',
-      category: newTask.category
+      category: newTask.category || 'Geral'
     });
 
-    toast.success('Tarefa adicionada!');
+    toast.success('Atividade de Manutenção adicionada!');
     addNotification({
-      title: 'Tarefa Adicionada',
-      message: `Tarefa "${newTask.item}" adicionada ao cronograma.`,
+      title: 'Manutenção Adicionada',
+      message: `Atividade "${newTask.item}" adicionada com sucesso.`,
       type: 'SUCCESS'
     });
 
     setShowAddTaskModal(false);
     setNewTask({ item: '', frequency: 'Mensal', category: 'Geral' });
+  };
+
+  const handleCreateIntelligentPage = () => {
+    if (createPageMode === 'mindmap') {
+      navigate('/installation-mindmap');
+      setShowCreateIntelligentPageModal(false);
+      return;
+    }
+
+    if (!targetClientForPage) {
+      toast.error('Selecione um cliente para vincular a nova página.');
+      return;
+    }
+
+    const clientObj = clients.find(c => c.id === targetClientForPage);
+
+    if (createPageMode === 'nbr5674') {
+      generateSchedulesForClient(targetClientForPage);
+      toast.success(`Protocolo NBR 5674 gerado para ${clientObj?.name || 'o cliente'}!`);
+      addNotification({
+        title: 'Nova Página NBR 5674 Criada',
+        message: `Página NBR 5674 gerada para ${clientObj?.name}.`,
+        type: 'SUCCESS'
+      });
+      setSelectedClientId(targetClientForPage);
+      setShowCreateIntelligentPageModal(false);
+      return;
+    }
+
+    if (!newPageName) {
+      toast.error('Informe o nome da página/checklist inteligente.');
+      return;
+    }
+
+    const taskItem = newPageInitialTask || `Inspecao Inicial - ${newPageName}`;
+
+    const nextDate = new Date();
+    if (newPageFreq === 'Mensal') nextDate.setMonth(nextDate.getMonth() + 1);
+    else if (newPageFreq === 'Trimestral') nextDate.setMonth(nextDate.getMonth() + 3);
+    else if (newPageFreq === 'Semestral') nextDate.setMonth(nextDate.getMonth() + 6);
+    else nextDate.setFullYear(nextDate.getFullYear() + 1);
+
+    addScheduledMaintenance({
+      clientId: targetClientForPage,
+      standardId: 'custom-page-' + Date.now(),
+      item: taskItem,
+      frequency: newPageFreq,
+      nextDate: nextDate.toISOString().split('T')[0],
+      status: 'PENDING',
+      category: newPageName
+    });
+
+    toast.success(`Página Inteligente "${newPageName}" criada com sucesso!`);
+    addNotification({
+      title: 'Página Inteligente Criada',
+      message: `Nova página de checklist "${newPageName}" criada para ${clientObj?.name}.`,
+      type: 'SUCCESS'
+    });
+
+    setSelectedClientId(targetClientForPage);
+    setShowCreateIntelligentPageModal(false);
+    setNewPageName('');
+    setNewPageInitialTask('');
   };
 
   const handleMarkAsDone = (id: string, frequency: string) => {
@@ -475,6 +568,7 @@ export default function IntelligentChecklist() {
       frequency: editingTask.frequency,
       category: editingTask.category,
       nextDate: editingTask.nextDate,
+      time: editingTask.time,
       status: editingTask.status
     });
     toast.success('Tarefa atualizada com sucesso!');
@@ -539,44 +633,289 @@ export default function IntelligentChecklist() {
   };
 
   if (!selectedClientId) {
+    const totalClientsCount = clients.length;
+    const totalMaintenancesCount = scheduledMaintenances.length;
+    const pendingMaintenancesCount = scheduledMaintenances.filter(m => m.status === 'PENDING').length;
+    const doneMaintenancesCount = scheduledMaintenances.filter(m => m.status === 'DONE').length;
+
+    const filteredClientsList = clients.filter(client => {
+      const clientTasks = scheduledMaintenances.filter(m => m.clientId === client.id);
+      const matchesSearch = client.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
+        (client.address && client.address.toLowerCase().includes(clientSearchQuery.toLowerCase())) ||
+        (client.document && client.document.toLowerCase().includes(clientSearchQuery.toLowerCase()));
+
+      if (!matchesSearch) return false;
+
+      if (clientFilterTab === 'has_tasks') return clientTasks.length > 0;
+      if (clientFilterTab === 'pending') return clientTasks.some(m => m.status === 'PENDING');
+      return true;
+    });
+
     return (
-      <div 
-        className="min-h-screen bg-cover bg-center relative flex items-center justify-center p-4 md:p-8 font-sans -m-8"
-        style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80")' }}
-      >
-        <div className="absolute inset-0 bg-[#0a192f]/80 backdrop-blur-xl" />
-        <div className="relative z-10 w-full max-w-5xl bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 md:p-12 shadow-2xl">
-          <div className="flex items-center gap-4 mb-12 justify-center">
-            <BackButton />
-            <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-              <Wrench className="w-7 h-7 text-blue-400" />
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 text-white font-sans p-4 md:p-8 relative overflow-hidden -m-8">
+        {/* Futuristic background glow circles */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/3 right-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+          {/* TOP HEADER BANNER */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-zinc-900/80 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-[#39FF14] to-indigo-500" />
+            
+            <div className="flex items-center gap-4">
+              <BackButton />
+              <div className="p-3.5 bg-gradient-to-br from-blue-500/20 to-emerald-500/20 border border-blue-500/40 rounded-2xl text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.3)] shrink-0">
+                <Wrench className="w-8 h-8 text-[#39FF14]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    NBR 5674 &bull; MANUTENÇÃO
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500/20 text-[#39FF14] border border-emerald-500/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-ping" />
+                    SISTEMA ATIVO
+                  </span>
+                </div>
+                <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-white mt-1">
+                  MANUTENÇÃO <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-[#39FF14]">PREVENTIVA</span>
+                </h1>
+                <p className="text-zinc-400 text-xs md:text-sm font-medium mt-0.5">
+                  Selecione um cliente para gerenciar rotinas, checklists inteligentes e emissão de laudos
+                </p>
+              </div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-light tracking-wide text-center text-white">
-              <span className="font-bold text-blue-400">MANUTENÇÃO</span> Preventiva
-            </h1>
-          </div>
-          
-          <h2 className="text-xl font-light text-center mb-8 text-white/80">Selecione o Cliente para Gerenciar Manutenções</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {clients.map(client => (
+
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
               <button
-                key={client.id}
-                onClick={() => setSelectedClientId(client.id)}
-                className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 transition-all duration-300 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 group shadow-lg"
+                onClick={() => {
+                  setSelectedClientIdForTask(clients[0]?.id || '');
+                  setShowAddTaskModal(true);
+                }}
+                className="p-3 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/40 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-xl group cursor-pointer"
+                title="Criar nova rotina de manutenção preventiva"
               >
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-blue-500/20 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.4)]">
-                  <Building2 className="w-8 h-8 text-white/50 group-hover:text-blue-400 transition-colors" />
-                </div>
-                <div className="text-center">
-                  <h3 className="text-xl font-bold text-white mb-1">{client.name}</h3>
-                  <p className="text-sm text-white/50">{scheduledMaintenances.filter(m => m.clientId === client.id).length} tarefas</p>
-                </div>
+                <Plus size={16} className="text-white group-hover:rotate-90 transition-transform" />
+                <span>CRIAR MANUTENÇÃO</span>
               </button>
-            ))}
-            {clients.length === 0 && (
-              <div className="col-span-full text-center py-12">
-                <p className="text-white/50">Nenhum cliente cadastrado. Vá para a aba de Clientes para adicionar.</p>
+
+              <button
+                onClick={() => {
+                  setTargetClientForPage(clients[0]?.id || '');
+                  setShowCreateIntelligentPageModal(true);
+                }}
+                className="p-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-xl group cursor-pointer"
+                title="Criar nova página de checklist inteligente ou diagrama"
+              >
+                <Zap size={16} className="text-[#39FF14] group-hover:scale-125 transition-transform" />
+                <span>Criar Nova Página Inteligente</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/clients')}
+                className="p-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
+              >
+                <Users size={16} className="text-blue-400" />
+                <span>Gerenciar Clientes</span>
+              </button>
+            </div>
+          </div>
+
+          {/* KPI STATS BAR */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-4 backdrop-blur-xl shadow-xl flex items-center gap-4">
+              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-400 shrink-0">
+                <Building2 size={22} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Total de Clientes</p>
+                <p className="text-2xl font-black text-white">{totalClientsCount}</p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-4 backdrop-blur-xl shadow-xl flex items-center gap-4">
+              <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl text-purple-400 shrink-0">
+                <Calendar size={22} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Tarefas Agendadas</p>
+                <p className="text-2xl font-black text-white">{totalMaintenancesCount}</p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-4 backdrop-blur-xl shadow-xl flex items-center gap-4">
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 shrink-0">
+                <Clock size={22} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Pendentes</p>
+                <p className="text-2xl font-black text-amber-400">{pendingMaintenancesCount}</p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-4 backdrop-blur-xl shadow-xl flex items-center gap-4">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[#39FF14] shrink-0">
+                <CheckCircle2 size={22} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Concluídas</p>
+                <p className="text-2xl font-black text-[#39FF14]">{doneMaintenancesCount}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* SEARCH & FILTER CONTROLS */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-900/80 border border-white/10 rounded-2xl p-4 backdrop-blur-xl shadow-xl">
+            {/* Search Bar */}
+            <div className="relative flex items-center w-full sm:w-96 bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 focus-within:border-[#39FF14]/50 transition-all">
+              <Search size={16} className="text-zinc-400 shrink-0 mr-2.5" />
+              <input
+                type="text"
+                placeholder="Buscar por nome do condomínio, endereço..."
+                value={clientSearchQuery}
+                onChange={(e) => setClientSearchQuery(e.target.value)}
+                className="bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none w-full font-medium"
+              />
+              {clientSearchQuery && (
+                <button onClick={() => setClientSearchQuery('')} className="p-1 text-zinc-400 hover:text-white">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1.5 bg-zinc-950 p-1.5 rounded-xl border border-white/10 w-full sm:w-auto overflow-x-auto">
+              <button
+                onClick={() => setClientFilterTab('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                  clientFilterTab === 'all'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Todos ({clients.length})
+              </button>
+              <button
+                onClick={() => setClientFilterTab('pending')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                  clientFilterTab === 'pending'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Com Pendências
+              </button>
+              <button
+                onClick={() => setClientFilterTab('has_tasks')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                  clientFilterTab === 'has_tasks'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Com Tarefas
+              </button>
+            </div>
+          </div>
+
+          {/* CLIENTS GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredClientsList.map(client => {
+              const clientTasks = scheduledMaintenances.filter(m => m.clientId === client.id);
+              const pendingCount = clientTasks.filter(m => m.status === 'PENDING').length;
+              const doneCount = clientTasks.filter(m => m.status === 'DONE').length;
+              const totalCount = clientTasks.length;
+              const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+
+              return (
+                <div
+                  key={client.id}
+                  onClick={() => setSelectedClientId(client.id)}
+                  className="bg-zinc-900/90 hover:bg-zinc-800/90 border border-white/10 hover:border-[#39FF14]/50 transition-all duration-300 rounded-2xl p-6 shadow-2xl group flex flex-col justify-between backdrop-blur-xl relative overflow-hidden cursor-pointer hover:scale-[1.02] hover:-translate-y-1"
+                >
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-[#39FF14] to-emerald-500 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+
+                  <div className="space-y-4">
+                    {/* Header with icon/logo and badge */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-emerald-500/20 border border-white/20 flex items-center justify-center group-hover:border-[#39FF14]/50 group-hover:shadow-[0_0_20px_rgba(57,255,20,0.3)] transition-all shrink-0">
+                        <Building2 className="w-6 h-6 text-blue-400 group-hover:text-[#39FF14] transition-colors" />
+                      </div>
+
+                      {pendingCount > 0 ? (
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1">
+                          <Clock size={10} /> {pendingCount} Pendente{pendingCount > 1 ? 's' : ''}
+                        </span>
+                      ) : totalCount > 0 ? (
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/30 text-[#39FF14] flex items-center gap-1">
+                          <CheckCircle2 size={10} /> Em Dia
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-zinc-800 border border-white/10 text-zinc-400">
+                          Sem Tarefas
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Client Title and Address */}
+                    <div>
+                      <h3 className="text-lg font-black text-white group-hover:text-[#39FF14] transition-colors line-clamp-1">
+                        {client.name}
+                      </h3>
+                      {client.address ? (
+                        <p className="text-xs text-zinc-400 flex items-center gap-1 mt-1 line-clamp-1">
+                          <MapPin size={12} className="text-zinc-500 shrink-0" />
+                          <span>{client.address}</span>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-zinc-500 mt-1 italic">
+                          Endereço não especificado
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Progress Bar & Details */}
+                    {totalCount > 0 && (
+                      <div className="space-y-1.5 pt-2 border-t border-white/5">
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                          <span>Conclusão das Tarefas</span>
+                          <span className="text-white font-mono">{doneCount}/{totalCount} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-zinc-950 rounded-full h-2 overflow-hidden border border-white/5 p-0.5">
+                          <div 
+                            className="bg-gradient-to-r from-blue-500 to-[#39FF14] h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card CTA Footer */}
+                  <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-black uppercase tracking-wider text-blue-400 group-hover:text-[#39FF14] transition-colors">
+                    <span>Acessar Checklists</span>
+                    <ArrowRight size={16} className="transform group-hover:translate-x-1.5 transition-transform" />
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Empty state */}
+            {filteredClientsList.length === 0 && (
+              <div className="col-span-full bg-zinc-900/60 border border-white/10 rounded-3xl p-12 text-center backdrop-blur-xl">
+                <Building2 size={48} className="mx-auto text-zinc-600 mb-4" />
+                <h3 className="text-lg font-bold text-white mb-1">Nenhum Cliente Encontrado</h3>
+                <p className="text-xs text-zinc-400 max-w-md mx-auto mb-6">
+                  {clientSearchQuery 
+                    ? `Nenhum resultado corresponde à busca "${clientSearchQuery}". Tente outros termos.` 
+                    : 'Sua conta ainda não possui clientes cadastrados para gerenciar manutenções.'}
+                </p>
+                <button
+                  onClick={() => navigate('/clients')}
+                  className="p-3 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider shadow-xl transition-all"
+                >
+                  Cadastrar Primeiro Cliente
+                </button>
               </div>
             )}
           </div>
@@ -619,9 +958,34 @@ export default function IntelligentChecklist() {
                   {selectedClient?.name || 'CONDOMÍNIO CONNECT'}
                 </h1>
                 <p className="text-white/80 text-sm md:text-base font-light">Gestão Transparente, Comunidade Conectada</p>
-                <p className="text-white/50 text-xs font-mono mt-1">
-                  {format(time, "EEEE, dd 'de' MMMM, yyyy", { locale: ptBR })}
-                </p>
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <p className="text-white/50 text-xs font-mono">
+                    {format(time, "EEEE, dd 'de' MMMM, yyyy", { locale: ptBR })}
+                  </p>
+                  
+                  <button
+                    onClick={() => {
+                      setSelectedClientIdForTask(selectedClientId || '');
+                      setShowAddTaskModal(true);
+                    }}
+                    className="p-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-black text-[10px] uppercase tracking-wider flex items-center gap-1 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                    title="Criar nova manutenção preventiva"
+                  >
+                    <Plus size={12} className="text-white" />
+                    <span>CRIAR MANUTENÇÃO</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setTargetClientForPage(selectedClientId || '');
+                      setShowCreateIntelligentPageModal(true);
+                    }}
+                    className="p-1.5 px-3 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/60 border border-emerald-400/40 text-[#39FF14] hover:text-white font-black text-[10px] uppercase tracking-wider flex items-center gap-1 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                  >
+                    <Zap size={12} className="text-[#39FF14]" />
+                    <span>+ Página Inteligente</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -867,6 +1231,7 @@ export default function IntelligentChecklist() {
                               ) : (
                                 <span className={isOverdue ? 'text-red-400 font-bold' : 'text-white'}>
                                   {format(parseISO(task.nextDate), 'dd/MM/yyyy')}
+                                  {task.time ? <span className="text-white/50 text-[11px] ml-1">às {task.time}</span> : null}
                                 </span>
                               )}
                             </td>
@@ -1379,6 +1744,16 @@ export default function IntelligentChecklist() {
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white outline-none focus:border-white/30"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/60 uppercase tracking-wider mb-1.5">Horário</label>
+                    <input 
+                      type="time"
+                      value={sidebarTask.time || ''}
+                      onChange={(e) => setSidebarTask({ ...sidebarTask, time: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white outline-none focus:border-white/30"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -1463,60 +1838,262 @@ export default function IntelligentChecklist() {
 
       {/* Add Task Modal */}
       {showAddTaskModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1e293b] border border-white/10 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6 text-white">Nova Tarefa Preventiva</h2>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Item da Manutenção</label>
-                <input 
-                  type="text"
-                  value={newTask.item}
-                  onChange={(e) => setNewTask({...newTask, item: e.target.value})}
-                  placeholder="Ex: Limpeza de Ar Condicionado"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
-                />
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="bg-[#1e293b] border border-white/10 rounded-[2.5rem] p-6 md:p-8 w-full max-w-md shadow-2xl relative">
+            <button 
+              type="button"
+              onClick={() => setShowAddTaskModal(false)}
+              className="absolute top-6 right-6 p-2 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X size={18} />
+            </button>
 
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-blue-500/20 border border-blue-500/40 rounded-2xl text-blue-400">
+                <Plus size={22} />
+              </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Frequência</label>
+                <h2 className="text-xl font-bold text-white">Adicionar Manutenção</h2>
+                <p className="text-xs text-zinc-400">Agende uma rotina preventiva de manutenção</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1.5">Cliente / Condomínio</label>
                 <select
-                  value={newTask.frequency}
-                  onChange={(e) => setNewTask({...newTask, frequency: e.target.value as any})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
+                  value={selectedClientIdForTask || selectedClientId || ''}
+                  onChange={(e) => setSelectedClientIdForTask(e.target.value)}
+                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all text-white text-xs font-semibold"
                 >
-                  <option value="Mensal" className="bg-[#18181b] text-white">Mensal</option>
-                  <option value="Trimestral" className="bg-[#18181b] text-white">Trimestral</option>
-                  <option value="Semestral" className="bg-[#18181b] text-white">Semestral</option>
-                  <option value="Anual" className="bg-[#18181b] text-white">Anual</option>
-                  <option value="Atividade Única" className="bg-[#18181b] text-white">Atividade Única</option>
+                  <option value="" disabled>Selecione um cliente...</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id} className="bg-zinc-900 text-white">
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Categoria</label>
+                <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1.5">Item da Manutenção</label>
                 <input 
                   type="text"
-                  value={newTask.category}
-                  onChange={(e) => setNewTask({...newTask, category: e.target.value})}
-                  placeholder="Ex: Elétrica, Hidráulica..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
+                  value={newTask.item}
+                  onChange={(e) => setNewTask({...newTask, item: e.target.value})}
+                  placeholder="Ex: Inspeção dos Extintores / Limpeza de Reservatório"
+                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all text-white text-xs"
                 />
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1.5">Frequência</label>
+                  <select
+                    value={newTask.frequency}
+                    onChange={(e) => setNewTask({...newTask, frequency: e.target.value as any})}
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-3 outline-none focus:border-blue-500 transition-all text-white text-xs font-semibold"
+                  >
+                    <option value="Mensal">Mensal</option>
+                    <option value="Trimestral">Trimestral</option>
+                    <option value="Semestral">Semestral</option>
+                    <option value="Anual">Anual</option>
+                    <option value="Atividade Única">Atividade Única</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1.5">Categoria</label>
+                  <input 
+                    type="text"
+                    value={newTask.category}
+                    onChange={(e) => setNewTask({...newTask, category: e.target.value})}
+                    placeholder="Ex: Elétrica"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
                 <button 
+                  type="button"
                   onClick={() => setShowAddTaskModal(false)}
-                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all text-white"
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button 
+                  type="button"
                   onClick={handleAddTask}
-                  className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 rounded-xl font-bold transition-all text-white shadow-lg shadow-blue-500/20"
+                  className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl font-black text-xs uppercase tracking-wider transition-all text-white shadow-lg shadow-blue-500/20 cursor-pointer"
                 >
-                  Adicionar
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Intelligent Page Modal */}
+      {showCreateIntelligentPageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-[#1e293b] border border-white/10 rounded-[2.5rem] p-6 md:p-8 w-full max-w-lg shadow-2xl relative my-8 overflow-hidden">
+            <button 
+              type="button"
+              onClick={() => setShowCreateIntelligentPageModal(false)}
+              className="absolute top-6 right-6 p-2 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-[#39FF14]">
+                <Zap size={24} />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Criar Nova Página Inteligente</h2>
+                <p className="text-xs text-zinc-400">Gere rotinas preditivas ou checklists customizados</p>
+              </div>
+            </div>
+
+            {/* Mode selection tabs */}
+            <div className="grid grid-cols-3 gap-2 bg-zinc-900 p-1.5 rounded-2xl border border-white/10 mb-6">
+              <button
+                type="button"
+                onClick={() => setCreatePageMode('custom')}
+                className={`py-2.5 px-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  createPageMode === 'custom'
+                    ? 'bg-emerald-600 text-white shadow-lg'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Customizada
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreatePageMode('nbr5674')}
+                className={`py-2.5 px-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  createPageMode === 'nbr5674'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                NBR 5674
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreatePageMode('mindmap')}
+                className={`py-2.5 px-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  createPageMode === 'mindmap'
+                    ? 'bg-purple-600 text-white shadow-lg'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Mapa IoT
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Select Client */}
+              {createPageMode !== 'mindmap' && (
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1.5">Cliente / Condomínio Alvo</label>
+                  <select
+                    value={targetClientForPage || selectedClientId || ''}
+                    onChange={(e) => setTargetClientForPage(e.target.value)}
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-all text-white text-xs font-semibold"
+                  >
+                    <option value="" disabled>Selecione um cliente...</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id} className="bg-zinc-900 text-white">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Custom Page Fields */}
+              {createPageMode === 'custom' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1.5">Nome da Página / Categoria Especial</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Rotina Semanal de Geradores e Nobreaks"
+                      value={newPageName}
+                      onChange={(e) => setNewPageName(e.target.value)}
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-all text-white text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1.5">Atividade Inicial Recomendada</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Checar nível de óleo e combustível do gerador"
+                      value={newPageInitialTask}
+                      onChange={(e) => setNewPageInitialTask(e.target.value)}
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-all text-white text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1.5">Frequência Padrão</label>
+                    <select
+                      value={newPageFreq}
+                      onChange={(e) => setNewPageFreq(e.target.value as any)}
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-all text-white text-xs font-semibold"
+                    >
+                      <option value="Mensal">Mensal</option>
+                      <option value="Trimestral">Trimestral</option>
+                      <option value="Semestral">Semestral</option>
+                      <option value="Anual">Anual</option>
+                      <option value="Atividade Única">Atividade Única</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* NBR 5674 Info */}
+              {createPageMode === 'nbr5674' && (
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 space-y-2 text-xs text-blue-200">
+                  <p className="font-bold flex items-center gap-2 text-blue-400">
+                    <CheckCircle2 size={16} /> Protocolo de Manutenção Predial NBR 5674
+                  </p>
+                  <p className="text-zinc-300">
+                    Esta opção gera automaticamente a lista completa de rotinas técnicas de manutenção (Sistemas Elétricos, Hidráulicos, SPDA, Elevadores, Incêndio e Impermeabilização) para o condomínio selecionado.
+                  </p>
+                </div>
+              )}
+
+              {/* Mind Map Info */}
+              {createPageMode === 'mindmap' && (
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4 space-y-2 text-xs text-purple-200">
+                  <p className="font-bold flex items-center gap-2 text-purple-400">
+                    <Activity size={16} /> Mapa Mental e Diagrama de Instalações IoT
+                  </p>
+                  <p className="text-zinc-300">
+                    Acesse a página de mapa mental com diagrama interativo dos pontos de instalação e sensores da edificação.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setShowCreateIntelligentPageModal(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleCreateIntelligentPage}
+                  className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl font-black text-xs uppercase tracking-wider transition-all text-white shadow-lg shadow-emerald-500/20 cursor-pointer"
+                >
+                  {createPageMode === 'mindmap' ? 'Abrir Mapa' : 'Criar Página'}
                 </button>
               </div>
             </div>
@@ -1650,6 +2227,7 @@ export default function IntelligentChecklist() {
                       </td>
                       <td className="p-5 text-right font-black text-zinc-900 text-sm font-mono">
                         {format(parseISO(schedule.nextDate), 'dd/MM/yyyy')}
+                        {schedule.time ? ` às ${schedule.time}` : ''}
                       </td>
                     </tr>
                   ))}
@@ -1774,6 +2352,16 @@ export default function IntelligentChecklist() {
                   required
                   value={editingTask.nextDate}
                   onChange={(e) => setEditingTask({...editingTask, nextDate: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Horário da Manutenção</label>
+                <input 
+                  type="time"
+                  value={editingTask.time || ''}
+                  onChange={(e) => setEditingTask({...editingTask, time: e.target.value})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 />
               </div>

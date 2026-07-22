@@ -516,6 +516,7 @@ export default function Quotes() {
                                     new Paragraph({ children: [new TextRun({ text: `CNPJ: ${companyData?.document || '---'}`, size: 16, color: "666666", allCaps: true, bold: true })] }),
                                     new Paragraph({ children: [new TextRun({ text: companyData?.email || '---', size: 16, color: "666666" })] }),
                                     new Paragraph({ children: [new TextRun({ text: companyData?.phone || '---', size: 16, color: "666666" })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `Atendimento: ${companyData?.businessHours || 'Seg. a Sex. das 08h às 18h'}`, size: 16, color: "666666" })] }),
                                   ],
                                   borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
                                   verticalAlign: VerticalAlign.CENTER,
@@ -1651,6 +1652,9 @@ export default function Quotes() {
                       <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
                         <span className="w-1 h-1 rounded-full bg-zinc-300" style={{ display: 'inline-block', width: '4px', height: '4px', backgroundColor: '#d4d4d8', borderRadius: '50%' }}></span> {companyData?.phone || '(00) 0000-0000'}
                       </p>
+                      <p className="text-[9px] font-bold text-zinc-500 flex items-center gap-1.5" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                        <span className="w-1 h-1 rounded-full bg-zinc-300" style={{ display: 'inline-block', width: '4px', height: '4px', backgroundColor: '#d4d4d8', borderRadius: '50%' }}></span> Atendimento: {companyData?.businessHours || 'Seg. a Sex. das 08h às 18h'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1877,8 +1881,8 @@ export default function Quotes() {
 
               {/* Footer Section */}
               <div className="mt-8 pt-6 flex justify-between items-center break-inside-avoid" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f4f4f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest" style={{ fontSize: '8px', color: '#d4d4d8', fontWeight: 700 }}>
-                  Geração Eletrônica via Plataforma Condomínio v4.0
+                <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest" style={{ fontSize: '8px', color: '#a1a1aa', fontWeight: 700 }}>
+                  Atendimento: {companyData?.businessHours || 'Seg. a Sex. das 08h às 18h'} • Geração Eletrônica via Plataforma Condomínio v4.0
                 </p>
                 <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <p className="text-[8px] font-black text-zinc-900 uppercase tracking-widest" style={{ fontSize: '8px', color: '#18181b', fontWeight: 900 }}>

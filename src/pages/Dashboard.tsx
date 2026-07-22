@@ -2865,6 +2865,15 @@ export default function Dashboard() {
             </div>
             
             <div className="h-4 w-px bg-white/10 mx-1" />
+            <Link 
+              to="/operational?tab=MAINTENANCE&action=new" 
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all w-fit bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:scale-105 active:scale-95 border border-blue-400/30"
+              title="Adicionar nova manutenção preventiva"
+            >
+              <Plus className="w-3.5 h-3.5 text-white" />
+              <span>CRIAR MANUTENÇÃO</span>
+            </Link>
+
             <button 
               onClick={() => setIsEditMode(!isEditMode)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all w-fit ${
@@ -2990,13 +2999,23 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <Link 
-              to="/operational" 
-              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/80 transition-all active:scale-95 flex items-center gap-1.5"
-            >
-              <LayoutList className="w-3.5 h-3.5" />
-              Ver Cronograma
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link 
+                to="/operational?tab=MAINTENANCE&action=new" 
+                className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5 shadow-lg"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                CRIAR MANUTENÇÃO
+              </Link>
+
+              <Link 
+                to="/operational" 
+                className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/80 transition-all active:scale-95 flex items-center gap-1.5"
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+                VER CRONOGRAMA
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -3054,7 +3073,7 @@ export default function Dashboard() {
                         <div className="flex items-center justify-between text-[11px] font-semibold pt-2 border-t border-white/5">
                           <span className="text-white/40">Vencimento:</span>
                           <span className={isOverdue ? 'text-red-400 font-bold' : 'text-amber-400 font-bold'}>
-                            {safeFormatDate(alert.nextDate)}
+                            {safeFormatDate(alert.nextDate)}{alert.time ? ` às ${alert.time}` : ''}
                           </span>
                         </div>
                         

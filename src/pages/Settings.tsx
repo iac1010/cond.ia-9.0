@@ -97,7 +97,8 @@ export default function Settings() {
     phone: '',
     email: '',
     address: '',
-    website: ''
+    website: '',
+    businessHours: 'Seg. a Sex. das 08h às 18h'
   });
 
   useEffect(() => {
@@ -675,6 +676,16 @@ export default function Settings() {
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
                   className="w-full bg-white border border-zinc-200 focus:border-blue-500 rounded-2xl px-6 py-4 outline-none transition-all text-zinc-900 text-lg placeholder:text-zinc-300"
                   required
+                />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-sm font-bold uppercase tracking-wider text-zinc-400 ml-1">Horário de Atendimento *</label>
+                <input 
+                  type="text" 
+                  value={formData.businessHours || ''}
+                  onChange={(e) => setFormData({...formData, businessHours: e.target.value})}
+                  placeholder="Ex: Seg. a Sex. das 08:00 às 18:00 • Sáb. das 08:00 às 12:00"
+                  className="w-full bg-white border border-zinc-200 focus:border-blue-500 rounded-2xl px-6 py-4 outline-none transition-all text-zinc-900 text-lg placeholder:text-zinc-300"
                 />
               </div>
               <div className="md:col-span-2 space-y-2">

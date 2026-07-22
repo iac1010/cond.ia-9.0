@@ -189,6 +189,7 @@ CREATE TABLE IF NOT EXISTS scheduled_maintenances (
   frequency TEXT NOT NULL,
   last_done TIMESTAMP WITH TIME ZONE,
   next_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  time TEXT,
   status TEXT NOT NULL CHECK (status IN ('PENDING', 'DONE', 'OVERDUE')),
   category TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -641,6 +642,9 @@ ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS used_materials JSONB DEFA
 ALTER TABLE IF EXISTS quotes ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]';
 ALTER TABLE IF EXISTS quotes ADD COLUMN IF NOT EXISTS tax_value DECIMAL(10, 2) DEFAULT 0;
 ALTER TABLE IF EXISTS quotes ADD COLUMN IF NOT EXISTS observations TEXT;
+
+-- Scheduled maintenances updates
+ALTER TABLE IF EXISTS scheduled_maintenances ADD COLUMN IF NOT EXISTS time TEXT;
 
 -- Contracts updates
 ALTER TABLE IF EXISTS contracts ADD COLUMN IF NOT EXISTS title TEXT;

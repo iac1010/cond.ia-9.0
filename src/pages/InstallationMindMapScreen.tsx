@@ -5,7 +5,8 @@ import {
   Map, ZoomIn, ZoomOut, Maximize2, RefreshCw, Layout, Smartphone,
   Radio, Cpu, Lightbulb, Shield, Thermometer, Wifi, Link, Info, Eye,
   ArrowLeft, Users, FileText, ChevronRight, ChevronLeft, Activity, Zap, CheckCircle2,
-  Printer, Download, Layers, Sparkles, MessageSquare, AlertCircle, Share2
+  Printer, Download, Layers, Sparkles, MessageSquare, AlertCircle, Share2,
+  Copy, Search, X, Battery, Filter, Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +22,9 @@ export interface MindMapNode {
   details?: string;
   parentId?: string | null;
   connectionDisabled?: boolean;
+  ipAddress?: string;
+  battery?: number;
+  signal?: number;
   x: number;
   y: number;
 }
@@ -199,6 +203,10 @@ export default function InstallationMindMapScreen() {
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [packetSpeed, setPacketSpeed] = useState<'normal' | 'fast' | 'off'>('normal');
 
+  // Canvas search & filter states
+  const [nodeSearchQuery, setNodeSearchQuery] = useState('');
+  const [nodeFilterType, setNodeFilterType] = useState<'all' | 'active' | 'inactive' | 'hub' | 'room' | 'device'>('all');
+
   // Form states for node creator/editor
   const [formLabel, setFormLabel] = useState('');
   const [formType, setFormType] = useState<'hub' | 'room' | 'device' | 'group'>('device');
@@ -210,6 +218,10 @@ export default function InstallationMindMapScreen() {
   const [customType, setCustomType] = useState('');
   const [customProtocol, setCustomProtocol] = useState('');
   const [customDeviceType, setCustomDeviceType] = useState('');
+  const [formIpAddress, setFormIpAddress] = useState('');
+  const [formBattery, setFormBattery] = useState('');
+  const [formSignal, setFormSignal] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Centers the nodes on the viewport container
   const centerMap = (customNodes: MindMapNode[] = nodes) => {
@@ -713,6 +725,9 @@ export default function InstallationMindMapScreen() {
     setFormStatus(node.status || 'active');
     setFormDetails(node.details || '');
     setFormParentId(node.parentId || '');
+    setFormIpAddress(node.ipAddress || '');
+    setFormBattery(node.battery !== undefined ? String(node.battery) : '');
+    setFormSignal(node.signal !== undefined ? String(node.signal) : '');
     setMapViewMode('edit-node');
   };
 
@@ -726,6 +741,9 @@ export default function InstallationMindMapScreen() {
     setCustomDeviceType('');
     setFormStatus('active');
     setFormDetails('');
+    setFormIpAddress('');
+    setFormBattery('');
+    setFormSignal('');
     const defaultParent = selectedNode ? selectedNode.id : (nodes.find(n => n.type === 'hub')?.id || '');
     setFormParentId(defaultParent);
     setMapViewMode('add');
@@ -742,8 +760,83 @@ export default function InstallationMindMapScreen() {
     setCustomDeviceType('');
     setFormStatus('active');
     setFormDetails('');
+    setFormIpAddress('');
+    setFormBattery('');
+    setFormSignal('');
     setFormParentId(parentId);
     setMapViewMode('add');
+  };
+
+  const duplicateNode = (nodeId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const sourceNode = nodes.find(n => n.id === nodeId);
+    if (!sourceNode) return;
+
+    const newNode: MindMapNode = {
+      ...sourceNode,
+      id: 'node-' + Date.now(),
+      label: `${sourceNode.label} (Cópia)`,
+      x: sourceNode.x + 35,
+      y: sourceNode.y + 35
+    };
+
+    setNodes(prev => [...prev, newNode]);
+    setSelectedNode(newNode);
+    toast.success('Ponto duplicado no mapa com sucesso!');
+  };
+
+  const exportMapJson = () => {
+    if (!activeClient || nodes.length === 0) return;
+    const payload = {
+      client: {
+        id: activeClient.id,
+        name: activeClient.name,
+        hubIp: clientHubIp,
+        routerIp: clientRouterIp,
+        notes: clientNotes,
+        checklist
+      },
+      exportedAt: new Date().toISOString(),
+      nodes
+    };
+    const jsonStr = JSON.stringify(payload, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mapa_instalacao_${activeClient.name.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Backup JSON do mapa exportado!');
+  };
+
+  const importMapJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (Array.isArray(parsed.nodes)) {
+          setNodes(parsed.nodes);
+          if (parsed.client) {
+            if (parsed.client.hubIp) setClientHubIp(parsed.client.hubIp);
+            if (parsed.client.routerIp) setClientRouterIp(parsed.client.routerIp);
+            if (parsed.client.notes) setClientNotes(parsed.client.notes);
+            if (parsed.client.checklist) setChecklist(parsed.client.checklist);
+          }
+          toast.success('Mapa de instalação importado com sucesso!');
+          setTimeout(() => centerMap(parsed.nodes), 100);
+        } else {
+          toast.error('Formato JSON de mapa inválido.');
+        }
+      } catch (err) {
+        toast.error('Erro ao ler arquivo JSON.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const toggleNodeConnection = (nodeId: string, e?: React.MouseEvent) => {
@@ -802,6 +895,9 @@ export default function InstallationMindMapScreen() {
       deviceType: finalDeviceType,
       status: formStatus,
       details: formDetails,
+      ipAddress: formIpAddress.trim() || undefined,
+      battery: formBattery !== '' ? Number(formBattery) : undefined,
+      signal: formSignal !== '' ? Number(formSignal) : undefined,
       parentId: formParentId || null,
       connectionDisabled: selectedNode.connectionDisabled
     } : n));
@@ -830,6 +926,9 @@ export default function InstallationMindMapScreen() {
       deviceType: finalDeviceType,
       status: formStatus,
       details: formDetails,
+      ipAddress: formIpAddress.trim() || undefined,
+      battery: formBattery !== '' ? Number(formBattery) : undefined,
+      signal: formSignal !== '' ? Number(formSignal) : undefined,
       parentId: formParentId || null,
       x: 150 + Math.random() * 120,
       y: 100 + Math.random() * 120
@@ -1274,19 +1373,128 @@ export default function InstallationMindMapScreen() {
                       </div>
                     </div>
 
-                    <div className="absolute top-4 right-4 z-20 flex gap-2 print:hidden select-none">
-                      <button
-                        onClick={() => setMapViewMode('templates')}
-                        className="p-2 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-[9px] font-black uppercase flex items-center gap-1 transition-all text-indigo-400 backdrop-blur shadow-xl"
-                      >
-                        <Sparkles size={11} /> Gabaritos IoT
-                      </button>
-                      <button
-                        onClick={openAddNode}
-                        className="p-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[9px] font-black uppercase flex items-center gap-1 transition-all text-emerald-400 backdrop-blur shadow-xl"
-                      >
-                        <Plus size={12} /> Novo Ponto
-                      </button>
+                    <div className="absolute top-4 right-4 z-20 flex flex-col md:flex-row items-end md:items-center gap-2 print:hidden select-none max-w-full flex-wrap justify-end">
+                      {/* SEARCH INPUT ON CANVAS */}
+                      <div className="relative flex items-center bg-black/85 border border-white/10 rounded-xl px-2.5 py-1 backdrop-blur shadow-xl">
+                        <Search size={12} className="text-zinc-400 shrink-0 mr-1.5" />
+                        <input
+                          type="text"
+                          placeholder="Buscar no mapa..."
+                          value={nodeSearchQuery}
+                          onChange={(e) => setNodeSearchQuery(e.target.value)}
+                          className="bg-transparent text-[10px] text-white placeholder-zinc-500 focus:outline-none w-28 sm:w-36"
+                        />
+                        {nodeSearchQuery && (
+                          <button onClick={() => setNodeSearchQuery('')} className="p-0.5 text-zinc-400 hover:text-white">
+                            <X size={10} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* FILTER CATEGORY CHIPS */}
+                      <div className="flex items-center gap-1 bg-black/85 border border-white/10 p-1 rounded-xl backdrop-blur shadow-xl overflow-x-auto">
+                        <button
+                          onClick={() => setNodeFilterType('all')}
+                          className={`p-1 px-2 rounded-lg text-[8px] font-black uppercase transition-all ${
+                            nodeFilterType === 'all'
+                              ? 'bg-white text-black shadow-md'
+                              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          Todos ({nodes.length})
+                        </button>
+                        <button
+                          onClick={() => setNodeFilterType('hub')}
+                          className={`p-1 px-2 rounded-lg text-[8px] font-black uppercase transition-all ${
+                            nodeFilterType === 'hub'
+                              ? 'bg-purple-600 text-white shadow-md'
+                              : 'text-purple-400 hover:bg-purple-500/10'
+                          }`}
+                        >
+                          🎛️ Hubs
+                        </button>
+                        <button
+                          onClick={() => setNodeFilterType('room')}
+                          className={`p-1 px-2 rounded-lg text-[8px] font-black uppercase transition-all ${
+                            nodeFilterType === 'room'
+                              ? 'bg-sky-600 text-white shadow-md'
+                              : 'text-sky-400 hover:bg-sky-500/10'
+                          }`}
+                        >
+                          🏠 Áreas
+                        </button>
+                        <button
+                          onClick={() => setNodeFilterType('device')}
+                          className={`p-1 px-2 rounded-lg text-[8px] font-black uppercase transition-all ${
+                            nodeFilterType === 'device'
+                              ? 'bg-emerald-600 text-white shadow-md'
+                              : 'text-emerald-400 hover:bg-emerald-500/10'
+                          }`}
+                        >
+                          💡 Pontos
+                        </button>
+                        <button
+                          onClick={() => setNodeFilterType('active')}
+                          className={`p-1 px-2 rounded-lg text-[8px] font-black uppercase transition-all ${
+                            nodeFilterType === 'active'
+                              ? 'bg-green-500 text-black shadow-md font-bold'
+                              : 'text-green-400 hover:bg-green-500/10'
+                          }`}
+                        >
+                          🟢 On
+                        </button>
+                        <button
+                          onClick={() => setNodeFilterType('inactive')}
+                          className={`p-1 px-2 rounded-lg text-[8px] font-black uppercase transition-all ${
+                            nodeFilterType === 'inactive'
+                              ? 'bg-rose-600 text-white shadow-md'
+                              : 'text-rose-400 hover:bg-rose-500/10'
+                          }`}
+                        >
+                          🔴 Off
+                        </button>
+                      </div>
+
+                      {/* BACKUP & TEMPLATE BUTTONS */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={exportMapJson}
+                          className="p-2 px-2.5 rounded-xl bg-black/80 hover:bg-white/10 border border-white/10 text-[9px] font-black uppercase flex items-center gap-1 transition-all text-zinc-300 hover:text-white backdrop-blur shadow-xl"
+                          title="Exportar backup completo em arquivo JSON"
+                        >
+                          <Download size={11} className="text-sky-400" /> Exportar JSON
+                        </button>
+
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-2 px-2.5 rounded-xl bg-black/80 hover:bg-white/10 border border-white/10 text-[9px] font-black uppercase flex items-center gap-1 transition-all text-zinc-300 hover:text-white backdrop-blur shadow-xl"
+                          title="Restaurar mapa a partir de arquivo JSON"
+                        >
+                          <Upload size={11} className="text-emerald-400" /> Carregar
+                        </button>
+
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={importMapJson}
+                          accept=".json"
+                          className="hidden"
+                        />
+
+                        <button
+                          onClick={() => setMapViewMode('templates')}
+                          className="p-2 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-[9px] font-black uppercase flex items-center gap-1 transition-all text-indigo-400 backdrop-blur shadow-xl"
+                        >
+                          <Sparkles size={11} /> Gabaritos
+                        </button>
+
+                        <button
+                          onClick={openAddNode}
+                          className="p-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[9px] font-black uppercase flex items-center gap-1 transition-all text-emerald-400 backdrop-blur shadow-xl"
+                        >
+                          <Plus size={12} /> Novo Ponto
+                        </button>
+                      </div>
                     </div>
 
                     {/* INTER-NODE LINK VECTOR CHANNELS */}
@@ -1372,6 +1580,24 @@ export default function InstallationMindMapScreen() {
                           const roomColorClass = ROOM_COLORS[node.type] || ROOM_COLORS.device;
                           const isInactive = node.status === 'inactive';
 
+                          // Search & Filter matching logic
+                          const matchesQuery = !nodeSearchQuery || 
+                            node.label.toLowerCase().includes(nodeSearchQuery.toLowerCase()) ||
+                            (node.details && node.details.toLowerCase().includes(nodeSearchQuery.toLowerCase())) ||
+                            (node.protocol && node.protocol.toLowerCase().includes(nodeSearchQuery.toLowerCase())) ||
+                            (node.ipAddress && node.ipAddress.toLowerCase().includes(nodeSearchQuery.toLowerCase())) ||
+                            node.type.toLowerCase().includes(nodeSearchQuery.toLowerCase());
+
+                          const matchesFilter = nodeFilterType === 'all' ||
+                            (nodeFilterType === 'active' && node.status === 'active') ||
+                            (nodeFilterType === 'inactive' && node.status === 'inactive') ||
+                            (nodeFilterType === 'hub' && node.type === 'hub') ||
+                            (nodeFilterType === 'room' && node.type === 'room') ||
+                            (nodeFilterType === 'device' && node.type === 'device');
+
+                          const isHighlighted = (nodeSearchQuery !== '' || nodeFilterType !== 'all') && matchesQuery && matchesFilter;
+                          const isMuted = (nodeSearchQuery !== '' || nodeFilterType !== 'all') && (!matchesQuery || !matchesFilter);
+
                           return (
                             <div
                               key={node.id}
@@ -1391,11 +1617,13 @@ export default function InstallationMindMapScreen() {
                                 cursor: isDraggingNode === node.id ? 'grabbing' : 'grab',
                                 transition: isDraggingNode === node.id ? 'none' : 'left 0.7s cubic-bezier(0.16, 1, 0.3, 1), top 0.7s cubic-bezier(0.16, 1, 0.3, 1)'
                               }}
-                              className={`p-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-[11px] font-black uppercase shadow-2xl select-none w-auto min-w-[180px] max-w-[320px] min-h-[44px] ${roomColorClass} ${
+                              className={`p-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-[11px] font-black uppercase shadow-2xl select-none w-auto min-w-[180px] max-w-[340px] min-h-[44px] ${roomColorClass} ${
                                 isSelected 
-                                  ? 'ring-4 ring-indigo-500 scale-105 border-white shadow-[0_0_20px_rgba(99,102,241,0.5)]' 
+                                  ? 'ring-4 ring-indigo-500 scale-105 border-white shadow-[0_0_20px_rgba(99,102,241,0.5)] z-10' 
+                                  : isHighlighted
+                                  ? 'ring-2 ring-[#39FF14] border-[#39FF14] scale-105 shadow-[0_0_20px_rgba(57,255,20,0.6)] z-10'
                                   : 'border-white/10 hover:border-white/30'
-                              } ${isInactive ? 'opacity-35 filter grayscale' : ''}`}
+                              } ${isMuted ? 'opacity-20 filter grayscale scale-95' : isInactive ? 'opacity-40 filter grayscale' : ''}`}
                             >
                               {/* Status blink sensor indicator */}
                               {isHub && <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-ping shrink-0" />}
@@ -1414,6 +1642,29 @@ export default function InstallationMindMapScreen() {
                                     {node.details}
                                   </span>
                                 )}
+
+                                {/* Technical badges: IP, Battery, Signal */}
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                  {node.ipAddress && (
+                                    <span className="text-[7.5px] bg-sky-950/80 text-sky-300 border border-sky-500/30 px-1 rounded font-mono lowercase" title={`IP Fixado: ${node.ipAddress}`}>
+                                      🌐 {node.ipAddress}
+                                    </span>
+                                  )}
+                                  {node.battery !== undefined && (
+                                    <span className={`text-[7.5px] px-1 rounded font-mono border flex items-center gap-0.5 ${
+                                      node.battery < 20
+                                        ? 'bg-rose-950/80 text-rose-300 border-rose-500/40 animate-pulse'
+                                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30'
+                                    }`} title={`Nível Bateria: ${node.battery}%`}>
+                                      <Battery size={9} /> {node.battery}%
+                                    </span>
+                                  )}
+                                  {node.signal !== undefined && (
+                                    <span className="text-[7.5px] bg-amber-950/80 text-amber-300 border border-amber-500/30 px-1 rounded font-mono" title={`Sinal RSSI: ${node.signal} dBm`}>
+                                      📶 {node.signal}dBm
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
                               {node.protocol && (
@@ -1447,6 +1698,28 @@ export default function InstallationMindMapScreen() {
                         })}
                       </div>
                     </div>
+
+                    {/* INTERACTIVE FLOATING COLOR LEGEND AT BOTTOM CENTER */}
+                    {!selectedNode && mapViewMode === 'view' && (
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-black/80 border border-white/10 px-3 py-1.5 rounded-2xl flex items-center gap-2.5 backdrop-blur-md shadow-2xl print:hidden max-w-[90vw] overflow-x-auto select-none">
+                        <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider shrink-0">Legenda:</span>
+                        <button onClick={() => setNodeFilterType('hub')} className="flex items-center gap-1 text-[8.5px] font-bold text-purple-300 hover:text-white transition-all shrink-0">
+                          <span className="w-2 h-2 rounded-full bg-purple-500" /> Gateway
+                        </button>
+                        <button onClick={() => setNodeFilterType('room')} className="flex items-center gap-1 text-[8.5px] font-bold text-sky-300 hover:text-white transition-all shrink-0">
+                          <span className="w-2 h-2 rounded-full bg-sky-500" /> Área / Cômodo
+                        </button>
+                        <button onClick={() => setNodeFilterType('device')} className="flex items-center gap-1 text-[8.5px] font-bold text-zinc-300 hover:text-white transition-all shrink-0">
+                          <span className="w-2 h-2 rounded-full bg-zinc-600" /> Equipamento
+                        </button>
+                        <button onClick={() => setNodeFilterType('active')} className="flex items-center gap-1 text-[8.5px] font-bold text-emerald-400 hover:text-white transition-all shrink-0">
+                          <span className="w-2 h-2 rounded-full bg-[#39FF14]" /> Online
+                        </button>
+                        <button onClick={() => setNodeFilterType('inactive')} className="flex items-center gap-1 text-[8.5px] font-bold text-rose-400 hover:text-white transition-all shrink-0">
+                          <span className="w-2 h-2 rounded-full bg-rose-500" /> Offline
+                        </button>
+                      </div>
+                    )}
 
                     {/* SELECT NODE MINIMAL ACTION CARD */}
                     {selectedNode && mapViewMode === 'view' && (
@@ -1497,6 +1770,15 @@ export default function InstallationMindMapScreen() {
                             title={selectedNode.status === 'inactive' ? "Ligar equipamento" : "Desligar equipamento (Offline)"}
                           >
                             {selectedNode.status === 'inactive' ? '💡 Ligar Ponto' : '🔌 Desligar Ponto'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => duplicateNode(selectedNode.id, e)}
+                            className="p-1.5 px-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 text-[9px] font-black uppercase transition-all flex items-center gap-1"
+                            title="Duplicar este ponto com offset no mapa"
+                          >
+                            <Copy size={11} /> Duplicar
                           </button>
 
                           <button
@@ -1822,6 +2104,45 @@ export default function InstallationMindMapScreen() {
                               placeholder="Frequência, IP, canal, marca..."
                               className="w-full bg-black/60 border border-white/10 rounded-xl px-2 py-1 text-xs text-white"
                             />
+                          </div>
+
+                          {/* Technical Telemetry Inputs */}
+                          <div className="p-2.5 bg-black/40 border border-white/5 rounded-xl space-y-2">
+                            <span className="text-[7.5px] font-black uppercase text-indigo-400 block tracking-wider">Telemetria &amp; Conectividade</span>
+                            <div className="space-y-1">
+                              <label className="text-[7px] font-black uppercase text-zinc-400 block">Endereço IP / Host</label>
+                              <input
+                                type="text"
+                                placeholder="Ex: 192.168.1.105"
+                                value={formIpAddress}
+                                onChange={(e) => setFormIpAddress(e.target.value)}
+                                className="w-full bg-zinc-950 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-zinc-600 font-mono"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <label className="text-[7px] font-black uppercase text-zinc-400 block">Bateria (%)</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  placeholder="0 - 100"
+                                  value={formBattery}
+                                  onChange={(e) => setFormBattery(e.target.value)}
+                                  className="w-full bg-zinc-950 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-zinc-600 font-mono"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[7px] font-black uppercase text-zinc-400 block">Sinal (dBm)</label>
+                                <input
+                                  type="number"
+                                  placeholder="-65"
+                                  value={formSignal}
+                                  onChange={(e) => setFormSignal(e.target.value)}
+                                  className="w-full bg-zinc-950 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-zinc-600 font-mono"
+                                />
+                              </div>
+                            </div>
                           </div>
 
                           <div className="space-y-1">

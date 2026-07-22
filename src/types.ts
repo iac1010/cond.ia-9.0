@@ -157,6 +157,7 @@ export type CompanyData = {
   email: string;
   address: string;
   website?: string;
+  businessHours?: string;
 };
 
 export type Product = {
@@ -257,6 +258,7 @@ export type ScheduledMaintenance = {
   frequency: 'Mensal' | 'Trimestral' | 'Semestral' | 'Anual' | 'Atividade Única';
   lastDone?: string;
   nextDate: string;
+  time?: string;
   status: 'PENDING' | 'DONE' | 'OVERDUE';
   category: string;
 };

@@ -34,6 +34,9 @@ export const ShoppingListTemplate: React.FC<ShoppingListTemplateProps> = ({
             <h2 className="text-xl font-black text-slate-900 uppercase">{companyData.name}</h2>
             <p className="text-sm text-slate-500 font-medium">{companyData.document}</p>
             <p className="text-sm text-slate-500 font-medium">{companyData.phone}</p>
+            {companyData.businessHours && (
+              <p className="text-xs text-slate-400 font-medium">{companyData.businessHours}</p>
+            )}
           </div>
         )}
       </div>

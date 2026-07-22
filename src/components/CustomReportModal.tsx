@@ -557,6 +557,7 @@ export default function CustomReportModal({ isOpen, onClose, ticket, client }: C
                         <div className="space-y-0.5 text-zinc-500 mt-1" style={{ fontSize: '9px', fontWeight: 600 }}>
                           <p>CNPJ: {companyData?.document || '---'}</p>
                           <p>{companyData?.email || 'contato@iacompany.com'} • {companyData?.phone || '(00) 0000-0000'}</p>
+                          <p>Atendimento: {companyData?.businessHours || 'Seg. a Sex. das 08h às 18h'}</p>
                         </div>
                       </div>
                     </div>

@@ -27,6 +27,7 @@ export default function Operational() {
     frequency: 'Mensal' as const,
     lastDone: '',
     nextDate: '',
+    time: '',
     status: 'PENDING' as const,
     category: ''
   });
@@ -41,8 +42,12 @@ export default function Operational() {
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
+    const actionParam = params.get('action');
     if (tabParam === 'MAINTENANCE' || tabParam === 'STAFF' || tabParam === 'KEYS' || tabParam === 'IOT') {
       return tabParam as Tab;
+    }
+    if (actionParam === 'new' || actionParam === 'add_maintenance' || actionParam === 'new_maintenance') {
+      return 'MAINTENANCE';
     }
     return 'STAFF';
   });
@@ -50,8 +55,27 @@ export default function Operational() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
+    const actionParam = params.get('action');
+
     if (tabParam === 'MAINTENANCE' || tabParam === 'STAFF' || tabParam === 'KEYS' || tabParam === 'IOT') {
       setActiveTab(tabParam as Tab);
+    }
+
+    if (actionParam === 'new' || actionParam === 'add_maintenance' || actionParam === 'new_maintenance') {
+      setActiveTab('MAINTENANCE');
+      setMaintenanceForm({
+        clientId: '',
+        standardId: '',
+        item: '',
+        frequency: 'Mensal',
+        lastDone: '',
+        nextDate: '',
+        time: '',
+        status: 'PENDING',
+        category: ''
+      });
+      setEditingId(null);
+      setIsModalOpen(true);
     }
   }, [location.search]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -176,10 +200,10 @@ export default function Operational() {
       }
     } else if (activeTab === 'MAINTENANCE') {
       if (item) {
-        setMaintenanceForm({ ...item });
+        setMaintenanceForm({ ...item, time: item.time || '' });
         setEditingId(item.id);
       } else {
-        setMaintenanceForm({ clientId: '', standardId: '', item: '', frequency: 'Mensal', lastDone: '', nextDate: '', status: 'PENDING', category: '' });
+        setMaintenanceForm({ clientId: '', standardId: '', item: '', frequency: 'Mensal', lastDone: '', nextDate: '', time: '', status: 'PENDING', category: '' });
         setEditingId(null);
       }
     }
@@ -364,10 +388,10 @@ export default function Operational() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => openModal()}
-          className="bg-white text-black px-8 py-4 flex items-center justify-center gap-3 rounded-xl font-bold transition-all group"
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/40 text-white px-6 py-3 flex items-center justify-center gap-2 rounded-xl font-black text-xs uppercase tracking-wider transition-all group shadow-lg cursor-pointer"
         >
-          <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform" /> 
-          Novo {activeTab === 'STAFF' ? 'Funcionário' : activeTab === 'KEYS' ? 'Chave' : 'Manutenção'}
+          <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" /> 
+          {activeTab === 'STAFF' ? 'NOVO FUNCIONÁRIO' : activeTab === 'KEYS' ? 'NOVA CHAVE' : 'CRIAR MANUTENÇÃO'}
         </motion.button>
       )}
         </div>
@@ -679,6 +703,7 @@ export default function Operational() {
                       <p className="text-[10px] uppercase font-black tracking-widest text-white/30 mb-1">Próxima Data</p>
                       <p className={`text-sm font-medium ${isOverdue ? 'text-red-400 font-bold' : alert.isNearing ? 'text-amber-400 font-bold' : 'text-white/80'}`}>
                         {safeFormatDate(m.nextDate, { day: '2-digit', month: 'long' })}
+                        {m.time ? ` às ${m.time}` : ''}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity justify-end">
@@ -966,6 +991,15 @@ export default function Operational() {
                   type="date"
                   value={maintenanceForm.nextDate}
                   onChange={e => setMaintenanceForm({...maintenanceForm, nextDate: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-2">Horário</label>
+                <input 
+                  type="time"
+                  value={maintenanceForm.time || ''}
+                  onChange={e => setMaintenanceForm({...maintenanceForm, time: e.target.value})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30 transition-all text-white"
                 />
               </div>
