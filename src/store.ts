@@ -3078,42 +3078,86 @@ export const useStore = create<AppState>()(
         if (!isSupabaseConfigured) return;
 
         try {
-          const clients = get().clients || [];
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          let finalClientId = maintenance.clientId;
-          if (!finalClientId || !uuidRegex.test(finalClientId)) {
-            const matchedClient = clients.find(c => c.id === finalClientId);
+          const clients = get().clients || [];
+          let finalClientId: string | null = null;
+
+          // Check if provided clientId is valid
+          if (maintenance.clientId && uuidRegex.test(maintenance.clientId)) {
+            finalClientId = maintenance.clientId;
+          } else {
+            const matchedClient = clients.find(c => c.id === maintenance.clientId || c.name === maintenance.clientId);
             if (matchedClient && uuidRegex.test(matchedClient.id)) {
               finalClientId = matchedClient.id;
-            } else if (clients[0]?.id && uuidRegex.test(clients[0].id)) {
-              finalClientId = clients[0].id;
             } else {
-              finalClientId = '';
+              const firstValid = clients.find(c => uuidRegex.test(c.id));
+              if (firstValid) {
+                finalClientId = firstValid.id;
+              }
             }
           }
 
-          if (!finalClientId || !uuidRegex.test(finalClientId)) {
+          // If no client UUID found in local state, fetch from Supabase
+          if (!finalClientId) {
+            const { data: dbClients } = await supabase.from('clients').select('id').limit(10);
+            if (dbClients && dbClients.length > 0) {
+              finalClientId = dbClients[0].id;
+            } else {
+              // Create a default client row in Supabase if no clients exist
+              const newClientId = uuidv4();
+              const { error: clientInsertErr } = await supabase.from('clients').insert([{
+                id: newClientId,
+                name: 'Condomínio / Cliente Geral',
+                contact_person: 'Geral',
+                email: 'contato@condominio.com'
+              }]);
+              if (!clientInsertErr) {
+                finalClientId = newClientId;
+              }
+            }
+          }
+
+          if (!finalClientId) {
             console.warn('Cannot add scheduled maintenance to Supabase without a valid client UUID.');
+            toast.error('Crie pelo menos um Cliente/Condomínio antes de agendar manutenções no Supabase.');
             return;
           }
+
+          // Normalize status
+          let normalizedStatus = (maintenance.status || 'PENDING').toUpperCase();
+          if (!['PENDING', 'DONE', 'OVERDUE'].includes(normalizedStatus)) {
+            if (normalizedStatus.includes('CONCLU') || normalizedStatus.includes('DONE')) normalizedStatus = 'DONE';
+            else if (normalizedStatus.includes('ATRAS') || normalizedStatus.includes('OVERDUE')) normalizedStatus = 'OVERDUE';
+            else normalizedStatus = 'PENDING';
+          }
+
+          // Normalize dates
+          const formattedNextDate = (maintenance.nextDate && maintenance.nextDate.trim() !== '') 
+            ? maintenance.nextDate 
+            : new Date().toISOString().split('T')[0];
+
+          const formattedLastDone = (maintenance.lastDone && maintenance.lastDone.trim() !== '') 
+            ? maintenance.lastDone 
+            : null;
 
           const { error } = await supabase.from('scheduled_maintenances').insert([{
             id,
             client_id: finalClientId,
             standard_id: maintenance.standardId || 'custom',
-            item: maintenance.item,
-            frequency: maintenance.frequency,
-            last_done: maintenance.lastDone ? maintenance.lastDone : null,
-            next_date: maintenance.nextDate || new Date().toISOString().split('T')[0],
-            time: maintenance.time || null,
-            status: maintenance.status || 'PENDING',
+            item: maintenance.item || 'Manutenção Preventiva',
+            frequency: maintenance.frequency || 'Mensal',
+            last_done: formattedLastDone,
+            next_date: formattedNextDate,
+            time: maintenance.time && maintenance.time.trim() !== '' ? maintenance.time : null,
+            status: normalizedStatus,
             category: maintenance.category || 'Geral'
           }]);
+
           if (error) {
             console.error('Erro Supabase addScheduledMaintenance:', error);
             toast.error(`Erro ao salvar manutenção no Supabase: ${error.message}`);
           } else {
-            toast.success('Manutenção agendada salva!');
+            toast.success('Manutenção agendada salva com sucesso!');
           }
         } catch (e: any) { 
           console.error(e);
@@ -3129,20 +3173,20 @@ export const useStore = create<AppState>()(
 
         try {
           const updateData: any = {};
-          const clients = get().clients || [];
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          const clients = get().clients || [];
           
           if (updated.clientId !== undefined) {
-            let finalClientId = updated.clientId;
-            if (!finalClientId || !uuidRegex.test(finalClientId)) {
-              const matchedClient = clients.find(c => c.id === finalClientId);
+            let finalClientId: string | null = null;
+            if (updated.clientId && uuidRegex.test(updated.clientId)) {
+              finalClientId = updated.clientId;
+            } else {
+              const matchedClient = clients.find(c => c.id === updated.clientId || c.name === updated.clientId);
               if (matchedClient && uuidRegex.test(matchedClient.id)) {
                 finalClientId = matchedClient.id;
-              } else {
-                finalClientId = clients[0]?.id || '';
               }
             }
-            if (finalClientId && uuidRegex.test(finalClientId)) {
+            if (finalClientId) {
               updateData.client_id = finalClientId;
             }
           }
@@ -3150,10 +3194,18 @@ export const useStore = create<AppState>()(
           if (updated.standardId !== undefined) updateData.standard_id = updated.standardId;
           if (updated.item !== undefined) updateData.item = updated.item;
           if (updated.frequency !== undefined) updateData.frequency = updated.frequency;
-          if (updated.lastDone !== undefined) updateData.last_done = updated.lastDone ? updated.lastDone : null;
-          if (updated.nextDate !== undefined) updateData.next_date = updated.nextDate ? updated.nextDate : undefined;
-          if (updated.time !== undefined) updateData.time = updated.time ? updated.time : null;
-          if (updated.status !== undefined) updateData.status = updated.status;
+          if (updated.lastDone !== undefined) updateData.last_done = updated.lastDone && updated.lastDone.trim() !== '' ? updated.lastDone : null;
+          if (updated.nextDate !== undefined) updateData.next_date = updated.nextDate && updated.nextDate.trim() !== '' ? updated.nextDate : new Date().toISOString().split('T')[0];
+          if (updated.time !== undefined) updateData.time = updated.time && updated.time.trim() !== '' ? updated.time : null;
+          if (updated.status !== undefined) {
+            let normalizedStatus = (updated.status || 'PENDING').toUpperCase();
+            if (!['PENDING', 'DONE', 'OVERDUE'].includes(normalizedStatus)) {
+              if (normalizedStatus.includes('CONCLU') || normalizedStatus.includes('DONE')) normalizedStatus = 'DONE';
+              else if (normalizedStatus.includes('ATRAS') || normalizedStatus.includes('OVERDUE')) normalizedStatus = 'OVERDUE';
+              else normalizedStatus = 'PENDING';
+            }
+            updateData.status = normalizedStatus;
+          }
           if (updated.category !== undefined) updateData.category = updated.category;
 
           const { error } = await supabase.from('scheduled_maintenances').update(updateData).eq('id', id);
@@ -3161,7 +3213,7 @@ export const useStore = create<AppState>()(
             console.error('Erro Supabase updateScheduledMaintenance:', error);
             toast.error(`Erro ao atualizar manutenção: ${error.message}`);
           } else {
-            toast.success('Manutenção atualizada!');
+            toast.success('Manutenção atualizada no Supabase!');
           }
         } catch (e: any) { 
           console.error(e);
