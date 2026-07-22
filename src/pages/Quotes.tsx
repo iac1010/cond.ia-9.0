@@ -2,7 +2,11 @@ import React, { useState, useRef, useMemo } from 'react';
 import { useStore } from '../store';
 import { QuoteItem, Quote, QuoteInstallment } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Plus, Trash2, Save, FileSpreadsheet, CheckCircle, Clock, XCircle, FileText, Download, Eye, Send, Printer, Wrench, Share2, Mail, MapPin } from 'lucide-react';
+import { 
+  Upload, Plus, Trash2, Save, FileSpreadsheet, CheckCircle, Clock, XCircle, 
+  FileText, Download, Eye, Send, Printer, Wrench, Share2, Mail, MapPin, Copy,
+  ChevronDown, ChevronUp, Building, Search, Filter, Layers, UserCheck, RefreshCw
+} from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
@@ -55,9 +59,122 @@ export default function Quotes() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [quoteToPrint, setQuoteToPrint] = useState<Quote | null>(null);
 
-  const approvedQuotes = quotes.filter(q => q.status === 'APPROVED');
-  const pendingQuotes = quotes.filter(q => q.status === 'DRAFT' || q.status === 'SENT');
-  const rejectedQuotes = quotes.filter(q => q.status === 'REJECTED');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
+
+  const approvedQuotes = useMemo(() => quotes.filter(q => q.status === 'APPROVED'), [quotes]);
+  const pendingQuotes = useMemo(() => quotes.filter(q => q.status === 'DRAFT' || q.status === 'SENT'), [quotes]);
+  const rejectedQuotes = useMemo(() => quotes.filter(q => q.status === 'REJECTED'), [quotes]);
+
+  const totalValueAll = useMemo(() => quotes.reduce((acc, q) => acc + (q.totalValue || 0), 0), [quotes]);
+  const totalValueApproved = useMemo(() => approvedQuotes.reduce((acc, q) => acc + (q.totalValue || 0), 0), [approvedQuotes]);
+  const totalValuePending = useMemo(() => pendingQuotes.reduce((acc, q) => acc + (q.totalValue || 0), 0), [pendingQuotes]);
+
+  // Group quotes by client
+  const groupedQuotes = useMemo(() => {
+    const qText = searchQuery.toLowerCase().trim();
+
+    // Filter quotes first by status and search text
+    const filtered = quotes.filter(quote => {
+      const client = clients.find(c => c.id === quote.clientId);
+      const clientName = client?.name?.toLowerCase() || '';
+      const quoteId = quote.id.toLowerCase();
+      const obs = (quote.observations || '').toLowerCase();
+      const itemMatch = (quote.items || []).some(item => item.description.toLowerCase().includes(qText));
+
+      const matchesSearch = !qText || clientName.includes(qText) || quoteId.includes(qText) || obs.includes(qText) || itemMatch;
+      const matchesStatus = statusFilter === 'ALL' || quote.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+
+    // Group by clientId
+    const map = new Map<string, {
+      clientId: string;
+      clientName: string;
+      clientEmail?: string;
+      clientPhone?: string;
+      clientDocument?: string;
+      clientAddress?: string;
+      quotes: Quote[];
+      totalValue: number;
+      approvedValue: number;
+      approvedCount: number;
+      pendingCount: number;
+      draftCount: number;
+      rejectedCount: number;
+    }>();
+
+    filtered.forEach(quote => {
+      const cid = quote.clientId || 'unregistered';
+      const client = clients.find(c => c.id === cid);
+
+      if (!map.has(cid)) {
+        map.set(cid, {
+          clientId: cid,
+          clientName: client?.name || 'Cliente Geral / Não Identificado',
+          clientEmail: client?.email,
+          clientPhone: client?.phone,
+          clientDocument: client?.document,
+          clientAddress: client?.address,
+          quotes: [],
+          totalValue: 0,
+          approvedValue: 0,
+          approvedCount: 0,
+          pendingCount: 0,
+          draftCount: 0,
+          rejectedCount: 0,
+        });
+      }
+
+      const group = map.get(cid)!;
+      group.quotes.push(quote);
+      group.totalValue += quote.totalValue || 0;
+
+      if (quote.status === 'APPROVED') {
+        group.approvedCount += 1;
+        group.approvedValue += quote.totalValue || 0;
+      } else if (quote.status === 'SENT' || quote.status === 'DRAFT') {
+        group.pendingCount += 1;
+      } else if (quote.status === 'REJECTED') {
+        group.rejectedCount += 1;
+      }
+    });
+
+    const list = Array.from(map.values());
+    list.forEach(g => {
+      g.quotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    });
+
+    // Sort client groups by total quote value descending
+    list.sort((a, b) => b.totalValue - a.totalValue);
+
+    return list;
+  }, [quotes, clients, searchQuery, statusFilter]);
+
+  const toggleClientExpand = (cid: string) => {
+    setExpandedClients(prev => ({
+      ...prev,
+      [cid]: prev[cid] === undefined ? false : !prev[cid]
+    }));
+  };
+
+  const expandAllClients = () => {
+    const newMap: Record<string, boolean> = {};
+    groupedQuotes.forEach(g => {
+      newMap[g.clientId] = true;
+    });
+    setExpandedClients(newMap);
+  };
+
+  const collapseAllClients = () => {
+    const newMap: Record<string, boolean> = {};
+    groupedQuotes.forEach(g => {
+      newMap[g.clientId] = false;
+    });
+    setExpandedClients(newMap);
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -250,6 +367,32 @@ export default function Quotes() {
       });
       toast.success('Orçamento aprovado! Receita gerada no Financeiro.');
     }
+  };
+
+  const handleCloneQuote = (quoteToClone: Quote) => {
+    const clonedItems: QuoteItem[] = (quoteToClone.items || []).map(item => ({
+      ...item,
+      id: uuidv4()
+    }));
+
+    const clonedInstallments: QuoteInstallment[] = (quoteToClone.installments || []).map(inst => ({
+      ...inst,
+      id: uuidv4()
+    }));
+
+    const clonedQuoteData: Omit<Quote, 'id'> = {
+      clientId: quoteToClone.clientId,
+      date: new Date().toISOString(),
+      items: clonedItems,
+      installments: clonedInstallments,
+      taxValue: quoteToClone.taxValue || 0,
+      totalValue: quoteToClone.totalValue || 0,
+      status: 'DRAFT',
+      observations: quoteToClone.observations ? `${quoteToClone.observations} (Cópia)` : 'Cópia de orçamento',
+    };
+
+    addQuote(clonedQuoteData);
+    toast.success('Orçamento clonado como Rascunho com sucesso! 📋');
   };
 
   const handleDownloadPdf = async (quote: Quote) => {
@@ -645,171 +788,361 @@ export default function Quotes() {
               </header>
 
               {/* Dashboard Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <GlassPanel className="p-6 flex items-center justify-between">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <GlassPanel className="p-5 flex items-center justify-between border-white/10 hover:border-white/20 transition-all">
                   <div>
-                    <h3 className="text-white/50 font-bold uppercase tracking-widest text-xs mb-2">Total de Orçamentos</h3>
-                    <span className="text-4xl font-black text-white drop-shadow-lg">{quotes.length}</span>
+                    <h3 className="text-white/40 font-bold uppercase tracking-widest text-[10px] mb-1">Total de Orçamentos</h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black text-white">{quotes.length}</span>
+                      <span className="text-xs text-white/50 font-mono">
+                        ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalValueAll)})
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-                    <FileText className="w-8 h-8 text-white/70" />
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-2xl">
+                    <FileText className="w-6 h-6 text-white/70" />
                   </div>
                 </GlassPanel>
-                
-                <GlassPanel className="p-6 flex items-center justify-between">
+
+                <GlassPanel className="p-5 flex items-center justify-between border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/30 transition-all">
                   <div>
-                    <h3 className="text-white/50 font-bold uppercase tracking-widest text-xs mb-2">Aprovados</h3>
-                    <span className="text-4xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{approvedQuotes.length}</span>
+                    <h3 className="text-emerald-400/70 font-bold uppercase tracking-widest text-[10px] mb-1">Aprovados</h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.3)]">{approvedQuotes.length}</span>
+                      <span className="text-xs text-emerald-400/60 font-mono">
+                        ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalValueApproved)})
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-4 bg-white/10 border border-white/20 rounded-2xl">
-                    <CheckCircle className="w-8 h-8 text-white" />
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                    <CheckCircle className="w-6 h-6 text-emerald-400" />
                   </div>
                 </GlassPanel>
-                
-                <GlassPanel className="p-6 flex items-center justify-between">
+
+                <GlassPanel className="p-5 flex items-center justify-between border-amber-500/20 bg-amber-500/5 hover:border-amber-500/30 transition-all">
                   <div>
-                    <h3 className="text-white/50 font-bold uppercase tracking-widest text-xs mb-2">Aguardando</h3>
-                    <span className="text-4xl font-black text-orange-400 drop-shadow-[0_0_10px_rgba(251,146,60,0.5)]">{pendingQuotes.length}</span>
+                    <h3 className="text-amber-400/70 font-bold uppercase tracking-widest text-[10px] mb-1">Em Negociação</h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]">{pendingQuotes.length}</span>
+                      <span className="text-xs text-amber-400/60 font-mono">
+                        ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalValuePending)})
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
-                    <Clock className="w-8 h-8 text-orange-400" />
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                    <Clock className="w-6 h-6 text-amber-400" />
+                  </div>
+                </GlassPanel>
+
+                <GlassPanel className="p-5 flex items-center justify-between border-red-500/20 bg-red-500/5 hover:border-red-500/30 transition-all">
+                  <div>
+                    <h3 className="text-red-400/70 font-bold uppercase tracking-widest text-[10px] mb-1">Rejeitados</h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black text-red-400">{rejectedQuotes.length}</span>
+                      <span className="text-xs text-red-400/50 font-mono">recusados</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                    <XCircle className="w-6 h-6 text-red-400" />
                   </div>
                 </GlassPanel>
               </div>
 
-              {/* Quotes List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {quotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(quote => {
-                  const client = clients.find(c => c.id === quote.clientId);
-                  
-                  const statusColors = {
-                    DRAFT: 'bg-white/10 text-white/60 border-white/20',
-                    SENT: 'bg-red-500/10 text-red-300 border-red-500/20',
-                    APPROVED: 'bg-white/20 text-white border-white/30',
-                    REJECTED: 'bg-red-500/20 text-red-300 border-red-500/30'
-                  };
+              {/* Search, Status Filters & Accordion Toggle Bar */}
+              <div className="flex flex-col md:flex-row gap-4 mb-8 justify-between items-stretch md:items-center bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-lg">
+                {/* Search input */}
+                <div className="relative flex-1 min-w-[240px]">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                  <input 
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Pesquisar por cliente, condomínio, código..."
+                    className="w-full bg-white/5 border border-white/10 focus:border-red-500/50 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-all font-medium"
+                  />
+                </div>
+
+                {/* Status Filter Tabs */}
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                  <button 
+                    onClick={() => setStatusFilter('ALL')}
+                    className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${statusFilter === 'ALL' ? 'bg-white/20 text-white border border-white/30 shadow' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'}`}
+                  >
+                    Todos ({quotes.length})
+                  </button>
+                  <button 
+                    onClick={() => setStatusFilter('APPROVED')}
+                    className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${statusFilter === 'APPROVED' ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 shadow' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'}`}
+                  >
+                    Aprovados ({approvedQuotes.length})
+                  </button>
+                  <button 
+                    onClick={() => setStatusFilter('SENT')}
+                    className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${statusFilter === 'SENT' ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'}`}
+                  >
+                    Enviados ({quotes.filter(q => q.status === 'SENT').length})
+                  </button>
+                  <button 
+                    onClick={() => setStatusFilter('DRAFT')}
+                    className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${statusFilter === 'DRAFT' ? 'bg-white/20 text-white border border-white/30 shadow' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'}`}
+                  >
+                    Rascunhos ({quotes.filter(q => q.status === 'DRAFT').length})
+                  </button>
+                  <button 
+                    onClick={() => setStatusFilter('REJECTED')}
+                    className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${statusFilter === 'REJECTED' ? 'bg-red-500/30 text-red-300 border border-red-500/40 shadow' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'}`}
+                  >
+                    Rejeitados ({rejectedQuotes.length})
+                  </button>
+                </div>
+
+                {/* Accordion expand/collapse buttons */}
+                <div className="flex items-center gap-2 border-t md:border-t-0 border-white/10 pt-3 md:pt-0">
+                  <button
+                    onClick={expandAllClients}
+                    className="text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-all"
+                  >
+                    Expandir Todos
+                  </button>
+                  <button
+                    onClick={collapseAllClients}
+                    className="text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-all"
+                  >
+                    Recolher
+                  </button>
+                </div>
+              </div>
+
+              {/* Client Grouped List */}
+              <div className="space-y-6">
+                {groupedQuotes.map((group) => {
+                  const isExpanded = expandedClients[group.clientId] !== false; // default expanded
 
                   return (
-                    <GlassPanel
-                      key={quote.id}
-                      className="p-6 flex flex-col justify-between min-h-[240px] group transition-all hover:bg-white/15"
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-4">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[quote.status]}`}>
-                            {quote.status === 'DRAFT' ? 'Rascunho' :
-                             quote.status === 'SENT' ? 'Enviado' :
-                             quote.status === 'APPROVED' ? 'Aprovado' : 'Rejeitado'}
-                          </span>
-                          <span className="text-xs text-white/40 font-mono">
-                            {safeFormatDate(quote.date)}
-                          </span>
-                        </div>
-                        <h3 className="text-xl font-bold text-white mb-1 line-clamp-1" title={client?.name || 'Cliente Desconhecido'}>
-                          {client?.name || 'Cliente Desconhecido'}
-                        </h3>
-                        <p className="text-xs text-white/40 mb-4 font-mono">#{quote.id.substring(0, 8)}</p>
-                        <p className="text-3xl font-black text-white tracking-tighter drop-shadow-md">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quote.totalValue)}
-                        </p>
-                      </div>
+                    <GlassPanel key={group.clientId} className="p-6 overflow-hidden border-white/15 hover:border-white/25 transition-all">
+                      {/* Client Header / Accordion Toggle */}
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={() => toggleClientExpand(group.clientId)}>
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500/20 to-red-900/30 border border-red-500/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(220,38,38,0.2)]">
+                            <Building className="w-6 h-6 text-red-400" />
+                          </div>
 
-                      <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-                        <select 
-                          value={quote.status}
-                          onChange={(e) => handleStatusChange(quote, e.target.value as Quote['status'])}
-                          className="text-xs bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 outline-none focus:border-red-500/50 transition-colors font-bold uppercase tracking-wider"
-                        >
-                          <option value="DRAFT" className="bg-[#0f0f11]">Rascunho</option>
-                          <option value="SENT" className="bg-[#0f0f11]">Enviado</option>
-                          <option value="APPROVED" className="bg-[#0f0f11]">Aprovado</option>
-                          <option value="REJECTED" className="bg-[#0f0f11]">Rejeitado</option>
-                        </select>
-                        
-                        <div className="flex flex-wrap gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity justify-end">
-                          <button 
+                          <div>
+                            <div className="flex items-center gap-3">
+                              <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
+                                {group.clientName}
+                              </h2>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleClientExpand(group.clientId);
+                                }}
+                                className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-all"
+                              >
+                                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                              </button>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/40 mt-1 font-mono">
+                              {group.clientDocument && <span>CNPJ/CPF: {group.clientDocument}</span>}
+                              {group.clientPhone && <span>Tel: {group.clientPhone}</span>}
+                              {group.clientAddress && <span className="line-clamp-1">{group.clientAddress}</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Group Stats & Add Quote Button */}
+                        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-white/10 pt-3 md:pt-0">
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-bold font-mono">
+                              {group.quotes.length} {group.quotes.length === 1 ? 'Orçamento' : 'Orçamentos'}
+                            </span>
+                            <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold font-mono">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.totalValue)}
+                            </span>
+                          </div>
+
+                          <button
                             onClick={() => {
-                              setEditingQuote(quote);
-                              setClientId(quote.clientId);
-                              setItems(quote.items);
-                              setTaxValue(quote.taxValue || 0);
-                              setInstallments(quote.installments || []);
-                              setObservations(quote.observations || '');
+                              setClientId(group.clientId);
+                              setItems([]);
+                              setInstallments([]);
+                              setTaxValue(0);
+                              setObservations('');
+                              setEditingQuote(null);
                               setIsCreating(true);
                             }}
-                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                            title="Editar"
+                            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
                           >
-                            <Wrench className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => setViewingQuote(quote)}
-                            className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                            title="Visualizar"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handlePrintQuote(quote)}
-                            className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                            title="Imprimir"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDownloadPdf(quote)}
-                            disabled={isGenerating}
-                            className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                            title="Baixar PDF"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDownloadWord(quote)}
-                            disabled={isGenerating}
-                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                            title="Baixar Word"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleSharePdf(quote)}
-                            disabled={isGenerating}
-                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                            title="Compartilhar"
-                          >
-                            <Share2 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setConfirmModal({
-                                isOpen: true,
-                                title: 'Excluir Orçamento',
-                                message: 'Tem certeza que deseja excluir este orçamento?',
-                                onConfirm: () => {
-                                  deleteQuote(quote.id);
-                                  toast.success('Orçamento excluído com sucesso!');
-                                }
-                              });
-                            }}
-                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
+                            <Plus className="w-4 h-4 text-red-400" /> Novo p/ Este Cliente
                           </button>
                         </div>
                       </div>
+
+                      {/* Accordion Quotes Grid */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.25 }}
+                            className="mt-6 pt-6 border-t border-white/10"
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                              {group.quotes.map((quote) => {
+                                const statusColors = {
+                                  DRAFT: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30',
+                                  SENT: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                                  APPROVED: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                                  REJECTED: 'bg-red-500/20 text-red-300 border-red-500/30'
+                                };
+
+                                const firstItemDesc = quote.items && quote.items.length > 0 ? quote.items[0].description : 'Sem itens';
+
+                                return (
+                                  <div
+                                    key={quote.id}
+                                    className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 rounded-2xl p-5 transition-all shadow-lg flex flex-col justify-between min-h-[220px] group relative"
+                                  >
+                                    <div>
+                                      {/* Top info */}
+                                      <div className="flex justify-between items-center mb-3">
+                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[quote.status]}`}>
+                                          {quote.status === 'DRAFT' ? 'Rascunho' :
+                                           quote.status === 'SENT' ? 'Enviado' :
+                                           quote.status === 'APPROVED' ? 'Aprovado' : 'Rejeitado'}
+                                        </span>
+                                        <span className="text-[11px] text-white/40 font-mono">
+                                          {safeFormatDate(quote.date)}
+                                        </span>
+                                      </div>
+
+                                      {/* Quote Code & Items summary */}
+                                      <div className="mb-3">
+                                        <span className="text-xs text-white/40 font-mono block">#{quote.id.substring(0, 8).toUpperCase()}</span>
+                                        <p className="text-2xl font-black text-white tracking-tight mt-1">
+                                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quote.totalValue)}
+                                        </p>
+                                        <p className="text-xs text-white/60 mt-2 line-clamp-1 italic">
+                                          {quote.items?.length || 0} {quote.items?.length === 1 ? 'item' : 'itens'}: {firstItemDesc}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Controls Footer */}
+                                    <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 mt-4">
+                                      <select 
+                                        value={quote.status}
+                                        onChange={(e) => handleStatusChange(quote, e.target.value as Quote['status'])}
+                                        className="text-[11px] bg-white/10 border border-white/10 text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-red-500/50 transition-colors font-bold uppercase tracking-wider"
+                                      >
+                                        <option value="DRAFT" className="bg-[#0f0f11]">Rascunho</option>
+                                        <option value="SENT" className="bg-[#0f0f11]">Enviado</option>
+                                        <option value="APPROVED" className="bg-[#0f0f11]">Aprovado</option>
+                                        <option value="REJECTED" className="bg-[#0f0f11]">Rejeitado</option>
+                                      </select>
+                                      
+                                      <div className="flex items-center gap-1">
+                                        <button 
+                                          onClick={() => {
+                                            setEditingQuote(quote);
+                                            setClientId(quote.clientId);
+                                            setItems(quote.items);
+                                            setTaxValue(quote.taxValue || 0);
+                                            setInstallments(quote.installments || []);
+                                            setObservations(quote.observations || '');
+                                            setIsCreating(true);
+                                          }}
+                                          className="p-1.5 text-white/50 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                          title="Editar"
+                                        >
+                                          <Wrench className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                          onClick={() => setViewingQuote(quote)}
+                                          className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                          title="Visualizar"
+                                        >
+                                          <Eye className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                          onClick={() => handlePrintQuote(quote)}
+                                          className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                          title="Imprimir"
+                                        >
+                                          <Printer className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDownloadPdf(quote)}
+                                          disabled={isGenerating}
+                                          className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                          title="Baixar PDF"
+                                        >
+                                          <Download className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDownloadWord(quote)}
+                                          disabled={isGenerating}
+                                          className="p-1.5 text-white/50 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                          title="Baixar Word"
+                                        >
+                                          <FileText className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleCloneQuote(quote)}
+                                          className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                          title="Clonar Orçamento"
+                                        >
+                                          <Copy className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleSharePdf(quote)}
+                                          disabled={isGenerating}
+                                          className="p-1.5 text-white/50 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                          title="Compartilhar"
+                                        >
+                                          <Share2 className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                          onClick={() => {
+                                            setConfirmModal({
+                                              isOpen: true,
+                                              title: 'Excluir Orçamento',
+                                              message: 'Tem certeza que deseja excluir este orçamento?',
+                                              onConfirm: () => {
+                                                deleteQuote(quote.id);
+                                                toast.success('Orçamento excluído com sucesso!');
+                                              }
+                                            });
+                                          }}
+                                          className="p-1.5 text-white/50 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                          title="Excluir"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </GlassPanel>
                   );
                 })}
-                {quotes.length === 0 && (
-                  <div className="col-span-full py-24 text-center">
+
+                {groupedQuotes.length === 0 && (
+                  <div className="py-24 text-center">
                     <GlassPanel className="inline-flex flex-col items-center justify-center p-12 border-dashed border-white/20">
                       <div className="inline-flex items-center justify-center w-20 h-20 bg-white/5 rounded-full mb-6 border border-white/10">
                         <FileText className="w-10 h-10 text-white/30" />
                       </div>
                       <h3 className="text-2xl font-light text-white/70">Nenhum orçamento encontrado</h3>
-                      <p className="text-white/40 mt-2">Crie um novo orçamento para começar.</p>
+                      <p className="text-white/40 mt-2">Tente ajustar a busca ou filtro de status.</p>
                     </GlassPanel>
                   </div>
                 )}
@@ -1245,6 +1578,15 @@ export default function Quotes() {
                 className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-red-500/30 transition-all active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.1)]"
               >
                 <FileText className="w-5 h-5" /> Baixar Word (Editável)
+              </button>
+              <button 
+                onClick={() => {
+                  handleCloneQuote(viewingQuote);
+                  setViewingQuote(null);
+                }}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-white/20 transition-all active:scale-95"
+              >
+                <Copy className="w-5 h-5" /> Clonar Orçamento
               </button>
               <button 
                 onClick={() => {

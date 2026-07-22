@@ -124,40 +124,7 @@ export default function Login() {
             </motion.p>
           )}
 
-          {/* Quick Access */}
-          <div className="pt-3 border-t border-white/10">
-            <p className="text-[9px] text-white/40 mb-2 font-black uppercase tracking-widest text-center">Acesso Rápido de Teste</p>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => { setUsername('admin'); setPassword('admin'); }}
-                className="text-[9px] py-1 bg-white/5 hover:bg-white/15 transition-all font-black uppercase tracking-wider rounded border border-white/5 hover:border-white/10 text-white"
-              >
-                Admin (Completo)
-              </button>
-              <button
-                type="button"
-                onClick={() => { setUsername('tecnico'); setPassword('123'); }}
-                className="text-[9px] py-1 bg-white/5 hover:bg-white/15 transition-all font-black uppercase tracking-wider rounded border border-white/5 hover:border-white/10 text-white"
-              >
-                Técnico (Obras)
-              </button>
-              <button
-                type="button"
-                onClick={() => { setUsername('cliente'); setPassword('123'); }}
-                className="text-[9px] py-1 bg-white/5 hover:bg-white/15 transition-all font-black uppercase tracking-wider rounded border border-white/5 hover:border-white/10 text-white"
-              >
-                Cliente (Morador)
-              </button>
-              <button
-                type="button"
-                onClick={() => { setUsername('iac'); setPassword('iac2010'); }}
-                className="text-[9px] py-1 bg-white/5 hover:bg-white/15 transition-all font-black uppercase tracking-wider rounded border border-white/5 hover:border-white/10 text-teal-300"
-              >
-                Super Geral
-              </button>
-            </div>
-          </div>
+
         </form>
 
         {/* Hint */}
